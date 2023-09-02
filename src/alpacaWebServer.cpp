@@ -39,7 +39,7 @@ void handleNotFound(AsyncWebServerRequest *request) {
   }
 
   log("Not found Method is %s", method.c_str());
-  
+
   request->send(404, "application/json");
 }
 
@@ -176,10 +176,7 @@ void returnSingleBool(AsyncWebServerRequest *request, bool b) {
   request->send(200, "application/json", json);
 }
 
-
-
-void returnNoError(
-    AsyncWebServerRequest *request) {
+void returnNoError(AsyncWebServerRequest *request) {
 
   String method;
 
@@ -212,7 +209,6 @@ void returnNoError(
 
   log("Returning no error for url %s with method %s", request->url().c_str(),
       method.c_str());
-
 
   char buffer[300];
   sprintf(buffer,
@@ -309,10 +305,7 @@ void setupWebServer() {
       "^\\/api\\/v1\\/telescope\\/0\\/alignmentmode.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleInteger(request, 0); });
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/altitude.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
+ 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/aperturearea.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
@@ -327,10 +320,6 @@ void setupWebServer() {
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/atpark.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/azimuth.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/canfindhome.*$", HTTP_GET,
@@ -418,14 +407,6 @@ void setupWebServer() {
       [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
 
   alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/declination.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/rightascension.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/sideofpier.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
 
@@ -433,17 +414,6 @@ void setupWebServer() {
       "^\\/api\\/v1\\/telescope\\/0\\/siderealtime.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/siteelevation.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/sidelatitude.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/sidelongitude.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/slewing.*$", HTTP_GET,
@@ -453,10 +423,7 @@ void setupWebServer() {
       "^\\/api\\/v1\\/telescope\\/0\\/tracking.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/utcdate.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleString(request, ""); });
-
+  
   alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/driverversion.*$",
                      HTTP_GET, [](AsyncWebServerRequest *request) {
                        returnSingleString(request, "1.0");
@@ -503,6 +470,41 @@ void setupWebServer() {
   alpacaWebServer.on(
       "^\\/management\\/v1\\/configureddevices.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnConfiguredDevices(request); });
+
+  // ======================================
+  // Gets to be implemented
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/utcdate.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleString(request, ""); });
+
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/siteelevation.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/sitelatitude.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/sitelongitude.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/azimuth.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/altitude.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/declination.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+
+  alpacaWebServer.on(
+      "^\\/api\\/v1\\/telescope\\/0\\/rightascension.*$", HTTP_GET,
+      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+
   // ======================================
   // Boilplate ends. PUTS to be implemented here
   alpacaWebServer.on(
@@ -512,9 +514,7 @@ void setupWebServer() {
 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/synctocoordinates.*$", HTTP_PUT,
-      [](AsyncWebServerRequest *request) { 
-        
-        syncToCoords(request); });
+      [](AsyncWebServerRequest *request) { syncToCoords(request); });
 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/sitelatitude.*$", HTTP_PUT,
@@ -529,7 +529,6 @@ void setupWebServer() {
       [](AsyncWebServerRequest *request) { setUTCDate(request); });
 
   // ===============================
-
 
   alpacaWebServer.onNotFound(
       [](AsyncWebServerRequest *request) { handleNotFound(request); });
