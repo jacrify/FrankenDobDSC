@@ -1,10 +1,11 @@
-// #include <WiFiManager.h>
-// WiFiManager wifiManager;
-#include <WiFi.h>
+#include <WiFiManager.h>
+WiFiManager wifiManager;
+// #include <WiFi.h>
 void setupWifi() {
+  wifiManager.setConnectTimeout(10);
+  wifiManager.autoConnect();
+  // wifiManager.autoConnect("alpaca");
 
-  WiFi.softAP("dontlookup");
-  // wifiManager.setConnectTimeout(10);
   // // wifiManager.autoConnect("dontlookup");
-  // wifiManager.startConfigPortal("dontlookup");
+  // wifiManager.startConfigPortal("alpaca");
 }

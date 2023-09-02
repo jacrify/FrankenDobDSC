@@ -19,6 +19,8 @@
 #ifndef Ephemeris_library
 #define Ephemeris_library
 
+#define PROGMEM
+
 #if ARDUINO
 #include <Ephemeris.hpp>
 #else

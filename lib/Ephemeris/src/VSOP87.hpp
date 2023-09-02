@@ -40,7 +40,7 @@ struct VSOP87Coefficient
 //         Tables of VSOP87 terms for Mercury.
 //
 
-CONST VSOP87Coefficient L0MercuryCoefficients[]
+CONST VSOP87Coefficient L0MercuryCoefficients[] =
 {
     {20982.152178,  0.000000, 0.000000},
     {6402.297634, 1.483020, 26087.902344},
