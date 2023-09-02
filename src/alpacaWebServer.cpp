@@ -6,6 +6,7 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <WebSocketsClient.h>
+#include "encoders.h"
 
 #define IPBROADCASTPORT 50375         // EQ platform broadcasts its ip on this
 #define EQ_PLATFORM_WEBSOCKET_PORT 80 // eq platform listens on this
@@ -366,6 +367,8 @@ void updatePosition(TelescopeModel &model) {
   } else {
     log("Calculating position but no eq platform");
   }
+  //TODO make this oo
+  model.setEncoderValues(getEncoderAl(), getEncoderAz());
   ra = model.getRACoord();
   dec = model.getDecCoord();
 }

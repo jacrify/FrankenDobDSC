@@ -41,6 +41,9 @@ void printResolution() {
   client.print(resolution_alt);
 }
 
+long getEncoderAz() { return encoderValueAz;}
+long getEncoderAl() { return encoderValueAl; }
+
 void EncoderAl() {
 
   int encodedAl = (digitalRead(enc_al_A) << 1) | digitalRead(enc_al_B);
@@ -80,16 +83,6 @@ void setupEncoders() {
 }
 
 void loopEncoders() {
-//   Serial.print("test");
-
-  /* Serial.print("az ");
-    printEncoderValue(encoderValueAz);
-    Serial.print("\t alt ");
-    printEncoderValue(encoderValueAl);
-
-    Serial.println("\r");
-
-    delay(50);*/
 
   if (server.hasClient()) {
     client = server.available();

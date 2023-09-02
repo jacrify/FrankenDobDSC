@@ -3,4 +3,6 @@
 
 void setupEncoders();
 void loopEncoders();
+long getEncoderAz();
+long getEncoderAl();
 #endif
