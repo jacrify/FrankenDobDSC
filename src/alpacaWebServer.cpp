@@ -2,10 +2,64 @@
 
 #include "AsyncUDP.h"
 #include "alpacaWebServer.h"
+#include <ArduinoJson.h> // Include the library
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
+#include <WebSocketsClient.h>
+
+#define IPBROADCASTPORT 50375         // EQ platform broadcasts its ip on this
+#define EQ_PLATFORM_WEBSOCKET_PORT 80 // eq platform listens on this
+
+unsigned const int localPort = 32227; // The Alpaca Discovery test port
+unsigned const int alpacaPort =
+    80; // The  port that the Alpaca API would be available on
+
+IPAddress eqPlatformIP;
+bool wsConnected;
+AsyncUDP udp;
+WebSocketsClient webSocket;
+
+long runtimeFromCenter;
+bool currentlyRunning;
 
 AsyncWebServer alpacaWebServer(80);
+
+// handles return response from eq platform. Stores responses.
+void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
+  switch (type) {
+  case WStype_DISCONNECTED:
+    log("[WSc] Disconnected!\n");
+    wsConnected = false;
+    break;
+  case WStype_CONNECTED:
+    log("[WSc] Connected to URL: %s\n", payload);
+    wsConnected = true;
+    break;
+  case WStype_TEXT: {
+    String msg = String((char *)payload);
+
+    // Create a JSON document to hold the payload
+    const size_t capacity =
+        JSON_OBJECT_SIZE(2) + 40; // Reserve some memory for the JSON document
+    StaticJsonDocument<capacity> doc;
+
+    // Deserialize the JSON payload
+    DeserializationError error = deserializeJson(doc, msg);
+    if (error) {
+      log("Failed to parse payload %s", msg);
+      return;
+    }
+
+    runtimeFromCenter = doc["runtimeFromCenter"];
+    currentlyRunning = doc["currentlyRunning"];
+    log("Got payload from eq plaform. Distance from center %lf, running %d",
+        runtimeFromCenter, currentlyRunning);
+
+    break;
+    // Handle other types as needed...
+  }
+  }
+}
 
 void handleNotFound(AsyncWebServerRequest *request) {
   log("Not found URL is %s", request->url().c_str());
@@ -223,47 +277,55 @@ void returnNoError(AsyncWebServerRequest *request) {
   String json = buffer;
   request->send(200, "application/json", json);
 }
-void setSiteLatitude(AsyncWebServerRequest *request) {
+
+void setSiteLatitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   String lat = request->arg("SiteLatitude");
   if (lat != NULL) {
     log("Received parameterName: %s", lat.c_str());
 
     double parsedValue = strtod(lat.c_str(), NULL);
     log("Parsed lat value: %lf", parsedValue);
+    model.setLatitude(parsedValue);
   }
   returnNoError(request);
 }
 
-void setSiteLongitude(AsyncWebServerRequest *request) {
+void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   String lng = request->arg("SiteLongitude");
   if (lng != NULL) {
     log("Received parameterName: %s", lng.c_str());
 
     double parsedValue = strtod(lng.c_str(), NULL);
     log("Parsed lng value: %lf", parsedValue);
+    model.setLongitude(parsedValue);
   }
   returnNoError(request);
 }
 
-void syncToCoords(AsyncWebServerRequest *request) {
+void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
   String ra = request->arg("RightAscension");
+  double parsedRA;
+  double parsedDec;
+  // TODO handle exceptions
   if (ra != NULL) {
     log("Received parameterName: %s", ra.c_str());
 
-    double parsedValue = strtod(ra.c_str(), NULL);
-    log("Parsed ra value: %lf", parsedValue);
+    parsedRA = strtod(ra.c_str(), NULL);
+    log("Parsed ra value: %lf", parsedRA);
   }
   String dec = request->arg("Declination");
   if (dec != NULL) {
     log("Received parameterName: %s", ra.c_str());
 
-    double parsedValue = strtod(dec.c_str(), NULL);
-    log("Parsed dec value: %lf", parsedValue);
+    parsedDec = strtod(dec.c_str(), NULL);
+    log("Parsed dec value: %lf", parsedDec);
   }
+
+  model.setPositionRaDec(parsedRA, parsedDec);
   returnNoError(request);
 }
 
-void setUTCDate(AsyncWebServerRequest *request) {
+void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   String utc = request->arg("UTCDate");
   if (utc != NULL) {
     log("Received UTCDate: %s", utc.c_str());
@@ -276,20 +338,62 @@ void setUTCDate(AsyncWebServerRequest *request) {
     log("Parsed Date - Year: %d, Month: %d, Day: %d, Hour: %d, Minute: %d, "
         "Second: %d",
         year, month, day, hour, minute, second);
+
+    model.setUTCYear(year);
+    model.setUTCMonth(month);
+    model.setUTCDay(day);
+    model.setUTCHour(hour);
+    model.setUTCMinute(minute);
+    model.setUTCSecond(second);
   }
   returnNoError(request);
 }
 
-unsigned const int localPort = 32227; // The Alpaca Discovery test port
-unsigned const int alpacaPort =
-    80; // The  port that the Alpaca API would be available on
+unsigned long lastPositionRequestTime;
+#define STALE_POSITION_TIME 300
 
-AsyncUDP udp;
+double ra;
+double dec;
 
-void setupWebServer() {
+// poll eq platform for it's position. Calculate position.
+// Triggered from ra or dec request. Should only run for one of them and then
+// cache for a few millis
+void updatePosition(TelescopeModel &model) {
+  if (wsConnected) {
+    webSocket.sendTXT("request_data");
+    // Use a simple delay-based approach to wait for the response.
+    delay(100); // wait for the data (adjust as necessary)
+  } else {
+    log("Calculating position but no eq platform");
+  }
+  ra = model.getRACoord();
+  dec = model.getDecCoord();
+}
 
+void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
+  unsigned long now = millis();
+  if ((now - lastPositionRequestTime) > STALE_POSITION_TIME) {
+    lastPositionRequestTime = now;
+    updatePosition(model);
+  }
+
+  returnSingleDouble(request, ra);
+}
+
+void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
+  unsigned long now = millis();
+  if ((now - lastPositionRequestTime) > STALE_POSITION_TIME) {
+    lastPositionRequestTime = now;
+    updatePosition(model);
+  }
+  returnSingleDouble(request, dec);
+}
+
+void setupWebServer(TelescopeModel model) {
+
+  // set up alpaca discovery udp
   if (udp.listen(32227)) {
-    Serial.println("Listening for discovery requests...");
+    log("Listening for discovery requests...");
     udp.onPacket([](AsyncUDPPacket packet) {
       log("Received UDP Discovery packet ");
       if ((packet.length() >= 16) &&
@@ -301,11 +405,32 @@ void setupWebServer() {
     });
   }
 
+  // set up listening for ip address from eq platform
+
+  // Initialize UDP to listen for broadcasts.
+  if (udp.listen(IPBROADCASTPORT)) {
+    udp.onPacket([](AsyncUDPPacket packet) {
+      String msg = packet.readString();
+      log("UDP Broadcast received: %s\n", msg.c_str());
+
+      // Check if the broadcast is from EQ Platform
+      if (msg.startsWith("EQIP=")) {
+        eqPlatformIP.fromString(msg.substring(5));
+        log("EQ Platform IP is: %s\n", eqPlatformIP.toString().c_str());
+
+        // If WebSocket is not connected, try connecting
+        if (!wsConnected) {
+          webSocket.begin(eqPlatformIP, EQ_PLATFORM_WEBSOCKET_PORT, "/ws");
+          webSocket.onEvent(webSocketEvent);
+        }
+      }
+    });
+  }
+
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/alignmentmode.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleInteger(request, 0); });
 
- 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/aperturearea.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
@@ -414,7 +539,6 @@ void setupWebServer() {
       "^\\/api\\/v1\\/telescope\\/0\\/siderealtime.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
 
-
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/slewing.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
@@ -423,7 +547,6 @@ void setupWebServer() {
       "^\\/api\\/v1\\/telescope\\/0\\/tracking.*$", HTTP_GET,
       [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
 
-  
   alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/driverversion.*$",
                      HTTP_GET, [](AsyncWebServerRequest *request) {
                        returnSingleString(request, "1.0");
@@ -499,11 +622,11 @@ void setupWebServer() {
 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/declination.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+      [&model](AsyncWebServerRequest *request) { getDec(request, model); });
 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/rightascension.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+      [&model](AsyncWebServerRequest *request) { getRA(request, model); });
 
   // ======================================
   // Boilplate ends. PUTS to be implemented here
@@ -512,21 +635,24 @@ void setupWebServer() {
       "^\\/api\\/v1\\/telescope\\/0\\/connected.*$", HTTP_PUT,
       [](AsyncWebServerRequest *request) { returnNoError(request); });
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/synctocoordinates.*$", HTTP_PUT,
-      [](AsyncWebServerRequest *request) { syncToCoords(request); });
+  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/synctocoordinates.*$",
+                     HTTP_PUT, [&model](AsyncWebServerRequest *request) {
+                       syncToCoords(request, model);
+                     });
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/sitelatitude.*$", HTTP_PUT,
-      [](AsyncWebServerRequest *request) { setSiteLatitude(request); });
+  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/sitelatitude.*$", HTTP_PUT,
+                     [&model](AsyncWebServerRequest *request) {
+                       setSiteLatitude(request, model);
+                     });
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/sitelongitude.*$", HTTP_PUT,
-      [](AsyncWebServerRequest *request) { setSiteLongitude(request); });
+  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/sitelongitude.*$",
+                     HTTP_PUT, [&model](AsyncWebServerRequest *request) {
+                       setSiteLongitude(request, model);
+                     });
 
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/utcdate.*$", HTTP_PUT,
-      [](AsyncWebServerRequest *request) { setUTCDate(request); });
+      [&model](AsyncWebServerRequest *request) { setUTCDate(request, model); });
 
   // ===============================
 
