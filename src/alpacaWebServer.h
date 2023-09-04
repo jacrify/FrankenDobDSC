@@ -5,4 +5,5 @@
 
 
 void setupWebServer(TelescopeModel &model);
+void webServerloop();
 #endif

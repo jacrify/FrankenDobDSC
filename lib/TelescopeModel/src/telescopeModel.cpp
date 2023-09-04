@@ -18,6 +18,8 @@ TelescopeModel::TelescopeModel() {
   azEncoderStepsPerRevolution = 0;
   altEncoderStepsPerRevolution = 0;
 
+  deltaSeconds=0;
+  
   // known eq position at sync
   raBasePos = 0;
   decBasePos = 0;
@@ -54,6 +56,10 @@ float TelescopeModel::getLongitude() { return longitude; }
 
 float TelescopeModel::getAltCoord() {}
 float TelescopeModel::getAzCoord() {}
+
+void TelescopeModel::setDeltaSeconds(double delta) {
+  deltaSeconds=delta;
+}
 
 void TelescopeModel::calculateCurrentPosition() {
 

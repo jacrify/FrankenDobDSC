@@ -23,23 +23,25 @@ bool wsConnected;
 AsyncUDP udp;
 WebSocketsClient webSocket;
 
-long runtimeFromCenter;
+double runtimeFromCenter;
 bool currentlyRunning;
 
 AsyncWebServer alpacaWebServer(80);
 
 // handles return response from eq platform. Stores responses.
 void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
+  log("Processing web socket event ");
   switch (type) {
   case WStype_DISCONNECTED:
     log("[WSc] Disconnected!\n");
     wsConnected = false;
-    break;
+    return;
   case WStype_CONNECTED:
     log("[WSc] Connected to URL: %s\n", payload);
     wsConnected = true;
-    break;
+    return;
   case WStype_TEXT: {
+    log("Got payload from eq plaform");
     String msg = String((char *)payload);
 
     // Create a JSON document to hold the payload
@@ -50,19 +52,19 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
     // Deserialize the JSON payload
     DeserializationError error = deserializeJson(doc, msg);
     if (error) {
-      log("Failed to parse payload %s", msg);
+      log("Failed to parse payload %s", msg.c_str());
       return;
     }
 
-    runtimeFromCenter = doc["runtimeFromCenter"];
-    currentlyRunning = doc["currentlyRunning"];
-    log("Got payload from eq plaform. Distance from center %lf, running %d",
-        runtimeFromCenter, currentlyRunning);
+    double runtimeFromCenter = doc["timeToCenter"];
+    bool currentlyRunning = doc["isTracking"];
+    log("Distance from center %lf, running %d", runtimeFromCenter,
+        currentlyRunning);
 
-    break;
-    // Handle other types as needed...
+    return;
   }
   }
+  log("Unknown websocket event type");
 }
 
 void handleNotFound(AsyncWebServerRequest *request) {
@@ -204,7 +206,8 @@ void returnSingleInteger(AsyncWebServerRequest *request, int value) {
 }
 
 void returnSingleDouble(AsyncWebServerRequest *request, double d) {
-  log("Single double value url is %s, double is %lf", request->url().c_str(), d);
+  log("Single double value url is %s, double is %lf", request->url().c_str(),
+      d);
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
@@ -346,14 +349,12 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   log("finished utc");
 }
 
-
-
-
 // poll eq platform for it's position. Calculate position.
 // Triggered from ra or dec request. Should only run for one of them and then
 // cache for a few millis
 void updatePosition(TelescopeModel &model) {
   if (wsConnected) {
+    log("EQ connected, requesting data...");
     webSocket.sendTXT("request_data");
     // Use a simple delay-based approach to wait for the response.
     delay(100); // wait for the data (adjust as necessary)
@@ -364,26 +365,48 @@ void updatePosition(TelescopeModel &model) {
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   log("Encoder Values %ld %ld", getEncoderAl(), getEncoderAz());
 
-  
-
+  // Using position from eq platform (expressed as a time delta) adjust
+  // current time for calculation
+  //  1. Get the current time
+  struct tm timeInfo;
   time_t now;
-  struct tm timeinfo;
-
-  // Obtain current time
   time(&now);
-  localtime_r(&now, &timeinfo);
+  gmtime_r(&now, &timeInfo);
 
-  model.setUTCYear(timeinfo.tm_year + 1900);
-  model.setUTCMonth(timeinfo.tm_mon + 1); // tm_mon is 0-based so add 1
-  model.setUTCDay(timeinfo.tm_mday);
-  model.setUTCHour(timeinfo.tm_hour);
-  model.setUTCMinute(timeinfo.tm_min);
-  model.setUTCSecond(timeinfo.tm_sec);
+  // 2. Adjust the time by runtimeFromCenter
+  now += (int)runtimeFromCenter; // Adjust by whole seconds
+  int fractionalSecs =
+      1000000 *
+      (runtimeFromCenter -
+       (int)runtimeFromCenter); // microseconds adjustment for fractional part
+  timeval currentTimeVal;
+  currentTimeVal.tv_sec = now;
+  currentTimeVal.tv_usec = fractionalSecs;
+  settimeofday(&currentTimeVal,
+               NULL); // Set system time including fractional seconds
+  gmtime_r(&currentTimeVal.tv_sec, &timeInfo);
+
+  // 3. Break down the time into its components
+  int year =
+      timeInfo.tm_year + 1900; // The tm_year is the number of years since 1900
+  int month = timeInfo.tm_mon + 1; // The tm_mon range is 0-11
+  int day = timeInfo.tm_mday;
+  int hour = timeInfo.tm_hour;
+  int min = timeInfo.tm_min;
+  int sec = timeInfo.tm_sec;
+
+  // 4. Set the time in your class
+  model.setUTCYear(year);
+  model.setUTCMonth(month);
+  model.setUTCDay(day);
+  model.setUTCHour(hour);
+  model.setUTCMinute(min);
+  model.setUTCSecond(sec);
+
   log("Model date: %d /%d/%d %d:%d:%d ", model.day, model.month, model.year,
       model.hour, model.min, model.sec);
 
   model.calculateCurrentPosition();
- 
 }
 
 void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -410,12 +433,13 @@ void setupWebServer(TelescopeModel &model) {
 
   // set up alpaca discovery udp
   if (udp.listen(32227)) {
-    log("Listening for discovery requests...");
+    log("Listening for alpaca discovery requests...");
     udp.onPacket([](AsyncUDPPacket packet) {
-      log("Received UDP Discovery packet ");
+      log("Received alpaca UDP Discovery packet ");
       if ((packet.length() >= 16) &&
           (strncmp("alpacadiscovery1", (char *)packet.data(), 16) == 0)) {
-        log("Responsing to UDP Discovery packet ");
+        log("Responsing to alpaca UDP Discovery packet with my port number %d",
+            alpacaPort);
 
         packet.printf("{\"AlpacaPort\": %d}", alpacaPort);
       }
@@ -427,17 +451,19 @@ void setupWebServer(TelescopeModel &model) {
   // Initialize UDP to listen for broadcasts.
 
   if (udp.listen(IPBROADCASTPORT)) {
+    log("Listening for eq platform broadcasts");
     udp.onPacket([](AsyncUDPPacket packet) {
       String msg = packet.readString();
-      log("UDP Broadcast received: %s\n", msg.c_str());
+      log("EQ UDP Broadcast received: %s", msg.c_str());
 
       // Check if the broadcast is from EQ Platform
       if (msg.startsWith("EQIP=")) {
         eqPlatformIP.fromString(msg.substring(5));
-        log("EQ Platform IP is: %s\n", eqPlatformIP.toString().c_str());
+        log("EQ Platform IP is: %s", eqPlatformIP.toString().c_str());
 
         // If WebSocket is not connected, try connecting
         if (!wsConnected) {
+          log("Trying to connect to web socket on EQ");
           webSocket.begin(eqPlatformIP, EQ_PLATFORM_WEBSOCKET_PORT, "/ws");
           webSocket.onEvent(webSocketEvent);
         }
@@ -574,8 +600,8 @@ void setupWebServer(TelescopeModel &model) {
                          return returnNoError(request);
 
                        if (subPath.startsWith("synctocoordinates"))
-                          return syncToCoords(request, model);
-                        //  return returnNoError(request);
+                         return syncToCoords(request, model);
+                       //  return returnNoError(request);
 
                        if (subPath.startsWith("sitelatitude"))
                          //  return returnNoError(request);
@@ -604,3 +630,7 @@ void setupWebServer(TelescopeModel &model) {
   log("Server started");
   return;
 }
+
+void webServerloop() { 
+  webSocket.loop(); 
+  }

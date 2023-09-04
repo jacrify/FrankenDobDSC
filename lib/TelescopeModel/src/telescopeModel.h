@@ -31,6 +31,9 @@ public:
   void setUTCSecond(int sec);
   void calculateCurrentPosition();
 
+  //Calculate in the future (if positive) or into past (if negative)
+  void setDeltaSeconds(double delta);
+
       
   int year;
   int month;
@@ -55,6 +58,9 @@ public:
   long azEncBaseValue;
   float ra;
   float dec;
+
+  double deltaSeconds;
+
 };
 
 #endif

@@ -22,5 +22,6 @@ void setup() {
 
 void loop() {
   loopEncoders();
+  webServerloop();
 }
 

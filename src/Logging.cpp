@@ -1,5 +1,5 @@
-// #include <Arduino.h>
-#include <WebSerial.h>
+#include <Arduino.h>
+
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
