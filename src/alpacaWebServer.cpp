@@ -16,14 +16,15 @@ unsigned const int alpacaPort =
 unsigned long lastPositionRequestTime;
 #define STALE_POSITION_TIME 200
 
-AsyncUDP udp;
+AsyncUDP alpacaUdp;
+AsyncUDP eqUdp;
 #define IPBROADCASTPORT 50375
 
 double runtimeFromCenter;
 bool currentlyRunning;
 // used to store last time position was received from EQ
 #define STALE_EQ_WARNING_THRESHOLD 10000 // used to detect packet loss
-unsigned long lastPositionReceivedTime;
+unsigned long lastPositionReceivedTimeMillis;
 
 AsyncWebServer alpacaWebServer(80);
 
@@ -314,9 +315,10 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
 // cache for a few millis
 void updatePosition(TelescopeModel &model) {
   unsigned long nowmillis = millis();
-  if ((nowmillis - lastPositionReceivedTime) > STALE_EQ_WARNING_THRESHOLD)
-    log("No EQ platform, or packet loss: last packet recieved %d seconds ago",
-        nowmillis - lastPositionReceivedTime);
+  if ((nowmillis - lastPositionReceivedTimeMillis) > STALE_EQ_WARNING_THRESHOLD)
+    log("No EQ platform, or packet loss: last packet recieved %d seconds ago "
+        "at %ld",
+        nowmillis - lastPositionReceivedTimeMillis, lastPositionReceivedTimeMillis);
 
   // if platform is running, then it has moved on since packet
   // recieved. The time since the packet received needs to be added to
@@ -325,9 +327,11 @@ void updatePosition(TelescopeModel &model) {
   // time to center should be considered as 99s.
   double interpolationTimeInSeconds = 0;
   if (currentlyRunning) {
+    log("setting interpolation time");
     interpolationTimeInSeconds =
-        (nowmillis - lastPositionReceivedTime) * 1000.0;
+        (nowmillis - lastPositionReceivedTimeMillis) / 1000.0;
   }
+  
   // TODO interpolate platform values
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   log("Encoder Values %ld %ld", getEncoderAl(), getEncoderAz());
@@ -336,13 +340,17 @@ void updatePosition(TelescopeModel &model) {
   // current time for calculation
   //  1. Get the current time
   struct tm timeInfo;
-  time_t now;
+  time_t now; // in seconds
   time(&now);
   gmtime_r(&now, &timeInfo);
-
+  
+  log("Base time for calc is %ld", now);
+  log("Runtime from center is %lf", runtimeFromCenter);
+  log("Interpolation time %lf", interpolationTimeInSeconds);
   // 2. Adjust the time by runtimeFromCenter
-  now += (int)(runtimeFromCenter +
+  now += (int)(runtimeFromCenter -
                interpolationTimeInSeconds); // Adjust by whole seconds
+
   int fractionalSecs =
       1000000 *
       (runtimeFromCenter -
@@ -350,8 +358,7 @@ void updatePosition(TelescopeModel &model) {
   timeval currentTimeVal;
   currentTimeVal.tv_sec = now;
   currentTimeVal.tv_usec = fractionalSecs;
-  settimeofday(&currentTimeVal,
-               NULL); // Set system time including fractional seconds
+
   gmtime_r(&currentTimeVal.tv_sec, &timeInfo);
 
   // 3. Break down the time into its components
@@ -398,15 +405,17 @@ void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
 
 void setupWebServer(TelescopeModel &model) {
   lastPositionRequestTime = 0;
+  lastPositionReceivedTimeMillis = 0;
+  currentlyRunning = false;
 
   // set up alpaca discovery udp
-  if (udp.listen(32227)) {
+  if (alpacaUdp.listen(32227)) {
     log("Listening for alpaca discovery requests...");
-    udp.onPacket([](AsyncUDPPacket packet) {
+    alpacaUdp.onPacket([](AsyncUDPPacket packet) {
       log("Received alpaca UDP Discovery packet ");
       if ((packet.length() >= 16) &&
           (strncmp("alpacadiscovery1", (char *)packet.data(), 16) == 0)) {
-        log("Responsing to alpaca UDP Discovery packet with my port number %d",
+        log("Responding to alpaca UDP Discovery packet with my port number %d",
             alpacaPort);
 
         packet.printf("{\"AlpacaPort\": %d}", alpacaPort);
@@ -418,15 +427,15 @@ void setupWebServer(TelescopeModel &model) {
 
   // Initialize UDP to listen for broadcasts.
 
-  if (udp.listen(IPBROADCASTPORT)) {
+  if (eqUdp.listen(IPBROADCASTPORT)) {
     log("Listening for eq platform broadcasts");
-    udp.onPacket([](AsyncUDPPacket packet) {
+    eqUdp.onPacket([](AsyncUDPPacket packet) {
       unsigned long now = millis();
       String msg = packet.readString();
       log("UDP Broadcast received: %s", msg.c_str());
 
       // Check if the broadcast is from EQ Platform
-      if (msg.startsWith("EQ=")) {
+      if (msg.startsWith("EQ:")) {
         msg = msg.substring(3);
         log("Got payload from eq plaform");
 
@@ -447,13 +456,15 @@ void setupWebServer(TelescopeModel &model) {
           runtimeFromCenter = doc["timeToCenter"];
           currentlyRunning = doc["isTracking"];
 
-          lastPositionReceivedTime = now;
-          log("Distance from center %lf, running %d", runtimeFromCenter,
-              currentlyRunning);
+          lastPositionReceivedTimeMillis = now;
+          log("Distance from center %lf, running %d, at time %ld",
+              runtimeFromCenter, currentlyRunning, lastPositionReceivedTimeMillis);
         } else {
           log("Payload missing required fields.");
           return;
         }
+      } else {
+        log("Message has bad starting chars");
       }
     });
   }
