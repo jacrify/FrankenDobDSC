@@ -1,0 +1,11 @@
+@startuml AlpacaDiscovery
+
+AlpacaClient->Telescope : UDP broadcast 32227 alpacadiscovery1
+Telescope->AlpacaClient : AlpacaPort 80
+AlpacaClient->Telescope : http://...80 management/apiversions
+Telescope->AlpacaClient : [1]
+AlpacaClient->Telescope : http://...80 management/v1/configureddevices
+Telescope->AlpacaClient : {.."DeviceType": "Telescope","DeviceNumber": 0}
+AlpacaClient->Telescope : http://...80 management/v1/description
+Telescope->AlpacaClient : {.."Manufacturer": "me",  "ManufacturerVersion": "1"}
+      

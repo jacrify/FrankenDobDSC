@@ -1,0 +1,9 @@
+@startuml AlpacaSetup
+
+AlpacaClient->Telescope : http://...80 /api/v1/telecscope/utcdate
+Telescope->AlpacaClient : ok
+AlpacaClient->Telescope : http://...80 /api/v1/telecscope/latitude
+Telescope->AlpacaClient : ok
+AlpacaClient->Telescope : http://...80 /api/v1/telecscope/longitude
+Telescope->AlpacaClient : ok
+      

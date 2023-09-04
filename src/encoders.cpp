@@ -108,6 +108,7 @@ void printEncoderValue(long val) {
 }
 
 void loopEncoders() {
+  //this is for sky safari "direct encoder support"
 
   if (server.hasClient()) {
     client = server.available();
