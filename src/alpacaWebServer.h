@@ -4,5 +4,5 @@
 #include "telescopeModel.h"
 
 
-void setupWebServer(TelescopeModel model);
+void setupWebServer(TelescopeModel &model);
 #endif

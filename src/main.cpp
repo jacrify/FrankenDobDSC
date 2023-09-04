@@ -3,14 +3,16 @@
 #include "encoders.h"
 #include "alpacaWebServer.h"
 #include "telescopeModel.h"
+#include "Logging.h"
 
 TelescopeModel model;
 
 void setup() {
   Serial.begin(115200);
   Serial.println("starting");
-  model.setAltEncoderStepsPerRevolution(108229);
-  model.setAzEncoderStepsPerRevolution(-30000);
+
+  model.setAltEncoderStepsPerRevolution(-30000);
+  model.setAzEncoderStepsPerRevolution(108229);
   setupWifi();
   setupEncoders();
   setupWebServer(model);

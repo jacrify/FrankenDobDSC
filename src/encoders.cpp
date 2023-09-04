@@ -7,17 +7,20 @@
 
 String firmwareVersion = "2.2";
 
-
-const long resolution_az = 37190; // 36900 on paper.
+const long resolution_az = 108229; // 36900 on paper.
 const long resolution_alt = 30000;
 
 WiFiServer server(4030);
 WiFiClient client;
 
-#define enc_az_A 32
-#define enc_az_B 27
-#define enc_al_A 25
-#define enc_al_B 26
+// #define enc_az_A 34
+// #define enc_az_B 35
+// #define enc_al_A 25
+// #define enc_al_B 26
+#define enc_az_A 25
+#define enc_az_B 26
+#define enc_al_A 27
+#define enc_al_B 14
 
 volatile int lastEncodedAl = 0, lastEncodedAz = 0;
 volatile long encoderValueAl = 0, encoderValueAz = 0;
@@ -41,8 +44,8 @@ void printResolution() {
   client.print(resolution_alt);
 }
 
-long getEncoderAz() { return encoderValueAz;}
-long getEncoderAl() { return encoderValueAl; }
+volatile long getEncoderAz() { return encoderValueAz;}
+volatile long getEncoderAl() { return encoderValueAl; }
 
 void EncoderAl() {
 
@@ -81,39 +84,6 @@ void setupEncoders() {
 
   server.begin();
 }
-
-void loopEncoders() {
-
-  if (server.hasClient()) {
-    client = server.available();
-
-    int c = client.read();
-    if (c == 81) {
-      char response[50];
-      sprintf(response, "%+05d\t%+05d\r", encoderValueAz, encoderValueAl);
-      client.print(response);
-      /*
-      printEncoderValue(encoderValueAz);
-      client.print("\t");
-      printEncoderValue(encoderValueAl);
-      client.print("\r");
-      */
-    } else if (c == 86) {
-      Serial.println("Client requested firmware.");
-      printFirmware();
-    } else if (c == 72) {
-      Serial.println("Client requested res.");
-      printResolution();
-      client.print("\r");
-    }
-  }
-
-  // close the connection:
-  // client.stop();
-  // Serial.println("Client Disconnected.");
-  // delay(50);
-}
-
 void printEncoderValue(long val) {
 
   unsigned long aval;
@@ -136,6 +106,39 @@ void printEncoderValue(long val) {
 
   client.print(aval);
 }
+
+void loopEncoders() {
+
+  if (server.hasClient()) {
+    client = server.available();
+
+    int c = client.read();
+    if (c == 81) {
+      char response[50];
+      sprintf(response, "%+05d\t%+05d\r", encoderValueAz, encoderValueAl);
+      client.print(response);
+      
+      printEncoderValue(encoderValueAz);
+      client.print("\t");
+      printEncoderValue(encoderValueAl);
+      client.print("\r");
+      
+    } else if (c == 86) {
+      Serial.println("Client requested firmware.");
+      printFirmware();
+    } else if (c == 72) {
+      Serial.println("Client requested res.");
+      printResolution();
+      client.print("\r");
+    }
+  }
+
+  // close the connection:
+  // client.stop();
+  // Serial.println("Client Disconnected.");
+  // delay(50);
+}
+
 
 
 

@@ -3,6 +3,6 @@
 
 void setupEncoders();
 void loopEncoders();
-long getEncoderAz();
-long getEncoderAl();
+long volatile getEncoderAz();
+long volatile getEncoderAl();
 #endif

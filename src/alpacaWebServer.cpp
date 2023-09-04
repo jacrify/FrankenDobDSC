@@ -1,12 +1,15 @@
-#include "Logging.h"
-
-#include "AsyncUDP.h"
 #include "alpacaWebServer.h"
+#include "AsyncUDP.h"
+#include "Logging.h"
+#include "encoders.h"
 #include <ArduinoJson.h> // Include the library
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <WebSocketsClient.h>
-#include "encoders.h"
+#include <time.h>
+
+unsigned long lastPositionRequestTime;
+#define STALE_POSITION_TIME 300
 
 #define IPBROADCASTPORT 50375         // EQ platform broadcasts its ip on this
 #define EQ_PLATFORM_WEBSOCKET_PORT 80 // eq platform listens on this
@@ -102,14 +105,13 @@ void returnDeviceDescription(AsyncWebServerRequest *request) {
   log("returnDeviceDescription url is  %s", request->url().c_str());
 
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
          "Value": {
           "ServerName": "myserver",
           "Manufacturer": "me",
           "ManufacturerVersion": "1",
           "Location": "here"
-
           },
         "ClientTransactionID": 0,
          "ServerTransactionID": 0
@@ -123,8 +125,8 @@ void returnConfiguredDevices(AsyncWebServerRequest *request) {
   log("returnConfiguredDevices url is  %s", request->url().c_str());
 
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
             "Value": [ {
           "DeviceName": "Frankendob",
           "DeviceType": "Telescope",
@@ -143,8 +145,8 @@ void returnApiVersions(AsyncWebServerRequest *request) {
   log("returnApiVersions url is  %s", request->url().c_str());
 
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
          "Value": [1],
         "ClientTransactionID": 0,
          "ServerTransactionID": 0
@@ -158,13 +160,13 @@ void returnEmptyArray(AsyncWebServerRequest *request) {
   log("Empty array value url is %s", request->url().c_str());
 
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
              "ErrorNumber": %d,
              "ErrorMessage": "%s",
              "Value": []
       })",
-          0, "");
+           0, "");
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -174,13 +176,13 @@ void returnSingleString(AsyncWebServerRequest *request, String s) {
   log("Single string value url is %s, string is %s", request->url().c_str(), s);
 
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
              "ErrorNumber": %d,
              "ErrorMessage": "%s",
              "Value": "%s"
       })",
-          0, "", s);
+           0, "", s);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -189,28 +191,28 @@ void returnSingleString(AsyncWebServerRequest *request, String s) {
 void returnSingleInteger(AsyncWebServerRequest *request, int value) {
   log("Single int value url is %s, int is %ld", request->url().c_str(), value);
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
              "ErrorNumber": %d,
              "ErrorMessage": "%s",
              "Value": %ld
       })",
-          0, "", value);
+           0, "", value);
 
   String json = buffer;
   request->send(200, "application/json", json);
 }
 
 void returnSingleDouble(AsyncWebServerRequest *request, double d) {
-  log("Single double value url is %s, int is %lf", request->url().c_str(), d);
+  log("Single double value url is %s, double is %lf", request->url().c_str(), d);
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
              "ErrorNumber": %d,
              "ErrorMessage": "%s",
              "Value": %lf
       })",
-          0, "", d);
+           0, "", d);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -219,13 +221,13 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
 void returnSingleBool(AsyncWebServerRequest *request, bool b) {
   log("Single bool value url is %s, bool is %d", request->url().c_str(), b);
   char buffer[300];
-  sprintf(buffer,
-          R"({
+  snprintf(buffer, sizeof(buffer),
+           R"({
              "ErrorNumber": %d,
              "ErrorMessage": "%s",
              "Value": %s
       })",
-          0, "", b ? "true" : "false");
+           0, "", b ? "true" : "false");
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -233,49 +235,14 @@ void returnSingleBool(AsyncWebServerRequest *request, bool b) {
 
 void returnNoError(AsyncWebServerRequest *request) {
 
-  String method;
+  // log("Returning no error for url %s ", request->url().c_str());
 
-  switch (request->method()) {
-  case HTTP_GET:
-    method = "GET";
-    break;
-  case HTTP_POST:
-    method = "POST";
-    break;
-  case HTTP_DELETE:
-    method = "DELETE";
-    break;
-  case HTTP_PUT:
-    method = "PUT";
-    break;
-  case HTTP_PATCH:
-    method = "PATCH";
-    break;
-  case HTTP_HEAD:
-    method = "HEAD";
-    break;
-  case HTTP_OPTIONS:
-    method = "OPTIONS";
-    break;
-  default:
-    method = "UNKNOWN";
-    break;
-  }
-
-  log("Returning no error for url %s with method %s", request->url().c_str(),
-      method.c_str());
-
-  char buffer[300];
-  sprintf(buffer,
-          R"({
+  static const char *json = R"({
            "ClientTransactionID": 0,
            "ServerTransactionID": 0,
            "ErrorNumber": 0,
-          "ErrorMessage": ""
-          })",
-          0);
-
-  String json = buffer;
+           "ErrorMessage": ""
+          })";
   request->send(200, "application/json", json);
 }
 
@@ -288,7 +255,7 @@ void setSiteLatitude(AsyncWebServerRequest *request, TelescopeModel &model) {
     log("Parsed lat value: %lf", parsedValue);
     model.setLatitude(parsedValue);
   }
-  returnNoError(request);
+  return returnNoError(request);
 }
 
 void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -299,8 +266,9 @@ void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
     double parsedValue = strtod(lng.c_str(), NULL);
     log("Parsed lng value: %lf", parsedValue);
     model.setLongitude(parsedValue);
+    log("Long set");
   }
-  returnNoError(request);
+  return returnNoError(request);
 }
 
 void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -328,33 +296,58 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
 
 void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   String utc = request->arg("UTCDate");
-  if (utc != NULL) {
+  if (!utc.isEmpty())
     log("Received UTCDate: %s", utc.c_str());
 
-    int year, month, day, hour, minute, second;
+  // int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
 
-    sscanf(utc.c_str(), "%4d-%2d-%2dT%2d:%2d:%2dZ", &year, &month, &day, &hour,
-           &minute, &second);
+  // sscanf(utc.c_str(), "%4d-%2d-%2dT%2d:%2d:%2dZ", &year, &month, &day, &hour,
+  //        &minute, &second);
 
-    log("Parsed Date - Year: %d, Month: %d, Day: %d, Hour: %d, Minute: %d, "
-        "Second: %d",
-        year, month, day, hour, minute, second);
+  int year = utc.substring(0, 4).toInt();
+  int month = utc.substring(5, 7).toInt();
+  int day = utc.substring(8, 10).toInt();
+  int hour = utc.substring(11, 13).toInt();
+  int minute = utc.substring(14, 16).toInt();
+  int second = utc.substring(17, 19).toInt();
 
-    model.setUTCYear(year);
-    model.setUTCMonth(month);
-    model.setUTCDay(day);
-    model.setUTCHour(hour);
-    model.setUTCMinute(minute);
-    model.setUTCSecond(second);
-  }
+  log("Parsed Date - Year: %d, Month: %d, Day: %d, Hour: %d, Minute: %d, "
+      "Second: %d",
+      year, month, day, hour, minute, second);
+
+  struct tm timeinfo;
+  struct timeval tv;
+
+  // Setting up your timeinfo structure
+  timeinfo.tm_year = year - 1900; // Years since 1900
+  timeinfo.tm_mon = month - 1;    // Months are 0-based
+  timeinfo.tm_mday = day;
+  timeinfo.tm_hour = hour;
+  timeinfo.tm_min = minute;
+  timeinfo.tm_sec = second;
+
+  // Convert our tm structure to timeval
+  tv.tv_sec =
+      mktime(&timeinfo); // Converts tm struct to seconds since the Unix epoch
+  tv.tv_usec = 0;        // Microseconds - can be set to 0
+
+  // Set the time
+  settimeofday(&tv, NULL);
+
+  model.setUTCYear(year);
+  model.setUTCMonth(month);
+  model.setUTCDay(day);
+  model.setUTCHour(hour);
+  model.setUTCMinute(minute);
+  model.setUTCSecond(second);
+  log("Model date after set: %d /%d/%d %d:%d:%d ", model.day, model.month,
+      model.year, model.hour, model.min, model.sec);
   returnNoError(request);
+  log("finished utc");
 }
 
-unsigned long lastPositionRequestTime;
-#define STALE_POSITION_TIME 300
 
-double ra;
-double dec;
+
 
 // poll eq platform for it's position. Calculate position.
 // Triggered from ra or dec request. Should only run for one of them and then
@@ -367,10 +360,30 @@ void updatePosition(TelescopeModel &model) {
   } else {
     log("Calculating position but no eq platform");
   }
-  //TODO make this oo
+  // TODO make this oo
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  ra = model.getRACoord();
-  dec = model.getDecCoord();
+  log("Encoder Values %ld %ld", getEncoderAl(), getEncoderAz());
+
+  
+
+  time_t now;
+  struct tm timeinfo;
+
+  // Obtain current time
+  time(&now);
+  localtime_r(&now, &timeinfo);
+
+  model.setUTCYear(timeinfo.tm_year + 1900);
+  model.setUTCMonth(timeinfo.tm_mon + 1); // tm_mon is 0-based so add 1
+  model.setUTCDay(timeinfo.tm_mday);
+  model.setUTCHour(timeinfo.tm_hour);
+  model.setUTCMinute(timeinfo.tm_min);
+  model.setUTCSecond(timeinfo.tm_sec);
+  log("Model date: %d /%d/%d %d:%d:%d ", model.day, model.month, model.year,
+      model.hour, model.min, model.sec);
+
+  model.calculateCurrentPosition();
+ 
 }
 
 void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -380,7 +393,7 @@ void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
     updatePosition(model);
   }
 
-  returnSingleDouble(request, ra);
+  returnSingleDouble(request, model.getRACoord());
 }
 
 void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -389,10 +402,11 @@ void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
     lastPositionRequestTime = now;
     updatePosition(model);
   }
-  returnSingleDouble(request, dec);
+  returnSingleDouble(request, model.getDecCoord());
 }
 
-void setupWebServer(TelescopeModel model) {
+void setupWebServer(TelescopeModel &model) {
+  lastPositionRequestTime = 0;
 
   // set up alpaca discovery udp
   if (udp.listen(32227)) {
@@ -411,6 +425,7 @@ void setupWebServer(TelescopeModel model) {
   // set up listening for ip address from eq platform
 
   // Initialize UDP to listen for broadcasts.
+
   if (udp.listen(IPBROADCASTPORT)) {
     udp.onPacket([](AsyncUDPPacket packet) {
       String msg = packet.readString();
@@ -430,232 +445,156 @@ void setupWebServer(TelescopeModel model) {
     });
   }
 
+  // GETS. Mostly default flags.
   alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/alignmentmode.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleInteger(request, 0); });
+      "^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_GET,
+      [&model](AsyncWebServerRequest *request) {
+        String url = request->url();
+        log("Processing GET on url %s", url.c_str());
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/aperturearea.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+        // Strip off the initial portion of the URL
+        String subPath = url.substring(String("/api/v1/telescope/0/").length());
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/aperturediameter.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
+        if (subPath == "alignmentmode")
+          return returnSingleInteger(request, 0);
+        if (subPath == "aperturearea")
+          return returnSingleDouble(request, 0);
+        if (subPath == "aperturediameter")
+          return returnSingleDouble(request, 0);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/athome.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/atpark.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "athome" || subPath == "atpark" ||
+            subPath == "canfindhome" || subPath == "canpark" ||
+            subPath == "canpulseguide" || subPath == "cansetdeclinationrate" ||
+            subPath == "cansetguiderates" || subPath == "cansetpark" ||
+            subPath == "cansetpierside" || subPath == "canmoveaxis" ||
+            subPath == "cansetrightascensionrate" ||
+            subPath == "cansettracking" || subPath == "canslew" ||
+            subPath == "canslewaltaz" || subPath == "canslewasync" ||
+            subPath == "canslewaltazasync" || subPath == "cansyncaltaz" ||
+            subPath == "canunpark" || subPath == "doesrefraction" ||
+            subPath == "sideofpier" || subPath == "slewing" ||
+            subPath == "tracking") {
+          return returnSingleBool(request, false);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canfindhome.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "cansync") {
+          return returnSingleBool(request, true);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canpark.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "declinationrate" || subPath == "focallength" ||
+            subPath == "siderealtime") {
+          return returnSingleDouble(request, 0);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canpulseguide.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "equatorialsystem") {
+          return returnSingleInteger(request, 1);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansetdeclinationrate.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "interfaceversion") {
+          return returnSingleInteger(request, 3);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansetguiderates.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansetpark.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "driverversion" || subPath == "driverinfo" ||
+            subPath == "description" || subPath == "name") {
+          String responseValue = "Frankendob"; // Default
+          if (subPath == "driverversion")
+            responseValue = "1.0";
+          else if (subPath == "driverinfo")
+            responseValue = "Hackypoo";
+          return returnSingleString(request, responseValue);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansetpierside.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "supportedactions") {
+          return returnEmptyArray(request);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canmoveaxis.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "connected") {
+          return returnSingleBool(request, true);
+        }
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansetrightascensionrate.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "utcdate")
+          return returnSingleString(request, "");
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansettracking.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "siteelevation")
+          return returnSingleDouble(request, 0);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canslew.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "sitelatitude")
+          return returnSingleDouble(request, 0);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canslewaltaz.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "sitelongitude")
+          return returnSingleDouble(request, 0);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canslewasync.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "azimuth")
+          return returnSingleDouble(request, 0);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canslewaltazasync.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "altitude")
+          return returnSingleDouble(request, 0);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansync.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, true); });
+        if (subPath == "declination")
+          return getDec(request, model);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/cansyncaltaz.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
+        if (subPath == "rightascension")
+          return getRA(request, model);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/canunpark.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/declinationrate.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/doesrefraction.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-
-  // https://ascom-standards.org/Help/Developer/html/T_ASCOM_DeviceInterface_EquatorialCoordinateType.htm
-  // equTopocentric
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/equatorialsystem.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleInteger(request, 1); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/focallength.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/sideofpier.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/siderealtime.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/slewing.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/tracking.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, false); });
-
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/driverversion.*$",
-                     HTTP_GET, [](AsyncWebServerRequest *request) {
-                       returnSingleString(request, "1.0");
-                     });
-
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/driverinfo.*$", HTTP_GET,
-                     [](AsyncWebServerRequest *request) {
-                       returnSingleString(request, "Hackypoo");
-                     });
-
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/description.*$", HTTP_GET,
-                     [](AsyncWebServerRequest *request) {
-                       returnSingleString(request, "Frankendob");
-                     });
-
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/name.*$", HTTP_GET,
-                     [](AsyncWebServerRequest *request) {
-                       returnSingleString(request, "Frankendob");
-                     });
-
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/interfaceversion.*$",
-                     HTTP_GET, [](AsyncWebServerRequest *request) {
-                       returnSingleInteger(request, 3);
-                     }); //?
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/supportedactions.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnEmptyArray(request); });
-
-  alpacaWebServer.on(
-
-      "^\\/api\\/v1\\/telescope\\/0\\/connected.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleBool(request, true); });
+        return handleNotFound(request);
+      });
 
   // Mangement API ================
+  alpacaWebServer.on(
+      "^\\/management\\/.*$", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String url = request->url().c_str();
+        log("Processing GET on management url %s", url.c_str());
+        // Strip off the initial portion of the URL
+        String subPath = url.substring(String("/management/").length());
 
-  alpacaWebServer.on(
-      "^\\/management\\/apiversions.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnApiVersions(request); });
-  alpacaWebServer.on(
-      "^\\/management\\/v1\\/description.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnDeviceDescription(request); });
+        if (subPath == "apiversions")
+          return returnApiVersions(request);
 
-  alpacaWebServer.on(
-      "^\\/management\\/v1\\/configureddevices.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnConfiguredDevices(request); });
+        if (subPath == "v1/configureddevices")
+          return returnConfiguredDevices(request);
+
+        if (subPath == "v1/description")
+          return returnDeviceDescription(request);
+
+        return handleNotFound(request);
+      });
 
   // ======================================
-  // Gets to be implemented
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/utcdate.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleString(request, ""); });
+  //  PUTS implementation
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/siteelevation.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/sitelatitude.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/sitelongitude.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/azimuth.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/altitude.*$", HTTP_GET,
-      [](AsyncWebServerRequest *request) { returnSingleDouble(request, 0); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/declination.*$", HTTP_GET,
-      [&model](AsyncWebServerRequest *request) { getDec(request, model); });
-
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/rightascension.*$", HTTP_GET,
-      [&model](AsyncWebServerRequest *request) { getRA(request, model); });
-
-  // ======================================
-  // Boilplate ends. PUTS to be implemented here
-  alpacaWebServer.on(
-
-      "^\\/api\\/v1\\/telescope\\/0\\/connected.*$", HTTP_PUT,
-      [](AsyncWebServerRequest *request) { returnNoError(request); });
-
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/synctocoordinates.*$",
-                     HTTP_PUT, [&model](AsyncWebServerRequest *request) {
-                       syncToCoords(request, model);
-                     });
-
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/sitelatitude.*$", HTTP_PUT,
+  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_PUT,
                      [&model](AsyncWebServerRequest *request) {
-                       setSiteLatitude(request, model);
-                     });
+                       String url = request->url();
+                       log("Processing PUT on url %s", url.c_str());
+                       // Strip off the initial portion of the URL
+                       String subPath = url.substring(
+                           String("/api/v1/telescope/0/").length());
 
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/sitelongitude.*$",
-                     HTTP_PUT, [&model](AsyncWebServerRequest *request) {
-                       setSiteLongitude(request, model);
-                     });
+                       if (subPath.startsWith("connected"))
+                         return returnNoError(request);
 
-  alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/utcdate.*$", HTTP_PUT,
-      [&model](AsyncWebServerRequest *request) { setUTCDate(request, model); });
+                       if (subPath.startsWith("synctocoordinates"))
+                          return syncToCoords(request, model);
+                        //  return returnNoError(request);
+
+                       if (subPath.startsWith("sitelatitude"))
+                         //  return returnNoError(request);
+                         return setSiteLatitude(request, model);
+
+                       if (subPath.startsWith("sitelongitude"))
+                         //  return returnNoError(request);
+                         return setSiteLongitude(request, model);
+
+                       if (subPath.startsWith("utcdate"))
+                         // return returnNoError(request);
+                         return setUTCDate(request, model);
+
+                       // Add more routes here as needed
+
+                       // If no match found, return a 404 or appropriate
+                       // response
+                       return handleNotFound(request);
+                     });
 
   // ===============================
 

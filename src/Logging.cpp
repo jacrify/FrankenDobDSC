@@ -22,12 +22,17 @@ void logWrite() {
     logString = "";
   }
 }
+
+
 void log(const char *fmt, ...) {
-  char buf[256];
-  va_list args;
-  va_start(args, fmt);
-  vsnprintf(buf, 256, fmt, args);
-  va_end(args);
-  Serial.println(buf);
-  // WebSerial.println(buf);
-}
+  
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, 256, fmt, args);
+    va_end(args);
+    Serial.println(buf);
+    
+    // WebSerial.println(buf);
+  }
+

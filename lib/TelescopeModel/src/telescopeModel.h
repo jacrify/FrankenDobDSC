@@ -4,7 +4,8 @@
 
 class TelescopeModel {
 public:
-  void setEncoderValues(long encAlt, long encAz);
+  TelescopeModel();
+   void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
   void setAltEncoderStepsPerRevolution(long altResolution);
 
@@ -28,9 +29,9 @@ public:
   void setUTCHour(int hour);
   void setUTCMinute(int min);
   void setUTCSecond(int sec);
+  void calculateCurrentPosition();
 
-private:
-    EquatorialCoordinates calculateCurrentPosition();
+      
   int year;
   int month;
   int day;
@@ -52,6 +53,8 @@ private:
   //known encoder values at same
   long altEncBaseValue;
   long azEncBaseValue;
+  float ra;
+  float dec;
 };
 
 #endif

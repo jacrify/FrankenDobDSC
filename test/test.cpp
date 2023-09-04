@@ -91,22 +91,53 @@ void test_telescope_model(void) {
   model.setEncoderValues(0, 0);
   // arcturus
   model.setPositionRaDec(14.28644, 18.97959);
+  model.calculateCurrentPosition();
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(14.28644, model.getRACoord(), "ra");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, model.getDecCoord(), "dec");
   model.setEncoderValues(0,20);
-
+  model.calculateCurrentPosition();
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(33.39644, model.getDecCoord(), "dec");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(15.30819, model.getRACoord(), "ra");
-
+  
   model.setEncoderValues(45, 20);
+  model.calculateCurrentPosition();
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(-3.011309, model.getDecCoord(), "dec");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(17.176, model.getRACoord(), "ra");
 }
+
+void test_odd_times(void) {
+  TelescopeModel model;
+  model.setLatitude(-34.049120);
+  model.setLongitude(151.042100);
+  // Choose a date and time (UTC)
+  unsigned int day = 3, month = 9, year = 2022, hour = 7, minute = 5,
+               second = 33;
+  model.setUTCYear(2023);
+  model.setUTCMonth(9);
+  model.setUTCDay(2);
+  model.setUTCHour(10);
+  model.setUTCMinute(0);
+  model.setUTCSecond(0);
+
+  model.setAltEncoderStepsPerRevolution(108229);
+  model.setAzEncoderStepsPerRevolution(-30000);
+
+  model.setEncoderValues(0, 0);
+  // arcturus
+  model.setPositionRaDec(0, 0);
+  model.calculateCurrentPosition();
+  
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(0, model.getRACoord(), "ra");
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(0, model.getDecCoord(), "dec");
+
+}
+
 void setup() {
   UNITY_BEGIN(); // IMPORTANT LINE!
   RUN_TEST(test_eq_to_horizontal);
   RUN_TEST(test_horizontal_to_eq);
   RUN_TEST(test_telescope_model);
+  RUN_TEST(test_odd_times);
   UNITY_END(); // IMPORTANT LINE!
 }
 

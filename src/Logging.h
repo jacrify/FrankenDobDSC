@@ -4,5 +4,7 @@
 void log(const char *fmt, ...);
 void loga(char *fmt, ...);
 void logWrite() ;
+
+
 // void log(const std::string& str);
 #endif
