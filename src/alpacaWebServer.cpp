@@ -8,64 +8,24 @@
 #include <WebSocketsClient.h>
 #include <time.h>
 
-unsigned long lastPositionRequestTime;
-#define STALE_POSITION_TIME 300
-
-#define IPBROADCASTPORT 50375         // EQ platform broadcasts its ip on this
-#define EQ_PLATFORM_WEBSOCKET_PORT 80 // eq platform listens on this
-
 unsigned const int localPort = 32227; // The Alpaca Discovery test port
 unsigned const int alpacaPort =
     80; // The  port that the Alpaca API would be available on
 
-IPAddress eqPlatformIP;
-bool wsConnected;
+// used to track ra/dec requests, so we do for one but not both
+unsigned long lastPositionRequestTime;
+#define STALE_POSITION_TIME 200
+
 AsyncUDP udp;
-WebSocketsClient webSocket;
+#define IPBROADCASTPORT 50375
 
 double runtimeFromCenter;
 bool currentlyRunning;
+// used to store last time position was received from EQ
+#define STALE_EQ_WARNING_THRESHOLD 10000 // used to detect packet loss
+unsigned long lastPositionReceivedTime;
 
 AsyncWebServer alpacaWebServer(80);
-
-// handles return response from eq platform. Stores responses.
-void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
-  log("Processing web socket event ");
-  switch (type) {
-  case WStype_DISCONNECTED:
-    log("[WSc] Disconnected!\n");
-    wsConnected = false;
-    return;
-  case WStype_CONNECTED:
-    log("[WSc] Connected to URL: %s\n", payload);
-    wsConnected = true;
-    return;
-  case WStype_TEXT: {
-    log("Got payload from eq plaform");
-    String msg = String((char *)payload);
-
-    // Create a JSON document to hold the payload
-    const size_t capacity =
-        JSON_OBJECT_SIZE(2) + 40; // Reserve some memory for the JSON document
-    StaticJsonDocument<capacity> doc;
-
-    // Deserialize the JSON payload
-    DeserializationError error = deserializeJson(doc, msg);
-    if (error) {
-      log("Failed to parse payload %s", msg.c_str());
-      return;
-    }
-
-    double runtimeFromCenter = doc["timeToCenter"];
-    bool currentlyRunning = doc["isTracking"];
-    log("Distance from center %lf, running %d", runtimeFromCenter,
-        currentlyRunning);
-
-    return;
-  }
-  }
-  log("Unknown websocket event type");
-}
 
 void handleNotFound(AsyncWebServerRequest *request) {
   log("Not found URL is %s", request->url().c_str());
@@ -353,15 +313,22 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
 // Triggered from ra or dec request. Should only run for one of them and then
 // cache for a few millis
 void updatePosition(TelescopeModel &model) {
-  if (wsConnected) {
-    log("EQ connected, requesting data...");
-    webSocket.sendTXT("request_data");
-    // Use a simple delay-based approach to wait for the response.
-    delay(100); // wait for the data (adjust as necessary)
-  } else {
-    log("Calculating position but no eq platform");
+  unsigned long nowmillis = millis();
+  if ((nowmillis - lastPositionReceivedTime) > STALE_EQ_WARNING_THRESHOLD)
+    log("No EQ platform, or packet loss: last packet recieved %d seconds ago",
+        nowmillis - lastPositionReceivedTime);
+
+  // if platform is running, then it has moved on since packet
+  // recieved. The time since the packet received needs to be added to
+  // the timeToCenter.
+  // eg if time to center is 100s, and packet was received a second ago,
+  // time to center should be considered as 99s.
+  double interpolationTimeInSeconds = 0;
+  if (currentlyRunning) {
+    interpolationTimeInSeconds =
+        (nowmillis - lastPositionReceivedTime) * 1000.0;
   }
-  // TODO make this oo
+  // TODO interpolate platform values
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   log("Encoder Values %ld %ld", getEncoderAl(), getEncoderAz());
 
@@ -374,7 +341,8 @@ void updatePosition(TelescopeModel &model) {
   gmtime_r(&now, &timeInfo);
 
   // 2. Adjust the time by runtimeFromCenter
-  now += (int)runtimeFromCenter; // Adjust by whole seconds
+  now += (int)(runtimeFromCenter +
+               interpolationTimeInSeconds); // Adjust by whole seconds
   int fractionalSecs =
       1000000 *
       (runtimeFromCenter -
@@ -453,19 +421,38 @@ void setupWebServer(TelescopeModel &model) {
   if (udp.listen(IPBROADCASTPORT)) {
     log("Listening for eq platform broadcasts");
     udp.onPacket([](AsyncUDPPacket packet) {
+      unsigned long now = millis();
       String msg = packet.readString();
-      log("EQ UDP Broadcast received: %s", msg.c_str());
+      log("UDP Broadcast received: %s", msg.c_str());
 
       // Check if the broadcast is from EQ Platform
-      if (msg.startsWith("EQIP=")) {
-        eqPlatformIP.fromString(msg.substring(5));
-        log("EQ Platform IP is: %s", eqPlatformIP.toString().c_str());
+      if (msg.startsWith("EQ=")) {
+        msg = msg.substring(3);
+        log("Got payload from eq plaform");
 
-        // If WebSocket is not connected, try connecting
-        if (!wsConnected) {
-          log("Trying to connect to web socket on EQ");
-          webSocket.begin(eqPlatformIP, EQ_PLATFORM_WEBSOCKET_PORT, "/ws");
-          webSocket.onEvent(webSocketEvent);
+        // Create a JSON document to hold the payload
+        const size_t capacity = JSON_OBJECT_SIZE(2) +
+                                40; // Reserve some memory for the JSON document
+        StaticJsonDocument<capacity> doc;
+
+        // Deserialize the JSON payload
+        DeserializationError error = deserializeJson(doc, msg);
+        if (error) {
+          log("Failed to parse payload %s", msg.c_str());
+          return;
+        }
+
+        if (doc.containsKey("timeToCenter") && doc.containsKey("isTracking") &&
+            doc["timeToCenter"].is<double>()) {
+          runtimeFromCenter = doc["timeToCenter"];
+          currentlyRunning = doc["isTracking"];
+
+          lastPositionReceivedTime = now;
+          log("Distance from center %lf, running %d", runtimeFromCenter,
+              currentlyRunning);
+        } else {
+          log("Payload missing required fields.");
+          return;
         }
       }
     });
@@ -473,7 +460,7 @@ void setupWebServer(TelescopeModel &model) {
 
   // GETS. Mostly default flags.
   alpacaWebServer.on(
-      "/api/v1/telescope/0/", HTTP_GET,
+      "^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_GET,
       [&model](AsyncWebServerRequest *request) {
         String url = request->url();
         log("Processing GET on url %s", url.c_str());
@@ -567,7 +554,7 @@ void setupWebServer(TelescopeModel &model) {
 
   // Mangement API ================
   alpacaWebServer.on(
-      "/management/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      "^\\/management\\/.*$", HTTP_GET, [](AsyncWebServerRequest *request) {
         String url = request->url().c_str();
         log("Processing GET on management url %s", url.c_str());
         // Strip off the initial portion of the URL
@@ -588,7 +575,7 @@ void setupWebServer(TelescopeModel &model) {
   // ======================================
   //  PUTS implementation
 
-  alpacaWebServer.on("/api/v1/telescope/0/", HTTP_PUT,
+  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_PUT,
                      [&model](AsyncWebServerRequest *request) {
                        String url = request->url();
                        log("Processing PUT on url %s", url.c_str());
@@ -630,7 +617,3 @@ void setupWebServer(TelescopeModel &model) {
   log("Server started");
   return;
 }
-
-void webServerloop() { 
-  webSocket.loop(); 
-  }
