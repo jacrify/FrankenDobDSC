@@ -473,7 +473,7 @@ void setupWebServer(TelescopeModel &model) {
 
   // GETS. Mostly default flags.
   alpacaWebServer.on(
-      "^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_GET,
+      "/api/v1/telescope/0/", HTTP_GET,
       [&model](AsyncWebServerRequest *request) {
         String url = request->url();
         log("Processing GET on url %s", url.c_str());
@@ -567,7 +567,7 @@ void setupWebServer(TelescopeModel &model) {
 
   // Mangement API ================
   alpacaWebServer.on(
-      "^\\/management\\/.*$", HTTP_GET, [](AsyncWebServerRequest *request) {
+      "/management/", HTTP_GET, [](AsyncWebServerRequest *request) {
         String url = request->url().c_str();
         log("Processing GET on management url %s", url.c_str());
         // Strip off the initial portion of the URL
@@ -588,7 +588,7 @@ void setupWebServer(TelescopeModel &model) {
   // ======================================
   //  PUTS implementation
 
-  alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_PUT,
+  alpacaWebServer.on("/api/v1/telescope/0/", HTTP_PUT,
                      [&model](AsyncWebServerRequest *request) {
                        String url = request->url();
                        log("Processing PUT on url %s", url.c_str());
