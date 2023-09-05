@@ -94,11 +94,11 @@ void test_telescope_model(void) {
   model.calculateCurrentPosition();
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(14.28644, model.getRACoord(), "ra");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, model.getDecCoord(), "dec");
-  model.setEncoderValues(0,20);
+  model.setEncoderValues(0, 20);
   model.calculateCurrentPosition();
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(33.39644, model.getDecCoord(), "dec");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(15.30819, model.getRACoord(), "ra");
-  
+
   model.setEncoderValues(45, 20);
   model.calculateCurrentPosition();
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(-3.011309, model.getDecCoord(), "dec");
@@ -126,10 +126,231 @@ void test_odd_times(void) {
   // arcturus
   model.setPositionRaDec(0, 0);
   model.calculateCurrentPosition();
-  
+
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(0, model.getRACoord(), "ra");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(0, model.getDecCoord(), "dec");
+}
 
+void test_az_encoder_calibration(void) {
+  TelescopeModel model;
+  model.setAltEncoderStepsPerRevolution(360);
+  model.setAzEncoderStepsPerRevolution(360);
+
+  model.setLatitude(-34.0493);
+  model.setLongitude(151.0494);
+  model.setUTCYear(2023);
+  model.setUTCMonth(9);
+  model.setUTCDay(2);
+  model.setUTCHour(10);
+  model.setUTCMinute(0);
+  model.setUTCSecond(0);
+
+  model.setEncoderValues(0, 0);
+  model.setPositionRaDec(14.28644, 18.97959);
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  // Generate new Alt/Az values from a known move
+  HorizontalCoordinates newAltAz;
+  newAltAz.alt = model.getAltCoord() + 1.0; // Assuming a 1 degree move in Alt
+  newAltAz.azi = model.getAzCoord() + 1.0;  // And a 1 degree move in Az
+
+  // Convert the new Alt/Az to Equatorial using the hardcoded time values
+  EquatorialCoordinates newEq =
+      Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(newAltAz, 2, 9,
+                                                                2023, 10, 0, 0);
+
+  // Set the new position using the converted RA/DEC and simulate new encoder
+  // values
+  model.setPositionRaDec(newEq.ra, newEq.dec);
+  model.setEncoderValues(
+      0, 100); // Here the azimuth encoder value has increased by 100
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
+
+  float epsilon = 1.0; // or whatever small value you're comfortable with
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, 36000, calculatedSteps,
+                                   "Azimuth Encoder Steps per Revolution");
+}
+
+void test_alt_encoder_calibration(void) {
+  TelescopeModel model;
+  model.setAltEncoderStepsPerRevolution(9999);
+  model.setAzEncoderStepsPerRevolution(9999);
+
+  model.setLatitude(-34.0493);
+  model.setLongitude(151.0494);
+  model.setUTCYear(2023);
+  model.setUTCMonth(9);
+  model.setUTCDay(2);
+  model.setUTCHour(10);
+  model.setUTCMinute(0);
+  model.setUTCSecond(0);
+
+  model.setEncoderValues(0, 0);
+  model.setPositionRaDec(14.28644, 18.97959);
+  // sets alt az
+  model.calculateCurrentPosition();
+
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  // Generate new Alt/Az values from a known move
+  HorizontalCoordinates newAltAz;
+  newAltAz.alt = model.getAltCoord() + 1.0; // Assuming a 1 degree move in Alt
+  newAltAz.azi = model.getAzCoord();        // Keep azimuth same
+
+  // Convert the new Alt/Az to Equatorial using the hardcoded time values
+  EquatorialCoordinates newEq =
+      Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(newAltAz, 2, 9,
+                                                                2023, 10, 0, 0);
+
+  // Set the new position using the converted RA/DEC and simulate new encoder
+  // values
+  model.setPositionRaDec(newEq.ra, newEq.dec);
+
+  model.setEncoderValues(
+      100, 0); // Here the altitude encoder value has increased by 100
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
+  // Use
+  float epsilon = 1.0; // or whatever small value you're comfortable with
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, 36000, calculatedSteps,
+                                   "Altitude Encoder Steps per Revolution");
+}
+
+void test_az_encoder_wraparound(void) {
+  TelescopeModel model;
+  model.setAltEncoderStepsPerRevolution(360);
+  model.setAzEncoderStepsPerRevolution(360);
+
+  model.setLatitude(-34.0493);
+  model.setLongitude(151.0494);
+  model.setUTCYear(2023);
+  model.setUTCMonth(9);
+  model.setUTCDay(2);
+  model.setUTCHour(10);
+  model.setUTCMinute(0);
+  model.setUTCSecond(0);
+
+  model.setEncoderValues(0, 0);
+  model.setPositionRaDec(14.28644, 18.97959);
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  // Generate new Alt/Az values from a known move
+  HorizontalCoordinates newAltAz;
+  newAltAz.alt = model.getAltCoord() + 1.0; // Assuming a 1 degree move in Alt
+  newAltAz.azi = model.getAzCoord() + 170;  // And a 1 degree move in Az
+
+  // Convert the new Alt/Az to Equatorial using the hardcoded time values
+  EquatorialCoordinates newEq =
+      Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(newAltAz, 2, 9,
+                                                                2023, 10, 0, 0);
+
+  // Set the new position using the converted RA/DEC and simulate new encoder
+  // values
+  model.setPositionRaDec(newEq.ra, newEq.dec);
+  model.setEncoderValues(
+      0, 17000); // Here the azimuth encoder value has increased by 100
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
+
+  float epsilon = 1.0; // or whatever small value you're comfortable with
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, 36000, calculatedSteps,
+                                   "Azimuth Encoder Steps per Revolution");
+}
+
+void test_alt_encoder_negative_move(void) {
+  TelescopeModel model;
+  model.setAltEncoderStepsPerRevolution(9999);
+  model.setAzEncoderStepsPerRevolution(9999);
+
+  model.setLatitude(-34.0493);
+  model.setLongitude(151.0494);
+  model.setUTCYear(2023);
+  model.setUTCMonth(9);
+  model.setUTCDay(2);
+  model.setUTCHour(10);
+  model.setUTCMinute(0);
+  model.setUTCSecond(0);
+
+  model.setEncoderValues(100, 0);
+  model.setPositionRaDec(14.28644, 18.97959);
+  // sets alt az
+  model.calculateCurrentPosition();
+
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  // Generate new Alt/Az values from a known move
+  HorizontalCoordinates newAltAz;
+  newAltAz.alt = model.getAltCoord() - 1.0; // Assuming a 1 degree move in Alt
+  newAltAz.azi = model.getAzCoord();        // Keep azimuth same
+
+  // Convert the new Alt/Az to Equatorial using the hardcoded time values
+  EquatorialCoordinates newEq =
+      Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(newAltAz, 2, 9,
+                                                                2023, 10, 0, 0);
+
+  // Set the new position using the converted RA/DEC and simulate new encoder
+  // values
+  model.setPositionRaDec(newEq.ra, newEq.dec);
+
+  model.setEncoderValues(
+      0, 0); // Here the altitude encoder value has decreased by 100
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
+  // Use
+  float epsilon = 1.0; // or whatever small value you're comfortable with
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, 36000, calculatedSteps,
+                                   "Altitude Encoder Steps per Revolution");
+}
+
+void test_large_encoder_values(void) {
+  TelescopeModel model;
+  model.setAltEncoderStepsPerRevolution(9999);
+  model.setAzEncoderStepsPerRevolution(9999);
+
+  model.setLatitude(-34.0493);
+  model.setLongitude(151.0494);
+  model.setUTCYear(2023);
+  model.setUTCMonth(9);
+  model.setUTCDay(2);
+  model.setUTCHour(10);
+  model.setUTCMinute(0);
+  model.setUTCSecond(0);
+
+  model.setEncoderValues(0, 0);
+  model.setPositionRaDec(14.28644, 18.97959);
+  // sets alt az
+  model.calculateCurrentPosition();
+
+  model.saveEncoderCalibrationPoint(); // Save this point
+
+  model.setEncoderValues(INT64_MAX - 1, 0);
+  model.setPositionRaDec(14.28644, 18.97959);
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint();
+
+  // Simulate a 1 unit move.
+  model.setEncoderValues(INT64_MAX, 0);
+  model.setPositionRaDec(15.28644, 18.97959);
+  model.calculateCurrentPosition();
+  model.saveEncoderCalibrationPoint();
+
+  long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
+
+  float epsilon = 1.0;
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
+      epsilon, 360, calculatedSteps,
+      "Azimuth Encoder Steps with large encoder values");
 }
 
 void setup() {
@@ -137,6 +358,13 @@ void setup() {
   RUN_TEST(test_eq_to_horizontal);
   RUN_TEST(test_horizontal_to_eq);
   RUN_TEST(test_telescope_model);
+  RUN_TEST(test_az_encoder_calibration);
+  RUN_TEST(test_alt_encoder_calibration);
+
+  RUN_TEST(test_az_encoder_wraparound);
+  RUN_TEST(test_alt_encoder_negative_move);
+
+  RUN_TEST(test_large_encoder_values);
   RUN_TEST(test_odd_times);
   UNITY_END(); // IMPORTANT LINE!
 }

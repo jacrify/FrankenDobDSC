@@ -5,7 +5,7 @@
 class TelescopeModel {
 public:
   TelescopeModel();
-   void setEncoderValues(long encAlt, long encAz);
+  void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
   void setAltEncoderStepsPerRevolution(long altResolution);
 
@@ -30,11 +30,13 @@ public:
   void setUTCMinute(int min);
   void setUTCSecond(int sec);
   void calculateCurrentPosition();
+  void saveEncoderCalibrationPoint();
+  long calculateAzEncoderStepsPerRevolution();
+  long calculateAltEncoderStepsPerRevolution();
 
-  //Calculate in the future (if positive) or into past (if negative)
+  // Calculate in the future (if positive) or into past (if negative)
   void setDeltaSeconds(double delta);
 
-      
   int year;
   int month;
   int day;
@@ -50,17 +52,33 @@ public:
   long azEncoderStepsPerRevolution;
   long altEncoderStepsPerRevolution;
 
-// known eq position at sync
+  // known eq position at sync
   float raBasePos;
   float decBasePos;
-  //known encoder values at same
+  // known encoder values at same
   long altEncBaseValue;
   long azEncBaseValue;
-  float ra;
-  float dec;
+  float currentRA;
+  float currentDec;
+  float currentAlt;
+  float currentAz;
+
+  // when align is hit, store the values so we can use them to calibrate
+  // encoders.
+  //Values always get stored in AlignValue1, with existing values copied
+  //to alignvalue2 beforehand
+
+  long altEncoderAlignValue1;
+  long altEncoderAlignValue2;
+  long azEncoderAlignValue1;
+  long azEncoderAlignValue2;
+
+  float altAlignValue1;
+  float altAlignValue2;
+  float azAlignValue1;
+  float azAlignValue2;
 
   double deltaSeconds;
-
 };
 
 #endif

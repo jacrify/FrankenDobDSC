@@ -18,16 +18,18 @@ TelescopeModel::TelescopeModel() {
   azEncoderStepsPerRevolution = 0;
   altEncoderStepsPerRevolution = 0;
 
-  deltaSeconds=0;
-  
+  deltaSeconds = 0;
+
   // known eq position at sync
   raBasePos = 0;
   decBasePos = 0;
   // known encoder values at same
   altEncBaseValue = 0;
   azEncBaseValue = 0;
-  ra = 0;
-  dec = 0;
+  currentRA = 0;
+  currentDec = 0;
+  currentAlt = 0;
+  currentAz = 0;
 }
 void TelescopeModel::setEncoderValues(long encAlt, long encAz) {
   altEnc = encAlt;
@@ -54,25 +56,27 @@ void TelescopeModel::setLongitude(float lng) {
 float TelescopeModel::getLatitude() { return latitude; }
 float TelescopeModel::getLongitude() { return longitude; }
 
-float TelescopeModel::getAltCoord() {}
-float TelescopeModel::getAzCoord() {}
+// TODO implement
+float TelescopeModel::getAltCoord() { return currentAlt; }
+float TelescopeModel::getAzCoord() { return currentAz; }
 
-void TelescopeModel::setDeltaSeconds(double delta) {
-  deltaSeconds=delta;
-}
+void TelescopeModel::setDeltaSeconds(double delta) { deltaSeconds = delta; }
 
 void TelescopeModel::calculateCurrentPosition() {
-
-  // start by converting calibrated base eq coords to alt az
+  // When client sets the position, we store the ra/dec of that
+  // position as well as the encoder values.
+  // So we start by converting that base position into known
+  // alt/az coords
   EquatorialCoordinates baseEqCoord;
-  // should be arcturus
+
   baseEqCoord.ra = raBasePos;
   baseEqCoord.dec = decBasePos;
 
   HorizontalCoordinates altAzCoord =
       Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
           baseEqCoord, day, month, year, hour, min, sec);
-  // add endcoder values since then
+  // add encoder values since then: we stored the encoder values
+  // at position set
   float a = 360.0 * ((float)(altEnc - altEncBaseValue)) /
             (float)altEncoderStepsPerRevolution;
   altAzCoord.alt += a;
@@ -81,16 +85,19 @@ void TelescopeModel::calculateCurrentPosition() {
             (float)azEncoderStepsPerRevolution;
   altAzCoord.azi += z;
 
-  // convert back to eq
+  currentAlt = altAzCoord.alt;
+  currentAz = altAzCoord.azi;
+
+  // convert back to eq to get new ra/dec
   EquatorialCoordinates adjustedEqCoord =
       Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
           altAzCoord, day, month, year, hour, min, sec);
-  ra = fmod(adjustedEqCoord.ra, 24.0);
+  currentRA = fmod(adjustedEqCoord.ra, 24.0);
 
-  dec = adjustedEqCoord.dec;
+  currentDec = adjustedEqCoord.dec;
 }
-float TelescopeModel::getDecCoord() { return dec; }
-float TelescopeModel::getRACoord() { return ra; }
+float TelescopeModel::getDecCoord() { return currentDec; }
+float TelescopeModel::getRACoord() { return currentRA; }
 
 void TelescopeModel::setPositionRaDec(float ra, float dec) {
   raBasePos = ra;
@@ -105,3 +112,57 @@ void TelescopeModel::setUTCDay(int d) { day = d; }
 void TelescopeModel::setUTCHour(int h) { hour = h; }
 void TelescopeModel::setUTCMinute(int m) { min = m; }
 void TelescopeModel::setUTCSecond(int s) { sec = s; }
+
+void TelescopeModel::saveEncoderCalibrationPoint() {
+  //use current ra/dec, without encoder values supplied, to get alt/az
+  EquatorialCoordinates baseEqCoord;
+
+  baseEqCoord.ra = raBasePos;
+  baseEqCoord.dec = decBasePos;
+
+  HorizontalCoordinates altAzCoord =
+      Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
+          baseEqCoord, day, month, year, hour, min, sec);
+
+  altEncoderAlignValue2 = altEncoderAlignValue1;
+  azEncoderAlignValue2 = azEncoderAlignValue1;
+  azAlignValue2 = azAlignValue1;
+  altAlignValue2 = altAlignValue1;
+
+  azAlignValue1 = altAzCoord.azi;
+  altAlignValue1 = altAzCoord.alt;
+  altEncoderAlignValue1 = altEnc;
+  azEncoderAlignValue1 = azEnc;
+}
+
+long TelescopeModel::calculateAzEncoderStepsPerRevolution() {
+  long encoderMove = azEncoderAlignValue2 - azEncoderAlignValue1;
+  float coordMove = azAlignValue2 - azAlignValue1;
+
+  // Handle wraparound for azimuth
+  if (coordMove < -180) {
+    coordMove += 360;
+  } else if (coordMove > 180) {
+    coordMove -= 360;
+  }
+
+  float stepsPerDegree = (float)encoderMove / coordMove;
+  return stepsPerDegree * 360.0; // Extrapolating for a full 360° rotation
+}
+long TelescopeModel::calculateAltEncoderStepsPerRevolution() {
+  long encoderMove = altEncoderAlignValue2 - altEncoderAlignValue1;
+  float coordMove = altAlignValue2 - altAlignValue1;
+
+  // Handle potential wraparound for altitude
+  // If your scope can move from slightly below the horizon to slightly past
+  // zenith
+  if (coordMove < -45) {
+    coordMove += 90;
+  } else if (coordMove > 45) {
+    coordMove -= 90;
+  }
+
+  float stepsPerDegree = (float)encoderMove / coordMove;
+  return stepsPerDegree *
+         360.0; // Extrapolating for a hypothetical full 360° rotation
+}

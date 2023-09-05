@@ -255,6 +255,9 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
   }
 
   model.setPositionRaDec(parsedRA, parsedDec);
+  updatePosition(model);
+  model.saveEncoderCalibrationPoint();
+
   returnNoError(request);
 }
 
@@ -310,7 +313,7 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   log("finished utc");
 }
 
-// poll eq platform for it's position. Calculate position.
+// Calculate position.
 // Triggered from ra or dec request. Should only run for one of them and then
 // cache for a few millis
 void updatePosition(TelescopeModel &model) {
@@ -327,7 +330,7 @@ void updatePosition(TelescopeModel &model) {
   // time to center should be considered as 99s.
   double interpolationTimeInSeconds = 0;
   if (currentlyRunning) {
-    log("setting interpolation time");
+    // log("setting interpolation time");
     interpolationTimeInSeconds =
         (nowmillis - lastPositionReceivedTimeMillis) / 1000.0;
   }
@@ -344,9 +347,9 @@ void updatePosition(TelescopeModel &model) {
   time(&now);
   gmtime_r(&now, &timeInfo);
   
-  log("Base time for calc is %ld", now);
-  log("Runtime from center is %lf", runtimeFromCenter);
-  log("Interpolation time %lf", interpolationTimeInSeconds);
+  // log("Base time for calc is %ld", now);
+  // log("Runtime from center is %lf", runtimeFromCenter);
+  // log("Interpolation time %lf", interpolationTimeInSeconds);
   // 2. Adjust the time by runtimeFromCenter
   now += (int)(runtimeFromCenter -
                interpolationTimeInSeconds); // Adjust by whole seconds
@@ -378,8 +381,8 @@ void updatePosition(TelescopeModel &model) {
   model.setUTCMinute(min);
   model.setUTCSecond(sec);
 
-  log("Model date: %d /%d/%d %d:%d:%d ", model.day, model.month, model.year,
-      model.hour, model.min, model.sec);
+  log("Model date for calcs: %02d/%02d/%02d %02d:%02d:%02d ", model.day,
+      model.month, model.year, model.hour, model.min, model.sec);
 
   model.calculateCurrentPosition();
 }
