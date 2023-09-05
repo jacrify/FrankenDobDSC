@@ -1,9 +1,9 @@
 #ifndef MYWEBSERVER_H
 #define MYWEBSERVER_H
-#include <ESPAsyncWebServer.h>
 #include "telescopeModel.h"
+#include <ESPAsyncWebServer.h>
+#include <Preferences.h>
 
-
-void setupWebServer(TelescopeModel &model);
+void setupWebServer(TelescopeModel &model,Preferences &prefs);
 
 #endif

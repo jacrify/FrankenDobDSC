@@ -8,6 +8,8 @@ public:
   void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
   void setAltEncoderStepsPerRevolution(long altResolution);
+  long getAzEncoderStepsPerRevolution();
+  long getAltEncoderStepsPerRevolution();
 
   void setLatitude(float lat);
   void setLongitude(float lng);
@@ -31,6 +33,17 @@ public:
   void setUTCSecond(int sec);
   void calculateCurrentPosition();
   void saveEncoderCalibrationPoint();
+
+  long getAltEncoderAlignValue1() const;
+  long getAltEncoderAlignValue2() const;
+  long getAzEncoderAlignValue1() const;
+  long getAzEncoderAlignValue2() const;
+
+  float getAltAlignValue1() const;
+  float getAltAlignValue2() const;
+  float getAzAlignValue1() const;
+  float getAzAlignValue2() const;
+
   long calculateAzEncoderStepsPerRevolution();
   long calculateAltEncoderStepsPerRevolution();
 

@@ -1,21 +1,27 @@
-#include <Arduino.h>
-#include "Network.h"
-#include "encoders.h"
-#include "alpacaWebServer.h"
-#include "telescopeModel.h"
 #include "Logging.h"
+#include "Network.h"
+#include "alpacaWebServer.h"
+#include "encoders.h"
+#include "telescopeModel.h"
+#include <Arduino.h>
+#include <LittleFS.h>
+#include <Preferences.h>
 
+Preferences prefs;
 TelescopeModel model;
 
 void setup() {
   Serial.begin(115200);
   Serial.println("starting");
+  prefs.begin("DSC", false);
 
-  model.setAltEncoderStepsPerRevolution(-30000);
-  model.setAzEncoderStepsPerRevolution(108229);
+  setupWifi();
+  LittleFS.begin();
+  // model.setAltEncoderStepsPerRevolution(-30000);
+  // model.setAzEncoderStepsPerRevolution(108229);
   setupWifi();
   setupEncoders();
-  setupWebServer(model);
+  setupWebServer(model,prefs);
   delay(3000);
   
 }

@@ -8,6 +8,9 @@
 #include <WebSocketsClient.h>
 #include <time.h>
 
+#define PREF_ALT_STEPS_KEY "AltStepsKey"
+#define PREF_AZ_STEPS_KEY "AzStepsKey"
+
 unsigned const int localPort = 32227; // The Alpaca Discovery test port
 unsigned const int alpacaPort =
     80; // The  port that the Alpaca API would be available on
@@ -62,6 +65,80 @@ void handleNotFound(AsyncWebServerRequest *request) {
   log("Not found Method is %s", method.c_str());
 
   request->send(404, "application/json");
+}
+void saveAltEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
+                         Preferences &prefs) {
+
+  long alt = model.calculateAltEncoderStepsPerRevolution();
+  log("Setting new value for encoder alt steps  to %ld", alt);
+  model.setAltEncoderStepsPerRevolution(alt);
+
+  prefs.putLong(PREF_ALT_STEPS_KEY, alt);
+  request->send(200);
+}
+
+void saveAzEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
+                        Preferences &prefs) {
+
+  long az = model.calculateAzEncoderStepsPerRevolution();
+  log("Setting new value for encoder az steps to %ld", az);
+  model.setAzEncoderStepsPerRevolution(az);
+
+  prefs.putLong(PREF_AZ_STEPS_KEY, az);
+  request->send(200);
+}
+
+
+void loadPreferences(Preferences &prefs, TelescopeModel &model) {
+  model.setAltEncoderStepsPerRevolution(
+      prefs.getLong(PREF_ALT_STEPS_KEY, -30000));
+
+  model.setAzEncoderStepsPerRevolution(
+      prefs.getLong(PREF_AZ_STEPS_KEY, 108229));
+}
+
+// safety
+void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
+                TelescopeModel &model) {
+
+  prefs.clear();
+  loadPreferences(prefs, model);
+  request->send(200);
+}
+void getEncoderData(AsyncWebServerRequest *request, TelescopeModel &model) {
+  // log("/getStatus");
+
+  char buffer[500];
+  sprintf(buffer,
+          R"({
+    "altEncoderAlignValue1" : %ld,
+    "altEncoderAlignValue2": %ld,
+    "azEncoderAlignValue1" : %ld,
+    "azEncoderAlignValue2": %ld,
+    "altAlignValue1": %.2lf,
+    "altAlignValue2": %.2lf,
+    "azAlignValue1": %.2lf,
+    "azAlignValue2": %.2lf,
+    "calculateAltEncoderStepsPerRevolution" : %ld,
+    "calculateAzEncoderStepsPerRevolution" : %ld,
+    "actualAltEncoderStepsPerRevolution" : %ld,
+    "actualAzEncoderStepsPerRevolution" : %ld
+})",
+          model.getAltEncoderAlignValue1(), model.getAltEncoderAlignValue2(),
+          model.getAzEncoderAlignValue1(), model.getAzEncoderAlignValue2(),
+          model.getAltAlignValue1(), model.getAltAlignValue2(),
+          model.getAzAlignValue1(), model.getAzAlignValue2(),
+          model.calculateAltEncoderStepsPerRevolution(),
+          model.calculateAzEncoderStepsPerRevolution(),
+          model.getAltEncoderStepsPerRevolution(),
+          model.getAzEncoderStepsPerRevolution());
+
+  String json = buffer;
+
+  // String json = "{\"timestamp\":" + String(times.get()) + ",\"position\":"
+  // + String(positions.get()) + ",\"velocity\":" + String(velocities.get()) +
+  // "}";
+  request->send(200, "application/json", json);
 }
 
 void returnDeviceDescription(AsyncWebServerRequest *request) {
@@ -167,13 +244,13 @@ void returnSingleInteger(AsyncWebServerRequest *request, int value) {
 }
 
 void returnSingleDouble(AsyncWebServerRequest *request, double d) {
-  log("Single double value url is %s, double is %lf", request->url().c_str(),
-      d);
+  // log("Single double value url is %s, double is %lf", request->url().c_str(),
+  //     d);
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
              "ErrorNumber": %d,
-             "ErrorMessage": "%s",
+             "nrrorMessage": "%s",
              "Value": %lf
       })",
            0, "", d);
@@ -183,7 +260,7 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
 }
 
 void returnSingleBool(AsyncWebServerRequest *request, bool b) {
-  log("Single bool value url is %s, bool is %d", request->url().c_str(), b);
+  // log("Single bool value url is %s, bool is %d", request->url().c_str(), b);
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
@@ -235,32 +312,6 @@ void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   return returnNoError(request);
 }
 
-void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
-  String ra = request->arg("RightAscension");
-  double parsedRA;
-  double parsedDec;
-  // TODO handle exceptions
-  if (ra != NULL) {
-    log("Received parameterName: %s", ra.c_str());
-
-    parsedRA = strtod(ra.c_str(), NULL);
-    log("Parsed ra value: %lf", parsedRA);
-  }
-  String dec = request->arg("Declination");
-  if (dec != NULL) {
-    log("Received parameterName: %s", ra.c_str());
-
-    parsedDec = strtod(dec.c_str(), NULL);
-    log("Parsed dec value: %lf", parsedDec);
-  }
-
-  model.setPositionRaDec(parsedRA, parsedDec);
-  updatePosition(model);
-  model.saveEncoderCalibrationPoint();
-
-  returnNoError(request);
-}
-
 void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   String utc = request->arg("UTCDate");
   if (!utc.isEmpty())
@@ -268,7 +319,8 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
 
   // int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
 
-  // sscanf(utc.c_str(), "%4d-%2d-%2dT%2d:%2d:%2dZ", &year, &month, &day, &hour,
+  // sscanf(utc.c_str(), "%4d-%2d-%2dT%2d:%2d:%2dZ", &year, &month, &day,
+  // &hour,
   //        &minute, &second);
 
   int year = utc.substring(0, 4).toInt();
@@ -321,7 +373,8 @@ void updatePosition(TelescopeModel &model) {
   if ((nowmillis - lastPositionReceivedTimeMillis) > STALE_EQ_WARNING_THRESHOLD)
     log("No EQ platform, or packet loss: last packet recieved %d seconds ago "
         "at %ld",
-        nowmillis - lastPositionReceivedTimeMillis, lastPositionReceivedTimeMillis);
+        nowmillis - lastPositionReceivedTimeMillis,
+        lastPositionReceivedTimeMillis);
 
   // if platform is running, then it has moved on since packet
   // recieved. The time since the packet received needs to be added to
@@ -334,10 +387,10 @@ void updatePosition(TelescopeModel &model) {
     interpolationTimeInSeconds =
         (nowmillis - lastPositionReceivedTimeMillis) / 1000.0;
   }
-  
+
   // TODO interpolate platform values
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  log("Encoder Values %ld %ld", getEncoderAl(), getEncoderAz());
+  // log("Encoder Values %ld %ld", getEncoderAl(), getEncoderAz());
 
   // Using position from eq platform (expressed as a time delta) adjust
   // current time for calculation
@@ -346,7 +399,7 @@ void updatePosition(TelescopeModel &model) {
   time_t now; // in seconds
   time(&now);
   gmtime_r(&now, &timeInfo);
-  
+
   // log("Base time for calc is %ld", now);
   // log("Runtime from center is %lf", runtimeFromCenter);
   // log("Interpolation time %lf", interpolationTimeInSeconds);
@@ -386,7 +439,31 @@ void updatePosition(TelescopeModel &model) {
 
   model.calculateCurrentPosition();
 }
+void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
+  String ra = request->arg("RightAscension");
+  double parsedRA;
+  double parsedDec;
+  // TODO handle exceptions
+  if (ra != NULL) {
+    log("Received parameterName: %s", ra.c_str());
 
+    parsedRA = strtod(ra.c_str(), NULL);
+    log("Parsed ra value: %lf", parsedRA);
+  }
+  String dec = request->arg("Declination");
+  if (dec != NULL) {
+    log("Received parameterName: %s", ra.c_str());
+
+    parsedDec = strtod(dec.c_str(), NULL);
+    log("Parsed dec value: %lf", parsedDec);
+  }
+
+  model.setPositionRaDec(parsedRA, parsedDec);
+  updatePosition(model);
+  model.saveEncoderCalibrationPoint();
+
+  returnNoError(request);
+}
 void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
   unsigned long now = millis();
   if ((now - lastPositionRequestTime) > STALE_POSITION_TIME) {
@@ -406,7 +483,9 @@ void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
   returnSingleDouble(request, model.getDecCoord());
 }
 
-void setupWebServer(TelescopeModel &model) {
+void setupWebServer(TelescopeModel &model, Preferences &prefs) {
+  loadPreferences(prefs,model);
+  
   lastPositionRequestTime = 0;
   lastPositionReceivedTimeMillis = 0;
   currentlyRunning = false;
@@ -418,7 +497,8 @@ void setupWebServer(TelescopeModel &model) {
       log("Received alpaca UDP Discovery packet ");
       if ((packet.length() >= 16) &&
           (strncmp("alpacadiscovery1", (char *)packet.data(), 16) == 0)) {
-        log("Responding to alpaca UDP Discovery packet with my port number %d",
+        log("Responding to alpaca UDP Discovery packet with my port number "
+            "%d",
             alpacaPort);
 
         packet.printf("{\"AlpacaPort\": %d}", alpacaPort);
@@ -461,7 +541,8 @@ void setupWebServer(TelescopeModel &model) {
 
           lastPositionReceivedTimeMillis = now;
           log("Distance from center %lf, running %d, at time %ld",
-              runtimeFromCenter, currentlyRunning, lastPositionReceivedTimeMillis);
+              runtimeFromCenter, currentlyRunning,
+              lastPositionReceivedTimeMillis);
         } else {
           log("Payload missing required fields.");
           return;
@@ -477,7 +558,7 @@ void setupWebServer(TelescopeModel &model) {
       "^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_GET,
       [&model](AsyncWebServerRequest *request) {
         String url = request->url();
-        log("Processing GET on url %s", url.c_str());
+        // log("Processing GET on url %s", url.c_str());
 
         // Strip off the initial portion of the URL
         String subPath = url.substring(String("/api/v1/telescope/0/").length());
@@ -625,8 +706,30 @@ void setupWebServer(TelescopeModel &model) {
 
   // ===============================
 
+  alpacaWebServer.on("/getEncoderData", HTTP_GET,
+                     [&model](AsyncWebServerRequest *request) {
+                       getEncoderData(request, model);
+                     });
+
+  alpacaWebServer.on("/saveAltEncoderSteps", HTTP_POST,
+                     [&model,&prefs](AsyncWebServerRequest *request) {
+                       saveAltEncoderSteps(request, model, prefs);
+                     });
+
+  alpacaWebServer.on("/saveAzEncoderSteps", HTTP_POST,
+                     [&model, &prefs](AsyncWebServerRequest *request) {
+                       saveAzEncoderSteps(request, model,prefs);
+                     });
+
+  alpacaWebServer.on("/clearPrefs", HTTP_GET,
+                     [&model, &prefs](AsyncWebServerRequest *request) {
+                       clearPrefs(request, prefs,model);
+                     });
+  alpacaWebServer.serveStatic("/", LittleFS, "/fs/");
+
   alpacaWebServer.onNotFound(
       [](AsyncWebServerRequest *request) { handleNotFound(request); });
+
   alpacaWebServer.begin();
   log("Server started");
   return;

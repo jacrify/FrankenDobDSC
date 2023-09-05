@@ -114,7 +114,7 @@ void TelescopeModel::setUTCMinute(int m) { min = m; }
 void TelescopeModel::setUTCSecond(int s) { sec = s; }
 
 void TelescopeModel::saveEncoderCalibrationPoint() {
-  //use current ra/dec, without encoder values supplied, to get alt/az
+  // use current ra/dec, without encoder values supplied, to get alt/az
   EquatorialCoordinates baseEqCoord;
 
   baseEqCoord.ra = raBasePos;
@@ -134,6 +134,35 @@ void TelescopeModel::saveEncoderCalibrationPoint() {
   altEncoderAlignValue1 = altEnc;
   azEncoderAlignValue1 = azEnc;
 }
+long TelescopeModel::getAzEncoderStepsPerRevolution() {
+  return azEncoderStepsPerRevolution;
+}
+long TelescopeModel::getAltEncoderStepsPerRevolution() {
+  return altEncoderStepsPerRevolution;
+}
+long TelescopeModel::getAltEncoderAlignValue1() const {
+  return altEncoderAlignValue1;
+}
+
+long TelescopeModel::getAltEncoderAlignValue2() const {
+  return altEncoderAlignValue2;
+}
+
+long TelescopeModel::getAzEncoderAlignValue1() const {
+  return azEncoderAlignValue1;
+}
+
+long TelescopeModel::getAzEncoderAlignValue2() const {
+  return azEncoderAlignValue2;
+}
+
+float TelescopeModel::getAltAlignValue1() const { return altAlignValue1; }
+
+float TelescopeModel::getAltAlignValue2() const { return altAlignValue2; }
+
+float TelescopeModel::getAzAlignValue1() const { return azAlignValue1; }
+
+float TelescopeModel::getAzAlignValue2() const { return azAlignValue2; }
 
 long TelescopeModel::calculateAzEncoderStepsPerRevolution() {
   long encoderMove = azEncoderAlignValue2 - azEncoderAlignValue1;
