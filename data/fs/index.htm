@@ -9,66 +9,82 @@
 
 <body>
 
-<table border=1>
-    <tr>
-        <td><label for="altEncoderAlignValue1">Alt Encoder Align Point 1:</label></td>
-        <td><span id="altEncoderAlignValue1">0</span></td>
-        <td><label for="altEncoderAlignValue2">Alt Encoder Align Point 2:</label></td>
-        <td><span id="altEncoderAlignValue2">0</span></td>
-    </tr>
-    <tr>
-        <td><label for="azEncoderAlignValue1">Az Encoder Align Point 1:</label></td>
-        <td><span id="azEncoderAlignValue1">0</span></td>
-        <td><label for="azEncoderAlignValue2">Az Encoder Align Point 2:</label></td>
-        <td><span id="azEncoderAlignValue2">0</span></td>
-    </tr>
-    <tr>
-        <td><label for="altAlignValue1">Actual Alt at Point 1:</label></td>
-        <td><span id="altAlignValue1">0</span></td>
-        <td><label for="altAlignValue2">Actual Alt at Point 2:</label></td>
-        <td><span id="altAlignValue2">0</span></td>
-    </tr>
-    <tr>
-        <td><label for="azAlignValue1">Actual Az at Point 1:</label></td>
-        <td><span id="azAlignValue1">0</span></td>
-        <td><label for="azAlignValue2">Actual Az at Point 2:</label></td>
-        <td><span id="azAlignValue2">0</span></td>
-    </tr>
-    <tr>
-        <td><label for="calculateAltEncoderStepsPerRevolution">Calculated Alt Step per Revolution</label></td>
-        <td><span id="calculateAltEncoderStepsPerRevolution">0</span></td>
-        <td><label for="calculateAzEncoderStepsPerRevolution">Calculated Az Step per Revolution</label></td>
-        <td><span id="calculateAzEncoderStepsPerRevolution">0</span></td>
-    </tr>
-    <tr>
-        <td><label for="actualAltEncoderStepsPerRevolution">Actual Alt Step per Revolution</label></td>
-        <td><span id="actualAltEncoderStepsPerRevolution">0</span></td>
-        <td><label for="actualAzEncoderStepsPerRevolution">Actual Az Step per Revolution</label></td>
-        <td><span id="actualAzEncoderStepsPerRevolution">0</span></td>
-    </tr>
-    <tr>
-        <td>
+    <table border=1>
+        <tr>
+            <td><label for="altEncoderAlignValue1">Alt Encoder Align Point 1:</label></td>
+            <td><span id="altEncoderAlignValue1">0</span></td>
+            <td><label for="altEncoderAlignValue2">Alt Encoder Align Point 2:</label></td>
+            <td><span id="altEncoderAlignValue2">0</span></td>
+        </tr>
+        <tr>
+            <td><label for="azEncoderAlignValue1">Az Encoder Align Point 1:</label></td>
+            <td><span id="azEncoderAlignValue1">0</span></td>
+            <td><label for="azEncoderAlignValue2">Az Encoder Align Point 2:</label></td>
+            <td><span id="azEncoderAlignValue2">0</span></td>
+        </tr>
+        <tr>
+            <td><label for="altAlignValue1">Actual Alt at Point 1:</label></td>
+            <td><span id="altAlignValue1">0</span></td>
+            <td><label for="altAlignValue2">Actual Alt at Point 2:</label></td>
+            <td><span id="altAlignValue2">0</span></td>
+        </tr>
+        <tr>
+            <td><label for="azAlignValue1">Actual Az at Point 1:</label></td>
+            <td><span id="azAlignValue1">0</span></td>
+            <td><label for="azAlignValue2">Actual Az at Point 2:</label></td>
+            <td><span id="azAlignValue2">0</span></td>
+        </tr>
+        <tr>
+            <td><label for="calculateAltEncoderStepsPerRevolution">Calculated Alt Step per Revolution</label></td>
+            <td><span id="calculateAltEncoderStepsPerRevolution">0</span></td>
+            <td><label for="calculateAzEncoderStepsPerRevolution">Calculated Az Step per Revolution</label></td>
+            <td><span id="calculateAzEncoderStepsPerRevolution">0</span></td>
+        </tr>
+        <tr>
+            <td><label for="actualAltEncoderStepsPerRevolution">Actual Alt Step per Revolution</label></td>
+            <td><span id="actualAltEncoderStepsPerRevolution">0</span></td>
+            <td><label for="actualAzEncoderStepsPerRevolution">Actual Az Step per Revolution</label></td>
+            <td><span id="actualAzEncoderStepsPerRevolution">0</span></td>
+        </tr>
+        <tr>
+            <td>
 
-        </td>
-        <td>
-            <button id="saveAltEncoderSteps">Save Alt Encoder Steps</button>
-        </td>
-        <td>
-        
-        </td>
-        <td>
-            <button id="saveAzEncoderSteps">Save Az Encoder Steps</button>
-        </td>
-    </tr>
-</table>
-<a href="/clearPrefs"> Clear saved preferences</a>
+            </td>
+            <td>
+                <button id="saveAltEncoderSteps">Save Alt Encoder Steps</button>
+            </td>
+            <td>
+
+            </td>
+            <td>
+                <button id="saveAzEncoderSteps">Save Az Encoder Steps</button>
+            </td>
+        </tr>
+    </table>
+
+    <table border="1">
+        <tr>
+
+            <td id="platformConnected">EQ Platform Connected</td>
+            <td id="platformTracking">EQ Platform Tracking</td>
+        </tr>
+        <tr>
+            <td>Time in minutes to middle</td>
+            <td><span id="timeToMiddle">0</span></td>
+        </tr>
+        <tr>
+            <td>Time in minutes to end of run</td>
+            <td><span id="timeToEnd">0</span></td>
+        </tr>
+    </table>
+    <a href="/clearPrefs"> Clear saved preferences</a>
 
     <script>
 
         function update() {
             console.log("Update ");
 
-            $.getJSON("/getEncoderData").done(function (data) {
+            $.getJSON("/getScopeStatus").done(function (data) {
                 $("#altEncoderAlignValue1").text(data.altEncoderAlignValue1);
                 $("#altEncoderAlignValue2").text(data.altEncoderAlignValue2);
                 $("#azEncoderAlignValue1").text(data.azEncoderAlignValue1);
@@ -81,11 +97,15 @@
                 $("#calculateAzEncoderStepsPerRevolution").text(data.calculateAzEncoderStepsPerRevolution);
                 $("#actualAltEncoderStepsPerRevolution").text(data.actualAltEncoderStepsPerRevolution);
                 $("#actualAzEncoderStepsPerRevolution").text(data.actualAzEncoderStepsPerRevolution);
+                $("#timeToMiddle").text(data.timeToMiddle);
+                $("#timeToEnd").text(data.timeToEnd);
+                 $("#platformConnected").css("background-color", data.platformConnected ? "green" : "red");
+                $("#platformTracking").css("background-color", data.platformTracking ? "green" : "red");
             }).fail(function () {
                 console.error("Failed to get data.");
             });
 
-         
+
         };
 
         $("#saveAltEncoderSteps").click(function () {

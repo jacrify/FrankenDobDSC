@@ -16,7 +16,7 @@ unsigned const int alpacaPort =
     80; // The  port that the Alpaca API would be available on
 
 // used to track ra/dec requests, so we do for one but not both
-unsigned long lastPositionRequestTime;
+unsigned long lastPositionCalculatedTime;
 #define STALE_POSITION_TIME 200
 
 AsyncUDP alpacaUdp;
@@ -24,7 +24,9 @@ AsyncUDP eqUdp;
 #define IPBROADCASTPORT 50375
 
 double runtimeFromCenter;
+double timeToEnd;
 bool currentlyRunning;
+bool platformConnected;
 // used to store last time position was received from EQ
 #define STALE_EQ_WARNING_THRESHOLD 10000 // used to detect packet loss
 unsigned long lastPositionReceivedTimeMillis;
@@ -88,7 +90,6 @@ void saveAzEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
   request->send(200);
 }
 
-
 void loadPreferences(Preferences &prefs, TelescopeModel &model) {
   model.setAltEncoderStepsPerRevolution(
       prefs.getLong(PREF_ALT_STEPS_KEY, -30000));
@@ -105,10 +106,17 @@ void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
   loadPreferences(prefs, model);
   request->send(200);
 }
-void getEncoderData(AsyncWebServerRequest *request, TelescopeModel &model) {
+void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
   // log("/getStatus");
-
-  char buffer[500];
+  unsigned long nowmillis = millis();
+  if ((nowmillis - lastPositionReceivedTimeMillis) >
+      STALE_EQ_WARNING_THRESHOLD) {
+    
+    platformConnected = false;
+  } else {
+    platformConnected = true;
+  }
+  char buffer[900];
   sprintf(buffer,
           R"({
     "altEncoderAlignValue1" : %ld,
@@ -122,7 +130,11 @@ void getEncoderData(AsyncWebServerRequest *request, TelescopeModel &model) {
     "calculateAltEncoderStepsPerRevolution" : %ld,
     "calculateAzEncoderStepsPerRevolution" : %ld,
     "actualAltEncoderStepsPerRevolution" : %ld,
-    "actualAzEncoderStepsPerRevolution" : %ld
+    "actualAzEncoderStepsPerRevolution" : %ld,
+    "platformTracking" : %s,
+    "timeToMiddle" : %.1lf,
+    "timeToEnd" : %.1lf,
+    "platformConnected" : %s
 })",
           model.getAltEncoderAlignValue1(), model.getAltEncoderAlignValue2(),
           model.getAzEncoderAlignValue1(), model.getAzEncoderAlignValue2(),
@@ -131,7 +143,9 @@ void getEncoderData(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.calculateAltEncoderStepsPerRevolution(),
           model.calculateAzEncoderStepsPerRevolution(),
           model.getAltEncoderStepsPerRevolution(),
-          model.getAzEncoderStepsPerRevolution());
+          model.getAzEncoderStepsPerRevolution(),
+          currentlyRunning ? "true" : "false", runtimeFromCenter/60, timeToEnd/60,
+          platformConnected ? "true" : "false");
 
   String json = buffer;
 
@@ -370,12 +384,16 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
 // cache for a few millis
 void updatePosition(TelescopeModel &model) {
   unsigned long nowmillis = millis();
-  if ((nowmillis - lastPositionReceivedTimeMillis) > STALE_EQ_WARNING_THRESHOLD)
+  if ((nowmillis - lastPositionReceivedTimeMillis) >
+      STALE_EQ_WARNING_THRESHOLD) {
     log("No EQ platform, or packet loss: last packet recieved %d seconds ago "
         "at %ld",
         nowmillis - lastPositionReceivedTimeMillis,
         lastPositionReceivedTimeMillis);
-
+    platformConnected = false;
+  } else {
+    platformConnected = true;
+  }
   // if platform is running, then it has moved on since packet
   // recieved. The time since the packet received needs to be added to
   // the timeToCenter.
@@ -466,8 +484,8 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
 }
 void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
   unsigned long now = millis();
-  if ((now - lastPositionRequestTime) > STALE_POSITION_TIME) {
-    lastPositionRequestTime = now;
+  if ((now - lastPositionCalculatedTime) > STALE_POSITION_TIME) {
+    lastPositionCalculatedTime = now;
     updatePosition(model);
   }
 
@@ -476,19 +494,20 @@ void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
 
 void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
   unsigned long now = millis();
-  if ((now - lastPositionRequestTime) > STALE_POSITION_TIME) {
-    lastPositionRequestTime = now;
+  if ((now - lastPositionCalculatedTime) > STALE_POSITION_TIME) {
+    lastPositionCalculatedTime = now;
     updatePosition(model);
   }
   returnSingleDouble(request, model.getDecCoord());
 }
 
 void setupWebServer(TelescopeModel &model, Preferences &prefs) {
-  loadPreferences(prefs,model);
-  
-  lastPositionRequestTime = 0;
+  loadPreferences(prefs, model);
+
+  lastPositionCalculatedTime = 0;
   lastPositionReceivedTimeMillis = 0;
   currentlyRunning = false;
+  platformConnected = false;
 
   // set up alpaca discovery udp
   if (alpacaUdp.listen(32227)) {
@@ -523,22 +542,24 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
         log("Got payload from eq plaform");
 
         // Create a JSON document to hold the payload
-        const size_t capacity = JSON_OBJECT_SIZE(2) +
+        const size_t capacity = JSON_OBJECT_SIZE(5) +
                                 40; // Reserve some memory for the JSON document
         StaticJsonDocument<capacity> doc;
 
         // Deserialize the JSON payload
         DeserializationError error = deserializeJson(doc, msg);
         if (error) {
-          log("Failed to parse payload %s", msg.c_str());
+          log("Failed to parse payload %s with error %s", msg.c_str(),
+              error.c_str());
           return;
         }
 
-        if (doc.containsKey("timeToCenter") && doc.containsKey("isTracking") &&
-            doc["timeToCenter"].is<double>()) {
+        if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
+            doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
+            doc["timeToEnd"].is<double>()) {
           runtimeFromCenter = doc["timeToCenter"];
+          timeToEnd = doc["timeToEnd"];
           currentlyRunning = doc["isTracking"];
-
           lastPositionReceivedTimeMillis = now;
           log("Distance from center %lf, running %d, at time %ld",
               runtimeFromCenter, currentlyRunning,
@@ -580,9 +601,11 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
             subPath == "canslewaltaz" || subPath == "canslewasync" ||
             subPath == "canslewaltazasync" || subPath == "cansyncaltaz" ||
             subPath == "canunpark" || subPath == "doesrefraction" ||
-            subPath == "sideofpier" || subPath == "slewing" ||
-            subPath == "tracking") {
+            subPath == "sideofpier" || subPath == "slewing") {
           return returnSingleBool(request, false);
+        }
+        if (subPath == "tracking") {
+          return returnSingleBool(request, currentlyRunning);
         }
 
         if (subPath == "cansync") {
@@ -706,24 +729,24 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
   // ===============================
 
-  alpacaWebServer.on("/getEncoderData", HTTP_GET,
+  alpacaWebServer.on("/getScopeStatus", HTTP_GET,
                      [&model](AsyncWebServerRequest *request) {
-                       getEncoderData(request, model);
+                       getScopeStatus(request, model);
                      });
 
   alpacaWebServer.on("/saveAltEncoderSteps", HTTP_POST,
-                     [&model,&prefs](AsyncWebServerRequest *request) {
+                     [&model, &prefs](AsyncWebServerRequest *request) {
                        saveAltEncoderSteps(request, model, prefs);
                      });
 
   alpacaWebServer.on("/saveAzEncoderSteps", HTTP_POST,
                      [&model, &prefs](AsyncWebServerRequest *request) {
-                       saveAzEncoderSteps(request, model,prefs);
+                       saveAzEncoderSteps(request, model, prefs);
                      });
 
   alpacaWebServer.on("/clearPrefs", HTTP_GET,
                      [&model, &prefs](AsyncWebServerRequest *request) {
-                       clearPrefs(request, prefs,model);
+                       clearPrefs(request, prefs, model);
                      });
   alpacaWebServer.serveStatic("/", LittleFS, "/fs/");
 
