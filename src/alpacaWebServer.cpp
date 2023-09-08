@@ -111,7 +111,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
   unsigned long nowmillis = millis();
   if ((nowmillis - lastPositionReceivedTimeMillis) >
       STALE_EQ_WARNING_THRESHOLD) {
-    
+
     platformConnected = false;
   } else {
     platformConnected = true;
@@ -144,8 +144,8 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.calculateAzEncoderStepsPerRevolution(),
           model.getAltEncoderStepsPerRevolution(),
           model.getAzEncoderStepsPerRevolution(),
-          currentlyRunning ? "true" : "false", runtimeFromCenter/60, timeToEnd/60,
-          platformConnected ? "true" : "false");
+          currentlyRunning ? "true" : "false", runtimeFromCenter / 60,
+          timeToEnd / 60, platformConnected ? "true" : "false");
 
   String json = buffer;
 
@@ -593,8 +593,8 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
         if (subPath == "athome" || subPath == "atpark" ||
             subPath == "canfindhome" || subPath == "canpark" ||
-            subPath == "canpulseguide" || subPath == "cansetdeclinationrate" ||
-            subPath == "cansetguiderates" || subPath == "cansetpark" ||
+            subPath == "cansetdeclinationrate" ||
+            subPath == "cansetpark" ||
             subPath == "cansetpierside" || subPath == "canmoveaxis" ||
             subPath == "cansetrightascensionrate" ||
             subPath == "cansettracking" || subPath == "canslew" ||
@@ -604,6 +604,18 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
             subPath == "sideofpier" || subPath == "slewing") {
           return returnSingleBool(request, false);
         }
+
+        //TODO implement
+        if (subPath == "canpulseguide") {
+          return returnSingleBool(request, false);
+        }
+        if (subPath == "cansetguiderates") {
+          return returnSingleBool(request, false);
+        }
+        if (subPath == "ispulseguiding") {
+          return returnSingleBool(request, false);
+        }
+
         if (subPath == "tracking") {
           return returnSingleBool(request, currentlyRunning);
         }
@@ -612,8 +624,13 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           return returnSingleBool(request, true);
         }
 
-        if (subPath == "declinationrate" || subPath == "focallength" ||
-            subPath == "siderealtime") {
+        if (subPath == "declinationrate"  ||
+            subPath == "focallength" || subPath == "siderealtime") {
+          return returnSingleDouble(request, 0);
+        }
+
+        //TODO add sidereal rate when tracking
+        if ( subPath == "rightascensionrate" ) {
           return returnSingleDouble(request, 0);
         }
 
