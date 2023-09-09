@@ -24,7 +24,7 @@ public:
   float getRACoord();
 
   void setPositionRaDec(float ra, float dec);
-
+//test
   void setUTCYear(int year);
   void setUTCMonth(int month);
   void setUTCDay(int day);
