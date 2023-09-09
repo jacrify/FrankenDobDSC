@@ -63,7 +63,7 @@ float TelescopeModel::getAzCoord() { return currentAz; }
 void TelescopeModel::setDeltaSeconds(double delta) { deltaSeconds = delta; }
 
 void TelescopeModel::calculateCurrentPosition() {
-  // When client sets the position, we store the ra/dec of that
+  // When client syncs the position, we store the ra/dec of that
   // position as well as the encoder values.
   // So we start by converting that base position into known
   // alt/az coords
