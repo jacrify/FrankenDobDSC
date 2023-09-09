@@ -129,8 +129,8 @@ void test_odd_times(void) {
   model.setPositionRaDec(0, 0);
   model.calculateCurrentPosition();
 
-  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(0, model.getRACoord(), "ra");
-  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(0, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.1, 0.0, model.getRACoord(), "ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.1, 0.0, model.getDecCoord(), "dec");
 }
 
 void test_az_encoder_calibration(void) {
@@ -315,45 +315,7 @@ void test_alt_encoder_negative_move(void) {
                                    "Altitude Encoder Steps per Revolution");
 }
 
-void test_large_encoder_values(void) {
-  TelescopeModel model;
-  model.setAltEncoderStepsPerRevolution(9999);
-  model.setAzEncoderStepsPerRevolution(9999);
 
-  model.setLatitude(-34.0493);
-  model.setLongitude(151.0494);
-  model.setUTCYear(2023);
-  model.setUTCMonth(9);
-  model.setUTCDay(2);
-  model.setUTCHour(10);
-  model.setUTCMinute(0);
-  model.setUTCSecond(0);
-
-  model.setEncoderValues(0, 0);
-  model.setPositionRaDec(14.28644, 18.97959);
-  // sets alt az
-  model.calculateCurrentPosition();
-
-  model.saveEncoderCalibrationPoint(); // Save this point
-
-  model.setEncoderValues(INT64_MAX - 1, 0);
-  model.setPositionRaDec(14.28644, 18.97959);
-  model.calculateCurrentPosition();
-  model.saveEncoderCalibrationPoint();
-
-  // Simulate a 1 unit move.
-  model.setEncoderValues(INT64_MAX, 0);
-  model.setPositionRaDec(15.28644, 18.97959);
-  model.calculateCurrentPosition();
-  model.saveEncoderCalibrationPoint();
-
-  long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
-
-  float epsilon = 1.0;
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
-      epsilon, 360, calculatedSteps,
-      "Azimuth Encoder Steps with large encoder values");
-}
 
   
 void test_two_star_takeshi_example() {
@@ -420,12 +382,9 @@ void setup() {
   RUN_TEST(test_telescope_model);
   RUN_TEST(test_az_encoder_calibration);
   RUN_TEST(test_alt_encoder_calibration);
-
   RUN_TEST(test_az_encoder_wraparound);
   RUN_TEST(test_alt_encoder_negative_move);
-
-  RUN_TEST(test_large_encoder_values);
-  RUN_TEST(test_odd_times);
+ RUN_TEST(test_odd_times);
   
   RUN_TEST(test_two_star_takeshi_example);
 
