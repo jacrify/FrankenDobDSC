@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <unity.h> // Include the Unity test framework.
 
+#include "CoordConv.hpp"
+
 void test_eq_to_horizontal(void) {
 
   // Set location on earth for horizontal coordinates transformations
@@ -353,6 +355,64 @@ void test_large_encoder_values(void) {
       "Azimuth Encoder Steps with large encoder values");
 }
 
+  
+void test_two_star_takeshi_example() {
+
+// http: // takitoshimi.starfree.jp/matrix/matrix_method_rev_e.pdf
+  CoordConv alignment;
+
+  double star1AltAxis = 83.87;
+  double star1AzmAxis = 99.25; // anticlockwise)
+  
+  double star1RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(0, 7, 54);
+  double star1RADegrees = 360 * star1RAHours/24.0 ;
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1.97498552, star1RADegrees, "star1ra");
+  double star1Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 27, 56);
+  double star1Dec = 29.038;
+  alignment.addReferenceDeg(star1RADegrees, star1Dec, star1AzmAxis,
+                            star1AltAxis);
+
+  double star2AltAxis = 35.04;
+  double star2AzmAxis = 310.98; // anticlockwise)
+  double star2RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(
+      2, 21 , 45 );
+
+  double star2Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 37, 02);
+  // time travel
+  star2RAHours = star2RAHours - (star2Time - star1Time);
+
+  double star2RADegress=360*star2RAHours/24.0;
+
+  
+  double star2Dec = 89.222;
+  alignment.addReferenceDeg(star2RADegress, star2Dec, star2AzmAxis,
+                            star2AltAxis);
+
+  alignment.calculateThirdReference();
+
+  double star3RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(
+      0, 43  , 07); 
+  double star3Dec = -18.038;
+
+  double star3Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 52, 12);
+  // time travel
+  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
+  star3RAHours = star3RAHours - (star3Time - star1Time);
+
+  star3RAHours = 360 * star3RAHours / 24.0;
+  // star3RA = fmod(star3RA, 360);
+  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
+
+  double outaxis1;
+  double outaxis2;
+  alignment.toInstrumentDeg(outaxis1, outaxis2, star3RAHours, star3Dec);
+
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, outaxis2, "alt");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 130.21, outaxis1, "az");
+  // 3.7002 degree error
+  // 14.8 minutes or 888 seconds 14 m 48 seconds
+}
+
 void setup() {
   UNITY_BEGIN(); // IMPORTANT LINE!
   RUN_TEST(test_eq_to_horizontal);
@@ -366,6 +426,9 @@ void setup() {
 
   RUN_TEST(test_large_encoder_values);
   RUN_TEST(test_odd_times);
+  
+  RUN_TEST(test_two_star_takeshi_example);
+
   UNITY_END(); // IMPORTANT LINE!
 }
 
