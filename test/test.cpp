@@ -164,7 +164,7 @@ void test_telescope_model(void) {
   model.setPositionRaDec(star2RADegress, star2Dec, 546000);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
-  model.calculateThirdReference(); // prob not needed
+  // model.calculateThirdReference(); // prob not needed
 
   // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
   // This calculated telescope coordinates is very close to the measured

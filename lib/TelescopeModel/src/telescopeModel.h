@@ -64,7 +64,7 @@ public:
   long getAzEncoderStepsPerRevolution();
   long getAltEncoderStepsPerRevolution();
 
-  void calculateThirdReference();
+
 
   void calculateAltAzFromEncoders(float &alt, float &az, long altEncVal,
                                   long azEncVal);
@@ -163,9 +163,9 @@ public:
   double lastSyncedDec;
   double lastSyncedAltEncoder;
   double lastSyncedAzEncoder;
-  unsigned long lastSyncedTime; // timestamp in milliseconds  of last sync
-  unsigned long firstSyncTime;  // used for storing the time of the first sync
-                                // point. t=0 for all future calcs
+  unsigned long secondSyncTime; // timestamp in milliseconds  of second sync
+  unsigned long firstSyncTime;  // timestamp in milliseconds  of first sync
+  unsigned long alignmentModelSyncTime; //t=0 for post alignment. Based on time of first sync
 
   CoordConv alignment;
   double millisecondsToRADeltaInDegrees(unsigned long millisecondsDelta);
