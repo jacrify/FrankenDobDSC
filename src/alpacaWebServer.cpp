@@ -444,7 +444,7 @@ void updatePosition(TelescopeModel &model) {
   int min = timeInfo.tm_min;
   int sec = timeInfo.tm_sec;
 
-  // 4. Set the time in your class
+  // 4. Set the time in the model
   model.setUTCYear(year);
   model.setUTCMonth(month);
   model.setUTCDay(day);
@@ -475,8 +475,8 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
     parsedDec = strtod(dec.c_str(), NULL);
     log("Parsed dec value: %lf", parsedDec);
   }
-
-  model.setPositionRaDec(parsedRA, parsedDec);
+  //TODO fix time
+  model.setPositionRaDec(parsedRA, parsedDec,0);
   updatePosition(model);
   model.saveEncoderCalibrationPoint();
 

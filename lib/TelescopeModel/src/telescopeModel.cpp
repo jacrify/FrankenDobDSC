@@ -1,7 +1,21 @@
 #include "telescopeModel.h"
 #include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <stdexcept>
+#include <stdio.h>
+#include <string>
+#include <unity.h>
 
 TelescopeModel::TelescopeModel() {
+  // Default alignment for alt az in south
+  // alignment.addReference(0, 0, M_PI, 0);//radians
+  alignment.addReferenceDeg(0, 0, 180, 0); // degrees
+
+  // alignment.addReference(0, M_PI_2, M_PI, M_PI_2);//radians
+  alignment.addReferenceDeg(0, 90, 180, 90); // degreess
+  alignment.calculateThirdReference();
+  alignment.reset();
 
   year = 0;
   month = 0;
@@ -18,7 +32,7 @@ TelescopeModel::TelescopeModel() {
   azEncoderStepsPerRevolution = 0;
   altEncoderStepsPerRevolution = 0;
 
-  deltaSeconds = 0;
+  raOffset = 0;
 
   // known eq position at sync
   raBasePos = 0;
@@ -30,6 +44,10 @@ TelescopeModel::TelescopeModel() {
   currentDec = 0;
   currentAlt = 0;
   currentAz = 0;
+}
+
+void TelescopeModel::calculateThirdReference() {
+  alignment.calculateThirdReference();
 }
 void TelescopeModel::setEncoderValues(long encAlt, long encAz) {
   altEnc = encAlt;
@@ -53,7 +71,30 @@ float TelescopeModel::getLongitude() { return longitude; }
 float TelescopeModel::getAltCoord() { return currentAlt; }
 float TelescopeModel::getAzCoord() { return currentAz; }
 
-void TelescopeModel::setDeltaSeconds(double delta) { deltaSeconds = delta; }
+void TelescopeModel::setRaOffset(double delta) { raOffset = delta; }
+
+void TelescopeModel::calculateAltAzFromEncoders(float &alt, float &az,
+                                                long altEncVal, long azEncVal) {
+  alt = 360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
+
+  // float a = 360.0 * ((float)(altEnc - altEncBaseValue)) /
+  //           (float)altEncoderStepsPerRevolution;
+  az = 360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
+  // float z = 360.0 * ((float)(azEnc - azEncBaseValue)) /
+  //           (float)azEncoderStepsPerRevolution;
+
+  // currentAlt = altBaseValue + a;
+  // currentAz = azBaseValue + z;
+
+  // handle situation where scope goes "over the top"
+  // if (currentAlt > 90) {
+  //   currentAlt = 180 - currentAlt;
+  //   currentAz += 180;
+  //   if (currentAz > 360) {
+  //     currentAz -= 360;
+  //   }
+  // }
+}
 
 /**
  * @brief Calculates the current position of the telescope based on encoder
@@ -73,69 +114,103 @@ void TelescopeModel::setDeltaSeconds(double delta) { deltaSeconds = delta; }
  * @return void
  */
 void TelescopeModel::calculateCurrentPosition() {
+
   // When client syncs the position, we store the ra/dec of that
   // position as well as the encoder values.
   // So we start by converting that base position into known
   // alt/az coords
+  double ra;
+  double dec;
+  float altEncoderDegrees;
+  float azEncoderDegrees;
+  //convert encoder values to degrees
+  calculateAltAzFromEncoders(altEncoderDegrees,azEncoderDegrees,altEnc,azEnc);
+  double ccAz = 360.0 - azEncoderDegrees;
+  double talt = (double)altEncoderDegrees;
 
-  Ephemeris::setLocationOnEarth(latitude, longitude);
-  EquatorialCoordinates baseEqCoord;
+  std::cout << "calculateposition : ccaz:" << ccAz << " talt: " << talt
+            << "\n\r";
 
-  baseEqCoord.ra = raBasePos;
-  baseEqCoord.dec = decBasePos;
+  // first two get updated
 
-  HorizontalCoordinates altAzCoord =
-      Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
-          baseEqCoord, day, month, year, hour, min, sec);
-  // add encoder values since then: we stored the encoder values
-  // at position set
-  float a = 360.0 * ((float)(altEnc - altEncBaseValue)) /
-            (float)altEncoderStepsPerRevolution;
-  altAzCoord.alt += a;
+  alignment.toReferenceDeg(ra, dec, ccAz, talt);
 
-  float z = 360.0 * ((float)(azEnc - azEncBaseValue)) /
-            (float)azEncoderStepsPerRevolution;
-  altAzCoord.azi += z;
-
-  currentAlt = altAzCoord.alt;
-  currentAz = altAzCoord.azi;
-
-  // handle situation where scope goes "over the top"
-  if (currentAlt > 90) {
-    currentAlt = 180 - currentAlt;
-    currentAz += 180;
-    if (currentAz > 360) {
-      currentAz -= 360;
-    }
-  }
-  // convert back to eq to get new ra/dec
-  EquatorialCoordinates adjustedEqCoord =
-      Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
-          altAzCoord, day, month, year, hour, min, sec);
-  if (adjustedEqCoord.ra >= (24.0-1e-5)) {
-    currentRA = adjustedEqCoord.ra - 24.0;
-    if (currentRA < 0) {
-      currentRA = 0.0;
-    }
-  } else {
-    currentRA = adjustedEqCoord.ra;
-  }
-
-  // currentRA = fmod(adjustedEqCoord.ra, 24.0);
-  // if (fabs(currentRA - 24.0) < 1e-6) {
-  //   currentRA = 0.0;
-  // }
-
-  currentDec = adjustedEqCoord.dec;
+  currentRA = ra;
+  currentDec = dec;
+  std::cout << "calculateposition : currentRa:" << currentRA
+            << " currentDec: " << currentDec << "\n\r";
 }
 float TelescopeModel::getDecCoord() { return currentDec; }
 float TelescopeModel::getRACoord() { return currentRA; }
 
-void TelescopeModel::setPositionRaDec(float ra, float dec) {
-  raBasePos = ra;
-  decBasePos = dec;
+void TelescopeModel::addReferencePoint() {
+  // when last sync happened, we saved encoded values and ra/dec.
+  float lastSyncAltDegrees;
+  float lastSyncAzDegrees;
+  //convert those saved encoded values to degrees
+  calculateAltAzFromEncoders(lastSyncAltDegrees, lastSyncAzDegrees,
+                             lastSyncedAltEncoder, lastSyncedAzEncoder);
+
+  std::cout << "adding ref point\n\r";
+  std::cout << "Last RA :" << lastSyncedRa << "\n\r";
+  std::cout << "Last Dec :" << lastSyncedDec << "\n\r";
+  std::cout << " lastSyncAzDegrees :" << lastSyncAzDegrees << "\n\r";
+  std::cout << "360- lastSyncAzDegrees :" << 360-lastSyncAzDegrees << "\n\r";
+  std::cout << "lastSyncAltDegrees :" << lastSyncAltDegrees << "\n\r";
+
+  alignment.addReferenceDeg(lastSyncedRa, lastSyncedDec,
+                            360 - lastSyncAzDegrees, lastSyncAltDegrees);
+  int i = alignment.refs;
+  std::cout << "Refs after add:" << i << "\n\r\n\r";
+}
+/**
+ * @brief calibrates a position in the sky with current encoder values
+ *
+ * Uses transforms to get values of alt/az based on passed ra/dec.
+ * (ie where should intrument be pointing)
+ * Stores those values, and current encoder values, for offset calcs
+ *
+ *
+ */
+void TelescopeModel::setPositionRaDec(float ra, float dec, unsigned long time) {
+
+  // float offSetInHours =
+  //     Ephemeris::hoursMinutesSecondsToFloatingHours(0, 0, raOffset);
+  // double offsetInDegrees = 360 * offSetInHours / 24.0;
+
+  double azcounterclockwise;
+  double alt;
+
+  lastSyncedRa = ra;
+  lastSyncedDec = dec;
+  lastSyncedAltEncoder = altEnc;
+  lastSyncedAzEncoder = azEnc;
+
+  // alignment.toInstrumentDeg(azcounterclockwise, alt, ra + offsetInDegrees,
+  // dec);
+  alignment.toInstrumentDeg(azcounterclockwise, alt, ra, dec);
+  azcounterclockwise = fmod(fmod(azcounterclockwise, 360) + 360, 360);
+
+  // todo do offsets here later
+  // std::cout << "Calculated az cc : " << azcounterclockwise << "\n\r";
+  // std::cout << "Calculated alt : " << alt << "\n\r";
+  currentRA = ra;
+  currentDec = dec;
+  currentAlt = alt;
+  currentAz = 360 - azcounterclockwise;
+
+  // the following used for offset calculations later, ie mapping encoder to
+  // alt/az
+  altBaseValue = alt;
+  azBaseValue = 360 - azcounterclockwise;
   altEncBaseValue = altEnc;
   azEncBaseValue = azEnc;
+
+  // the following used for encoder calibration and reference point setting
+  raBasePos = ra;
+  decBasePos = dec;
+  baseTime = time;
+  baseRaOffset = raOffset;
 }
 
 void TelescopeModel::setUTCYear(int y) { year = y; }
@@ -148,19 +223,21 @@ void TelescopeModel::setUTCSecond(int s) { sec = s; }
 /**
  * @brief Saves the encoder calibration point.
  *
- * It first calculates horizontal coordinates (alt/az) from the current
- * equatorial coordinates (ra/dec), on a specific date and time. Then, it stores
- * the old alignment values, and updates the new alignment values based on the
- * calculated alt/az values and the current encoder readings.
+ * Used for working out whether encoders are calibrated, ie steps per
+ * revoloution. It first calculates horizontal coordinates (alt/az) from the
+ * current equatorial coordinates (ra/dec), on a specific date and time. Then,
+ * it stores the old alignment values, and updates the new alignment values
+ * based on the calculated alt/az values and the current encoder readings.
  */
 void TelescopeModel::saveEncoderCalibrationPoint() {
-  // Initialize equatorial coordinates with current base positions.
+  // Initialize equatorial coordinates with current  position. Assumed to be set
+  // before calling.
   EquatorialCoordinates baseEqCoord;
   baseEqCoord.ra = raBasePos;
   baseEqCoord.dec = decBasePos;
 
-  // Convert current equatorial coordinates to horizontal coordinates for a
-  // certain date and time.
+  // Convert current equatorial coordinates to horizontal coordinates for this
+  //  date and time (assumed to be set before calling)
   HorizontalCoordinates altAzCoord =
       Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
           baseEqCoord, day, month, year, hour, min, sec);
@@ -236,7 +313,7 @@ long TelescopeModel::calculateAzEncoderStepsPerRevolution() {
   }
 
   if (abs(coordMove) < 0.000001)
-    return 0; //avoid division by zero here. May propagate the issue though.
+    return 0; // avoid division by zero here. May propagate the issue though.
 
   // Compute steps per degree by dividing total encoder movement by total
   // coordinate movement.

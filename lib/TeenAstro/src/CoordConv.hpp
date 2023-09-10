@@ -136,9 +136,9 @@ public:
 	void toReferenceDeg(double &angle1,  double &angle2, double axis1, double axis2) const;
 
 	double polErrorDeg(double lat, Err sel);
+        unsigned char refs = 0; // number of reference stars
 
-
-protected:
+      protected:
 	// add a user-provided reference star (all values in radians)
 	void addReference(double angle1, double angle2, double axis1, double axis2);
 
@@ -157,7 +157,7 @@ protected:
   double dcAARef[3][3];	// axis1/axis2 direction cosine vectors for the three reference stars, indexed by reference first
   double dcHDRef[3][3];	// angle1/angle2l direction cosine vectors for the three reference stars, indexed by reference first
 
-  unsigned char refs=0;	// number of reference stars
+ 
   bool isready=false;
 };
 
