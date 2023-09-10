@@ -130,57 +130,40 @@ void test_telescope_model(void) {
   double star1AltAxis = 83.87; // degrees
   double star1AzmAxis = 99.25; // anticlockwise)
 
+  // start pointing exactly at star, if zero position of encoders is north and
+  // flat.
   model.setEncoderValues(star1AltAxis * 100, 36000 - star1AzmAxis * 100);
 
-  // model.currentAlt = star1AltAxis;
-  // model.currentAz = 360 - star1AzmAxis;
+  //time of observation
+  double star1Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 27, 56);
 
   double star1RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(0, 7, 54);
   double star1RADegrees = 360 * star1RAHours / 24.0;
-  double star1Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 27, 56);
-
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1.97498552, star1RADegrees, "star1ra");
+  
   double star1Dec = 29.038;
-
+  
   model.setPositionRaDec(star1RADegrees, star1Dec, timeMillis);
   model.addReferencePoint();
-  //  double star1AltAxis = 83.87;
-  // double star1AzmAxis = 99.25; // anticlockwise)
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1AzmAxis, model.currentAz,
-  //                                  "currentaz");
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1AltAxis, model.currentAlt,
-  //                                  "currentalt");
-
-  // model.currentDec = star1Dec;
-  // model.currentRA = star1RADegrees;
-  // std::cout << "Current alt:" << model.currentAlt << "\n\r";
   
-
   double star2AltAxis = 35.04;  // degrees
   double star2AzmAxis = 310.98; // anticlockwise)
 
   model.setEncoderValues(star2AltAxis * 100, 36000 - star2AzmAxis * 100);
-  // model.currentAlt = star2AltAxis;
-  // model.currentAz = 360 - star2AzmAxis;
+
+  double star2Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 37, 02);
 
   double star2RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(2, 21, 45);
-
-  double star2Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 37, 02);
-  // time travel
-  star2RAHours = star2RAHours - (star2Time - star1Time);
-
+  star2RAHours = star2RAHours - (star2Time - star1Time);//adjust for time shift
   double star2RADegress = 360 * star2RAHours / 24.0;
 
   double star2Dec = 89.222;
-  // model.currentDec = star2Dec;
-  // model.currentRA = star2RADegress;
-  model.setPositionRaDec(star2RADegress, star2Dec,
-                         timeMillis + 546000); // time passed in millis
+
+  model.setPositionRaDec(star2RADegress, star2Dec,0);
+                        //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
-  model.calculateThirdReference(); //prob not needed
-
-
+  model.calculateThirdReference(); // prob not needed
 
   // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
   // This calculated telescope coordinates is very close to the measured
@@ -192,20 +175,17 @@ void test_telescope_model(void) {
   double star3AzmAxis = 130.21; // anticlockwise)
 
   model.setEncoderValues(star3AltAxis * 100, 36000 - star3AzmAxis * 100);
-  // model.currentAlt = star3AltAxis;
-  // model.currentAz = 360 - star3AzmAxis;
+  
+  double star3Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 52, 12);
 
   double star3RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(0, 43, 07);
-  double star3Dec = -18.038;
-
-  double star3Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 52, 12);
   // time travel
   star3RAHours = star3RAHours - (star3Time - star1Time);
-
   double star3RADegrees = 360 * star3RAHours / 24.0;
-  // star3RA = fmod(star3RA, 360);
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
+
+  double star3Dec = -18.038;
+
   model.calculateCurrentPosition();
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.currentDec, "dec");
@@ -500,7 +480,7 @@ void test_two_star_takeshi_example() {
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, outaxis2, "alt");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 130.21, outaxis1, "az");
 
-  alignment.toReferenceDeg(star3RADegrees, star3Dec,outaxis1, outaxis2  );
+  alignment.toReferenceDeg(star3RADegrees, star3Dec, outaxis1, outaxis2);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 4.712482, star3RADegrees, "ra");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, -18.038, star3Dec, "dec");
