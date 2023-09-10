@@ -44,6 +44,9 @@ TelescopeModel::TelescopeModel() {
   currentDec = 0;
   currentAlt = 0;
   currentAz = 0;
+
+  firstSyncTime = 0;
+  lastSyncedTime=0;
 }
 
 void TelescopeModel::calculateThirdReference() {
@@ -113,7 +116,7 @@ void TelescopeModel::calculateAltAzFromEncoders(float &alt, float &az,
  *
  * @return void
  */
-void TelescopeModel::calculateCurrentPosition() {
+void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   // When client syncs the position, we store the ra/dec of that
   // position as well as the encoder values.
@@ -123,10 +126,18 @@ void TelescopeModel::calculateCurrentPosition() {
   double dec;
   float altEncoderDegrees;
   float azEncoderDegrees;
-  //convert encoder values to degrees
-  calculateAltAzFromEncoders(altEncoderDegrees,azEncoderDegrees,altEnc,azEnc);
+  // convert encoder values to degrees
+  calculateAltAzFromEncoders(altEncoderDegrees, azEncoderDegrees, altEnc,
+                             azEnc);
   double ccAz = 360.0 - azEncoderDegrees;
   double talt = (double)altEncoderDegrees;
+
+  double raDeltaDegrees = 0;
+  // if (alignment.getRefs() > 0) {
+    unsigned long timedelta = timeMillis - firstSyncTime;
+    raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
+    std::cout << "Time delta in degrees :" << raDeltaDegrees << "\n\r";
+  // }
 
   std::cout << "calculateposition : ccaz:" << ccAz << " talt: " << talt
             << "\n\r";
@@ -135,7 +146,7 @@ void TelescopeModel::calculateCurrentPosition() {
 
   alignment.toReferenceDeg(ra, dec, ccAz, talt);
 
-  currentRA = ra;
+  currentRA = ra +raDeltaDegrees;
   currentDec = dec;
   std::cout << "calculateposition : currentRa:" << currentRA
             << " currentDec: " << currentDec << "\n\r";
@@ -143,22 +154,39 @@ void TelescopeModel::calculateCurrentPosition() {
 float TelescopeModel::getDecCoord() { return currentDec; }
 float TelescopeModel::getRACoord() { return currentRA; }
 
+double TelescopeModel::millisecondsToRADeltaInDegrees(
+    unsigned long millisecondsDelta) {
+  double RA_delta_degrees =
+      (millisecondsDelta / (24.0 * 3600.0 * 1000.0)) * 360.0;
+  return RA_delta_degrees;
+}
+
 void TelescopeModel::addReferencePoint() {
   // when last sync happened, we saved encoded values and ra/dec.
   float lastSyncAltDegrees;
   float lastSyncAzDegrees;
-  //convert those saved encoded values to degrees
+  // convert those saved encoded values to degrees
   calculateAltAzFromEncoders(lastSyncAltDegrees, lastSyncAzDegrees,
                              lastSyncedAltEncoder, lastSyncedAzEncoder);
+  double raDeltaDegrees=0;
+   if (alignment.getRefs() > 0) {
+    unsigned long timedelta = lastSyncedTime - firstSyncTime;
+    std::cout << "lastSyncedTime :" << lastSyncedTime << "\n\r";
+    std::cout << "firstSyncTime :" << firstSyncTime << "\n\r";
+    std::cout << "timedelta :" << timedelta << "\n\r";
+    raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
+    std::cout << "raDeltaDegrees :" << raDeltaDegrees << "\n\r";
+  }
 
   std::cout << "adding ref point\n\r";
   std::cout << "Last RA :" << lastSyncedRa << "\n\r";
+  std::cout << "Adjusted RA :" << lastSyncedRa - raDeltaDegrees << "\n\r";
   std::cout << "Last Dec :" << lastSyncedDec << "\n\r";
   std::cout << " lastSyncAzDegrees :" << lastSyncAzDegrees << "\n\r";
-  std::cout << "360- lastSyncAzDegrees :" << 360-lastSyncAzDegrees << "\n\r";
+  std::cout << "360- lastSyncAzDegrees :" << 360 - lastSyncAzDegrees << "\n\r";
   std::cout << "lastSyncAltDegrees :" << lastSyncAltDegrees << "\n\r";
 
-  alignment.addReferenceDeg(lastSyncedRa, lastSyncedDec,
+  alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
                             360 - lastSyncAzDegrees, lastSyncAltDegrees);
   int i = alignment.refs;
   std::cout << "Refs after add:" << i << "\n\r\n\r";
@@ -185,6 +213,12 @@ void TelescopeModel::setPositionRaDec(float ra, float dec, unsigned long time) {
   lastSyncedDec = dec;
   lastSyncedAltEncoder = altEnc;
   lastSyncedAzEncoder = azEnc;
+  lastSyncedTime = time;
+  // if no refs set, then mark this as t=0
+  if (alignment.getRefs() == 0) {
+    firstSyncTime = time;
+    std::cout << "First sync time set" << firstSyncTime<<"\n\r";
+  }
 
   // alignment.toInstrumentDeg(azcounterclockwise, alt, ra + offsetInDegrees,
   // dec);

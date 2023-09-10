@@ -70,8 +70,8 @@ public:
                                   long azEncVal);
 
   void addReferencePoint();
-  
-   void setLatitude(float lat);
+
+  void setLatitude(float lat);
   void setLongitude(float lng);
 
   float getLatitude();
@@ -91,7 +91,7 @@ public:
   void setUTCHour(int hour);
   void setUTCMinute(int min);
   void setUTCSecond(int sec);
-  void calculateCurrentPosition();
+  void calculateCurrentPosition(unsigned long timeMillis);
   void saveEncoderCalibrationPoint();
 
   long getAltEncoderAlignValue1() const;
@@ -159,12 +159,16 @@ public:
 
   double raOffset;
 
-  double lastSyncedRa ;
-  double lastSyncedDec ;
-  double lastSyncedAltEncoder ;
+  double lastSyncedRa;
+  double lastSyncedDec;
+  double lastSyncedAltEncoder;
   double lastSyncedAzEncoder;
+  unsigned long lastSyncedTime; // timestamp in milliseconds  of last sync
+  unsigned long firstSyncTime;  // used for storing the time of the first sync
+                                // point. t=0 for all future calcs
 
   CoordConv alignment;
+  double millisecondsToRADeltaInDegrees(unsigned long millisecondsDelta);
 };
 
 #endif

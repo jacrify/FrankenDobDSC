@@ -114,8 +114,8 @@ void test_telescope_model(void) {
   unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
 
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+  // unsigned long timeMillis =
+  //     convertDateTimeToMillis(day, month, year, hour, minute, second);
 
   // model.setUTCYear(2023);
   // model.setUTCMonth(9);
@@ -143,7 +143,7 @@ void test_telescope_model(void) {
   
   double star1Dec = 29.038;
   
-  model.setPositionRaDec(star1RADegrees, star1Dec, timeMillis);
+  model.setPositionRaDec(star1RADegrees, star1Dec, 0);
   model.addReferencePoint();
   
   double star2AltAxis = 35.04;  // degrees
@@ -155,13 +155,14 @@ void test_telescope_model(void) {
 
   double star2RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(2, 21, 45);
-  star2RAHours = star2RAHours - (star2Time - star1Time);//adjust for time shift
+  // star2RAHours = star2RAHours - (star2Time - star1Time);//adjust for time shift
   double star2RADegress = 360 * star2RAHours / 24.0;
 
   double star2Dec = 89.222;
 
-  model.setPositionRaDec(star2RADegress, star2Dec,0);
-                        //  timeMillis + 546000); // time passed in millis
+  // 546000 milliseconds since first sync
+  model.setPositionRaDec(star2RADegress, star2Dec, 546000);
+  //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
   model.calculateThirdReference(); // prob not needed
 
@@ -181,12 +182,13 @@ void test_telescope_model(void) {
   double star3RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(0, 43, 07);
   // time travel
-  star3RAHours = star3RAHours - (star3Time - star1Time);
+  // star3RAHours = star3RAHours - (star3Time - star1Time);
   double star3RADegrees = 360 * star3RAHours / 24.0;
 
   double star3Dec = -18.038;
 
-  model.calculateCurrentPosition();
+  // 1456000 milliseconds since first sync
+  model.calculateCurrentPosition(1456000);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.currentDec, "dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3RADegrees, model.currentRA, "ra");
@@ -214,7 +216,7 @@ void test_odd_times(void) {
   model.setEncoderValues(0, 0);
   // arcturus
   model.setPositionRaDec(0, 0, timeMillis);
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.1, 0.0, model.getRACoord(), "ra");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.1, 0.0, model.getDecCoord(), "dec");
@@ -239,7 +241,7 @@ void test_az_encoder_calibration(void) {
 
   model.setEncoderValues(0, 0);
   model.setPositionRaDec(14.28644, 18.97959, timeMillis);
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
@@ -257,7 +259,7 @@ void test_az_encoder_calibration(void) {
   model.setPositionRaDec(newEq.ra, newEq.dec, timeMillis);
   model.setEncoderValues(
       0, 100); // Here the azimuth encoder value has increased by 100
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
@@ -288,7 +290,7 @@ void test_alt_encoder_calibration(void) {
   model.setEncoderValues(0, 0);
   model.setPositionRaDec(14.28644, 18.97959, timeMillis);
   // sets alt az
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
 
   model.saveEncoderCalibrationPoint(); // Save this point
 
@@ -308,7 +310,7 @@ void test_alt_encoder_calibration(void) {
 
   model.setEncoderValues(
       100, 0); // Here the altitude encoder value has increased by 100
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
@@ -337,7 +339,7 @@ void test_az_encoder_wraparound(void) {
 
   model.setEncoderValues(0, 0);
   model.setPositionRaDec(14.28644, 18.9795, timeMillis);
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
@@ -355,7 +357,7 @@ void test_az_encoder_wraparound(void) {
   model.setPositionRaDec(newEq.ra, newEq.dec, timeMillis);
   model.setEncoderValues(
       0, 17000); // Here the azimuth encoder value has increased by 100
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
@@ -385,7 +387,7 @@ void test_alt_encoder_negative_move(void) {
   model.setEncoderValues(100, 0);
   model.setPositionRaDec(14.28644, 18.97959, timeMillis);
   // sets alt az
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
 
   model.saveEncoderCalibrationPoint(); // Save this point
 
@@ -405,7 +407,7 @@ void test_alt_encoder_negative_move(void) {
 
   model.setEncoderValues(
       0, 0); // Here the altitude encoder value has decreased by 100
-  model.calculateCurrentPosition();
+  // model.calculateCurrentPosition();
   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
