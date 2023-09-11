@@ -219,7 +219,12 @@ public:
     static HorizontalCoordinates equatorialToHorizontalCoordinatesAtDateAndTime(EquatorialCoordinates eqCoordinates,
                                                                                 unsigned int day,   unsigned int month,   unsigned int year,
                                                                                 unsigned int hours, unsigned int minutes, unsigned int seconds);
-    
+
+    /*! Convert equatorial coordinates to horizontal coordinates. Location on
+     * Earth must be initialized first. */
+    static HorizontalCoordinates equatorialToHorizontalCoordinatesAtDateAndTime(
+        EquatorialCoordinates eqCoordinates, unsigned long millis);
+
     /*! Convert horizontal coordinates to equatorial coordinates. Location on Earth must be initialized first. */
     static EquatorialCoordinates horizontalToEquatorialCoordinatesAtDateAndTime(HorizontalCoordinates hCoordinates,
                                                                                 unsigned int day,   unsigned int month,   unsigned int year,

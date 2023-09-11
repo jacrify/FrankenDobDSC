@@ -64,10 +64,12 @@ public:
   long getAzEncoderStepsPerRevolution();
   long getAltEncoderStepsPerRevolution();
 
-
-
   void calculateAltAzFromEncoders(float &alt, float &az, long altEncVal,
                                   long azEncVal);
+
+  void calculateEncoderOffsetFromAltAz(float alt, float az, long altEncVal,
+                                       long azEncVal, long &altEncOffset,
+                                       long &azEncOffset);
 
   void addReferencePoint();
 
@@ -83,7 +85,7 @@ public:
   float getDecCoord();
   float getRACoord();
 
-  void setPositionRaDec(float ra, float dec, unsigned long time);
+  void syncPositionRaDec(float ra, float dec, unsigned long time);
   // test
   void setUTCYear(int year);
   void setUTCMonth(int month);
@@ -165,7 +167,15 @@ public:
   double lastSyncedAzEncoder;
   unsigned long secondSyncTime; // timestamp in milliseconds  of second sync
   unsigned long firstSyncTime;  // timestamp in milliseconds  of first sync
-  unsigned long alignmentModelSyncTime; //t=0 for post alignment. Based on time of first sync
+  unsigned long alignmentModelSyncTime; // t=0 for post alignment. Based on time
+                                        // of first sync
+
+
+
+  float altOffsetToAddToEncoderResult ;
+  float azOffsetToAddToEncoderResult ;
+
+  bool isNorthernHemisphere();
 
   CoordConv alignment;
   double millisecondsToRADeltaInDegrees(unsigned long millisecondsDelta);

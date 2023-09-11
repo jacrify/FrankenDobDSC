@@ -475,8 +475,8 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
     parsedDec = strtod(dec.c_str(), NULL);
     log("Parsed dec value: %lf", parsedDec);
   }
-  //TODO fix time
-  model.setPositionRaDec(parsedRA, parsedDec,0);
+  // TODO fix time
+  model.syncPositionRaDec(parsedRA, parsedDec, 0);
   updatePosition(model);
   model.saveEncoderCalibrationPoint();
 
@@ -593,8 +593,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
         if (subPath == "athome" || subPath == "atpark" ||
             subPath == "canfindhome" || subPath == "canpark" ||
-            subPath == "cansetdeclinationrate" ||
-            subPath == "cansetpark" ||
+            subPath == "cansetdeclinationrate" || subPath == "cansetpark" ||
             subPath == "cansetpierside" || subPath == "canmoveaxis" ||
             subPath == "cansetrightascensionrate" ||
             subPath == "cansettracking" || subPath == "canslew" ||
@@ -605,7 +604,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           return returnSingleBool(request, false);
         }
 
-        //TODO implement
+        // TODO implement
         if (subPath == "canpulseguide") {
           return returnSingleBool(request, false);
         }
@@ -624,13 +623,13 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           return returnSingleBool(request, true);
         }
 
-        if (subPath == "declinationrate"  ||
-            subPath == "focallength" || subPath == "siderealtime") {
+        if (subPath == "declinationrate" || subPath == "focallength" ||
+            subPath == "siderealtime") {
           return returnSingleDouble(request, 0);
         }
 
-        //TODO add sidereal rate when tracking
-        if ( subPath == "rightascensionrate" ) {
+        // TODO add sidereal rate when tracking
+        if (subPath == "rightascensionrate") {
           return returnSingleDouble(request, 0);
         }
 
