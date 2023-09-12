@@ -71,6 +71,11 @@ public:
                                        long azEncVal, long &altEncOffset,
                                        long &azEncOffset);
 
+  void storeAltAzOffset(float actualAlt, float actualAz, float encoderBasedAlt,
+                        float encoderBasedAz);
+
+  void adjustAltAzBasedOnOffsets(float &alt, float &az);
+
   void addReferencePoint();
 
   void setLatitude(float lat);
@@ -163,17 +168,15 @@ public:
 
   double lastSyncedRa;
   double lastSyncedDec;
-  double lastSyncedAltEncoder;
-  double lastSyncedAzEncoder;
+  double lastSyncedAlt;
+  double lastSyncedAz;
   unsigned long secondSyncTime; // timestamp in milliseconds  of second sync
   unsigned long firstSyncTime;  // timestamp in milliseconds  of first sync
   unsigned long alignmentModelSyncTime; // t=0 for post alignment. Based on time
                                         // of first sync
 
-
-
-  float altOffsetToAddToEncoderResult ;
-  float azOffsetToAddToEncoderResult ;
+  float altOffsetToAddToEncoderResult;
+  float azOffsetToAddToEncoderResult;
 
   bool isNorthernHemisphere();
 

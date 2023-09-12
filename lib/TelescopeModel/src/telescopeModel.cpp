@@ -1,4 +1,5 @@
 #include "telescopeModel.h"
+#include "Logging.h"
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -77,45 +78,28 @@ float TelescopeModel::getAzCoord() { return currentAz; }
 
 void TelescopeModel::setRaOffset(double delta) { raOffset = delta; }
 
-// given known alt and az values, and known encoder values, return offsets
-// such that calculateAltAzFromEncoders() for these encoder values
-// would always return these alt az values.
-// TODO delete if not used
-void TelescopeModel::calculateEncoderOffsetFromAltAz(float alt, float az,
-                                                     long altEncVal,
-                                                     long azEncVal,
-                                                     long &altEncOffset,
-                                                     long &azEncOffset) {
+// // given known alt and az values, and known encoder values, return offsets
+// // such that calculateAltAzFromEncoders() for these encoder values
+// // would always return these alt az values.
+// // TODO delete if not used
+// void TelescopeModel::calculateEncoderOffsetFromAltAz(float alt, float az,
+//                                                      long altEncVal,
+//                                                      long azEncVal,
+//                                                      long &altEncOffset,
+//                                                      long &azEncOffset) {
 
-  float calculatedAlt =
-      360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
-  float calculatedAz =
-      360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
-  altEncOffset = calculatedAlt - alt;
-  azEncOffset = calculatedAz - az;
-}
+//   float calculatedAlt =
+//       360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
+//   float calculatedAz =
+//       360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
+//   altEncOffset = calculatedAlt - alt;
+//   azEncOffset = calculatedAz - az;
+// }
 
 void TelescopeModel::calculateAltAzFromEncoders(float &alt, float &az,
                                                 long altEncVal, long azEncVal) {
   alt = 360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
-
-  // float a = 360.0 * ((float)(altEnc - altEncBaseValue)) /
-  //           (float)altEncoderStepsPerRevolution;
   az = 360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
-  // float z = 360.0 * ((float)(azEnc - azEncBaseValue)) /
-  //           (float)azEncoderStepsPerRevolution;
-
-  // currentAlt = altBaseValue + a;
-  // currentAz = azBaseValue + z;
-
-  // handle situation where scope goes "over the top"
-  // if (currentAlt > 90) {
-  //   currentAlt = 180 - currentAlt;
-  //   currentAz += 180;
-  //   if (currentAz > 360) {
-  //     currentAz -= 360;
-  //   }
-  // }
 }
 bool TelescopeModel::isNorthernHemisphere() { return latitude >= 0; }
 /**
@@ -138,6 +122,7 @@ bool TelescopeModel::isNorthernHemisphere() { return latitude >= 0; }
  */
 void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
+  log("Calculating current position for time %ld", timeMillis);
   // When client syncs the position, we store the ra/dec of that
   // position as well as the encoder values.
   // So we start by converting that base position into known
@@ -149,6 +134,13 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   // convert encoder values to degrees
   calculateAltAzFromEncoders(altEncoderDegrees, azEncoderDegrees, altEnc,
                              azEnc);
+
+  log("Alt az from encoders: \t\talt: %lf\taz:%lf", altEncoderDegrees,
+      azEncoderDegrees);
+
+  adjustAltAzBasedOnOffsets(altEncoderDegrees, azEncoderDegrees);
+  log("Adjusted alt az from encoders: \t\talt: %lf\taz:%lf", altEncoderDegrees,
+      azEncoderDegrees);
   double ccAz;
   if (isNorthernHemisphere())
     ccAz = 360.0 - azEncoderDegrees;
@@ -174,7 +166,7 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   std::cout << "RA Delta:" << raDeltaDegrees << "\n\r";
 
   alignment.toReferenceDeg(ra, dec, ccAz, talt);
-  ra=fmod(fmod(ra, 360) + 360, 360);
+  ra = fmod(fmod(ra, 360) + 360, 360);
 
   currentRA = ra + raDeltaDegrees;
   currentDec = dec;
@@ -192,12 +184,7 @@ double TelescopeModel::millisecondsToRADeltaInDegrees(
 }
 
 void TelescopeModel::addReferencePoint() {
-  // when last sync happened, we saved encoded values and ra/dec.
-  float lastSyncAltDegrees;
-  float lastSyncAzDegrees;
-  // convert those saved encoded values to degrees
-  calculateAltAzFromEncoders(lastSyncAltDegrees, lastSyncAzDegrees,
-                             lastSyncedAltEncoder, lastSyncedAzEncoder);
+
   double raDeltaDegrees = 0;
   if (alignment.getRefs() > 0) {
     unsigned long timedelta = secondSyncTime - firstSyncTime;
@@ -210,31 +197,13 @@ void TelescopeModel::addReferencePoint() {
     raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   }
 
-  // std::cout << "adding ref point\n\r";
-  // std::cout << "Last RA :" << lastSyncedRa << "\n\r";
-  // std::cout << "Adjusted RA :" << lastSyncedRa - raDeltaDegrees << "\n\r";
-  // std::cout << "Last Dec :" << lastSyncedDec << "\n\r";
-  // std::cout << " lastSyncAzDegrees :" << lastSyncAzDegrees << "\n\r";
-  // std::cout << "360- lastSyncAzDegrees :" << 360 - lastSyncAzDegrees <<
-  // "\n\r"; std::cout << "lastSyncAltDegrees :" << lastSyncAltDegrees <<
-  // "\n\r";
-
-  // reverse az. Adjust ra back to first sync frame of reference.
-
-  std::cout << "RA for ref:" << lastSyncedRa << "\n\r";
-  std::cout << "Dec for ref:" << lastSyncedDec << "\n\r";
-  std::cout << "Azi for ref:" << lastSyncAzDegrees << "\n\r";
-  std::cout << "Alt for ref:" << lastSyncAltDegrees << "\n\r";
-  std::cout << "RA Delta:" << raDeltaDegrees << "\n\r";
   if (isNorthernHemisphere()) {
     alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
-                              360 - lastSyncAzDegrees, lastSyncAltDegrees);
+                              360 - lastSyncedAz, lastSyncedAlt);
     std::cout << "North\n\r";
   } else {
     alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
-                              lastSyncAzDegrees, lastSyncAltDegrees);
-
-                              
+                              lastSyncedAz, lastSyncedAlt);
   }
   if (alignment.getRefs() == 2) {
     alignment.calculateThirdReference();
@@ -249,61 +218,58 @@ void TelescopeModel::addReferencePoint() {
  *
  * Two main functions:
  * 1) Store the passed ra,dec, enoder, and time values for use in reference
- * point sync 2) Calculate local alt/az values, and store them for use as
- * offsets 2) Using stored transformations, calculate current alt/az in degrees
- * based passed ra/dec. Then calculate alt/az using only the encoders. Then
- *    store the delta (error) to be added in calulatePosition().
+ * point sync
+ * 2) Calculate local alt/az values, and store them for use as
+ * offsets
  *
  *
  */
 void TelescopeModel::syncPositionRaDec(float ra, float dec,
                                        unsigned long time) {
 
-  // float offSetInHours =
-  //     Ephemeris::hoursMinutesSecondsToFloatingHours(0, 0, raOffset);
-  // double offsetInDegrees = 360 * offSetInHours / 24.0;
-
   // get local alt/az of target.
   // Work out alt/az offset required, such that when added to
   // values calculated from encoder, we end up with this target
   // alt/az
-
-  Ephemeris::setLocationOnEarth(latitude, longitude);
+  Ephemeris::Ephemeris::setLocationOnEarth(latitude, longitude);
+  Ephemeris::
+      // East is negative and West is positive
+      Ephemeris::flipLongitude(false);
 
   EquatorialCoordinates eq;
-  eq.ra = ra;
+  eq.ra = ra / 15; // Ephemeris uses hours not degrees , 1 hour = 15 degrees
   eq.dec = dec;
+
+  log("Calculating local alt az bazed on \tra(h): %lf \tdec: %lf", eq.ra,
+      eq.dec);
+
   HorizontalCoordinates altAzCoord =
       Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(eq, time);
-  std::cout << "Ephemeris time : " << time << "\n\r";
-  std::cout << "Ephemeris alt : " << altAzCoord.alt << "\n\r";
-  std::cout << "Ephermis az : " << altAzCoord.azi << "\n\r";
+  //TODO souther hemi only?
+  altAzCoord.alt = -altAzCoord.alt;
+
+  log("Resulting local altaz\t\t\talt: %lf \t\taz:%lf", altAzCoord.alt,
+      altAzCoord.azi);
+
   float calculatedAlt, calculatedAz;
   calculateAltAzFromEncoders(calculatedAlt, calculatedAz, altEnc, azEnc);
 
-  std::cout << "Calculated alt from encoders : " << calculatedAlt << "\n\r";
-  std::cout << "Calculated az from encoders: " << calculatedAz << "\n\r";
-  altOffsetToAddToEncoderResult = altAzCoord.alt - calculatedAlt;
-  //  azOffsetToAddToEncoderResult = altAzCoord.azi - calculatedAz;
+  log("Calculated alt/az from encoders\t\talt: %lf \taz:%lf", calculatedAlt,
+      calculatedAz);
 
-  std::cout << "Calculated altOffsetToAddToEncoderResult : "
-            << altOffsetToAddToEncoderResult << "\n\r";
-  std::cout << "Calculated azOffsetToAddToEncoderResult : "
-            << azOffsetToAddToEncoderResult << "\n\r";
+  storeAltAzOffset(altAzCoord.alt, altAzCoord.azi, calculatedAlt, calculatedAz);
 
   lastSyncedRa = ra;
   lastSyncedDec = dec;
+  lastSyncedAlt = altAzCoord.alt;
+  lastSyncedAz = altAzCoord.azi;
   // lastSyncedAltEncoder = altEnc + altOffsetToAddToEncoderResult;
-  lastSyncedAltEncoder = altEnc;
-  lastSyncedAzEncoder = azEnc;
 
   // if no refs set, then mark this as t=0
   if (alignment.getRefs() == 0) {
     firstSyncTime = time;
-    std::cout << "First sync time set" << firstSyncTime << "\n\r\n\r";
   } else if (alignment.getRefs() == 1) {
     secondSyncTime = time;
-    std::cout << "Second sync time set" << secondSyncTime << "\n\r\n\r";
   }
   // // calculate alt/az using current (saved) model
   // double azModeledCounterclockwise;
@@ -459,6 +425,20 @@ long TelescopeModel::calculateAzEncoderStepsPerRevolution() {
   return stepsPerDegree * 360.0;
 }
 
+void TelescopeModel::storeAltAzOffset(float actualAlt, float actualAz,
+                                      float encoderBasedAlt,
+                                      float encoderBasedAz) {
+  altOffsetToAddToEncoderResult = actualAlt - encoderBasedAlt;
+  azOffsetToAddToEncoderResult = actualAz - encoderBasedAz;
+
+  log("Calcuated sync alt/az offset\t\talt:%lf\taz:%lf",
+      altOffsetToAddToEncoderResult, azOffsetToAddToEncoderResult);
+}
+
+void TelescopeModel::adjustAltAzBasedOnOffsets(float &alt, float &az) {
+  alt += altOffsetToAddToEncoderResult;
+  az += azOffsetToAddToEncoderResult;
+}
 /**
  * @brief Calculates the number of encoder steps per hypothetical full 360°
  * altitude revolution.
