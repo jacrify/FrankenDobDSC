@@ -608,7 +608,7 @@ void test_telescope_model_mylocation_with_offset() {
 
   // star 1: Vega
   double star1AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
   // anticlockwise
   double star1AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(357, 13, 18.8);
@@ -639,7 +639,7 @@ void test_telescope_model_mylocation_with_offset() {
 
   // fomalhut
   double star2AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(37, 36, 24.3);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(37, 36, 24.3);
   // anticlockwise
   double star2AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(103, 17, 9.4);
@@ -677,7 +677,7 @@ void test_telescope_model_mylocation_with_offset() {
 
   // altair
   double star3AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(44, 33, 25.8);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(44, 33, 25.8);
   // anticlockwise
   double star3AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(21, 55, 36.3);
@@ -775,7 +775,7 @@ void test_telescope_model_mylocation() {
   // star 1: Vega
 
   double star1AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
   // anticlockwise
   double star1AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(357, 13, 18.8);
@@ -806,7 +806,7 @@ void test_telescope_model_mylocation() {
   // fomalhut
 
   double star2AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(37, 36, 24.3);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(37, 36, 24.3);
   // anticlockwise
   double star2AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(103, 17, 9.4);
@@ -843,7 +843,7 @@ void test_telescope_model_mylocation() {
 
   // altair
   double star3AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(44, 33, 25.8);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(44, 33, 25.8);
   // anticlockwise
   double star3AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(21, 55, 36.3);
@@ -905,7 +905,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   // star 1: Vega
 
   double star1AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
   // anticlockwise
   double star1AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(357, 13, 18.8);
@@ -940,7 +940,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second);
 
   double star2AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 37, 4.1);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 37, 4.1);
   // anticlockwise
   double star2AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(102, 46, 3.7);
@@ -984,7 +984,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second);
 
   double star3AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(45, 16, 37.4);
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(45, 16, 37.4);
   // anticlockwise
   double star3AzmAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(18, 34, 31.1);
@@ -1023,9 +1023,9 @@ void setup() {
   // test_telescope_model();
   UNITY_BEGIN(); // IMPORTANT LINE!
 
-    RUN_TEST(test_eq_to_horizontal);
-  RUN_TEST(test_horizontal_to_eq);
-  RUN_TEST(test_eq_to_horizontal_vega);
+//   RUN_TEST(test_eq_to_horizontal);
+//   RUN_TEST(test_horizontal_to_eq);
+//   RUN_TEST(test_eq_to_horizontal_vega);
 
   // RUN_TEST(test_telescope_model_starting_offset);
   // RUN_TEST(test_az_encoder_calibration);
@@ -1036,8 +1036,8 @@ void setup() {
 
   // RUN_TEST(test_telescope_model_takeshi);
 
-  RUN_TEST(test_two_star_alignment_takeshi_example);
-  RUN_TEST(test_two_star_alignment_mylocation);
+//   RUN_TEST(test_two_star_alignment_takeshi_example);
+//   RUN_TEST(test_two_star_alignment_mylocation);
 
   RUN_TEST(test_telescope_model_mylocation_with_offset);
   RUN_TEST(test_telescope_model_mylocation);

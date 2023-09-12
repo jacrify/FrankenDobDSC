@@ -16,10 +16,9 @@ TelescopeModel::TelescopeModel() {
   // alignment.addReference(0, M_PI_2, M_PI, M_PI_2);//radians
   alignment.addReferenceDeg(0, 90, 180, 90); // degreess
   alignment.calculateThirdReference();
-  // alignment.reset();
 
-  latitude = 0;
-  longitude = 0;
+  latitude = -34.049120;
+  longitude = 151.042100;
 
   altEnc = 0;
   azEnc = 0;
@@ -87,10 +86,11 @@ float TelescopeModel::getAzCoord() { return currentAz; }
 
 void TelescopeModel::calculateAltAzFromEncoders(float &alt, float &az,
                                                 long altEncVal, long azEncVal) {
+  log("Alt encoder: %ld", altEncVal);
   alt = 360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
   az = 360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
 }
-bool TelescopeModel::isNorthernHemisphere() { return latitude >= 0; }
+bool TelescopeModel::isNorthernHemisphere() { return latitude > 0; }
 /**
  * @brief Calculates the current position of the telescope based on encoder
  * values.
@@ -131,22 +131,35 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   log("Offset alt az from encoders: \talt: %lf\taz:%lf", altEncoderDegrees,
       azEncoderDegrees);
-  double azAngle;
 
   if (isNorthernHemisphere()) {
-    azAngle = 360.0 - azEncoderDegrees;
+    //when in northern hemisphere, alt is positive, and azi is counter clockwise for model
+    // check for "over the top"
+    if (altEncoderDegrees > 90) {
+      altEncoderDegrees -= 90;
+      azEncoderDegrees += 180;
+    }
+    azEncoderDegrees = 360.0 - azEncoderDegrees;
   } else {
-    azAngle = azEncoderDegrees;
+    // when in southern hemisphere, alt is negatice, and azi is 
+    // clockwise for model
+    altEncoderDegrees = -altEncoderDegrees;
+    // check for "over the top"
+    if (altEncoderDegrees < -90) {
+      altEncoderDegrees += 90;
+      azEncoderDegrees += 180;
+    }
   }
-
-  log("AzAngle to use: \taz:%lf", azAngle);
+  //normalise to 0-360
+  azEncoderDegrees = fmod(fmod(azEncoderDegrees, 360) + 360, 360);
+  log("AzAngle to use: \taz:%lf", azEncoderDegrees);
   double raDeltaDegrees = 0;
   // if (alignment.getRefs() > 0) {
   unsigned long timedelta = timeMillis - alignmentModelSyncTime;
   raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   log("RA Delta due to time\t\traDelta: %lf", raDeltaDegrees);
 
-  alignment.toReferenceDeg(ra, dec, azAngle, altEncoderDegrees);
+  alignment.toReferenceDeg(ra, dec, azEncoderDegrees, altEncoderDegrees);
   log("Pre fmod ra\t\t\tra: %lf", ra);
 
   ra = fmod(fmod(ra, 360) + 360, 360);
@@ -181,14 +194,14 @@ void TelescopeModel::addReferencePoint() {
 
     raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   }
-
+  // when in northern hemisphere, pass positive alt and counterclockwise azi to model
   if (isNorthernHemisphere()) {
     alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
                               360 - lastSyncedAz, lastSyncedAlt);
-    std::cout << "North\n\r";
   } else {
+    // when in southern hemisphere, pass negative alt and clockwise azi to model
     alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
-                              lastSyncedAz, lastSyncedAlt);
+                              lastSyncedAz, -lastSyncedAlt);
   }
   if (alignment.getRefs() == 2) {
     log("Got two refs, calculating model...");
@@ -235,9 +248,6 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
 
   HorizontalCoordinates altAzCoord =
       Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(eq, time);
-  // TODO souther hemi only?
-  if (!isNorthernHemisphere())
-    altAzCoord.alt = -altAzCoord.alt;
 
   log("Expected local altaz\t\t\talt: %lf \t\taz:%lf", altAzCoord.alt,
       altAzCoord.azi);
