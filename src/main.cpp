@@ -13,8 +13,10 @@ TelescopeModel model;
 
 void setup() {
   Serial.begin(115200);
+  delay(1000);
   Serial.println("starting");
   prefs.begin("DSC", false);
+  
 
   setupWifi(prefs);
   LittleFS.begin();

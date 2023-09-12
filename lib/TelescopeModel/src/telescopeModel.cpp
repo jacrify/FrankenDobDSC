@@ -110,7 +110,8 @@ bool TelescopeModel::isNorthernHemisphere() { return latitude >= 0; }
  * @return void
  */
 void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
-
+  log("");
+  log("=====calculateCurrentPosition====");
   log("Calculating current position for time %ld", timeMillis);
   // When client syncs the position, we store the ra/dec of that
   // position as well as the encoder values.
@@ -123,33 +124,38 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   // convert encoder values to degrees
   calculateAltAzFromEncoders(altEncoderDegrees, azEncoderDegrees, altEnc,
                              azEnc);
-
   log("Alt az from encoders: \t\talt: %lf\taz:%lf", altEncoderDegrees,
       azEncoderDegrees);
 
   adjustAltAzBasedOnOffsets(altEncoderDegrees, azEncoderDegrees);
-  log("Offset alt az from encoders: \t\talt: %lf\taz:%lf", altEncoderDegrees,
+
+  log("Offset alt az from encoders: \talt: %lf\taz:%lf", altEncoderDegrees,
       azEncoderDegrees);
   double azAngle;
-  if (latitude > 90) {
-    if (isNorthernHemisphere()) {
-      azAngle = 360.0 - azEncoderDegrees;
-    } else {
-      azAngle = azEncoderDegrees;
-    }
+
+  if (isNorthernHemisphere()) {
+    azAngle = 360.0 - azEncoderDegrees;
+  } else {
+    azAngle = azEncoderDegrees;
   }
+
+  log("AzAngle to use: \taz:%lf", azAngle);
   double raDeltaDegrees = 0;
   // if (alignment.getRefs() > 0) {
   unsigned long timedelta = timeMillis - alignmentModelSyncTime;
   raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
-  log("RA Adjustment due to time\t\traDelta: %lf", raDeltaDegrees);
+  log("RA Delta due to time\t\traDelta: %lf", raDeltaDegrees);
 
   alignment.toReferenceDeg(ra, dec, azAngle, altEncoderDegrees);
+  log("Pre fmod ra\t\t\tra: %lf", ra);
+
   ra = fmod(fmod(ra, 360) + 360, 360);
 
   currentRA = ra + raDeltaDegrees;
   currentDec = dec;
-  log("Final position\t\ra: %lf\tdec: %lf", currentRA, currentDec);
+  log("Final position\t\t\tra: %lf\tdec: %lf", currentRA, currentDec);
+  log("=====calculateCurrentPosition====");
+  log("");
 }
 float TelescopeModel::getDecCoord() { return currentDec; }
 float TelescopeModel::getRACoord() { return currentRA; }
@@ -162,7 +168,8 @@ double TelescopeModel::millisecondsToRADeltaInDegrees(
 }
 
 void TelescopeModel::addReferencePoint() {
-
+  log("");
+  log("=====addReferencePoint====");
   double raDeltaDegrees = 0;
   if (alignment.getRefs() > 0) {
     unsigned long timedelta = secondSyncTime - firstSyncTime;
@@ -184,12 +191,14 @@ void TelescopeModel::addReferencePoint() {
                               lastSyncedAz, lastSyncedAlt);
   }
   if (alignment.getRefs() == 2) {
+    log("Got two refs, calculating model...");
     alignment.calculateThirdReference();
     alignmentModelSyncTime =
         firstSyncTime; // store this so future partial syncs don't clobber
   }
-  int i = alignment.refs;
-  std::cout << "Refs after add:" << i << "\n\r\n\r";
+
+  log("=====addReferencePoint====");
+  log("");
 }
 /**
  * @brief calibrates a position in the sky with current encoder values
@@ -205,6 +214,9 @@ void TelescopeModel::addReferencePoint() {
 void TelescopeModel::syncPositionRaDec(float ra, float dec,
                                        unsigned long time) {
 
+  log("");
+  log("=====syncPositionRaDec====");
+
   // get local alt/az of target.
   // Work out alt/az offset required, such that when added to
   // values calculated from encoder, we end up with this target
@@ -218,7 +230,7 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   eq.ra = ra / 15; // Ephemeris uses hours not degrees , 1 hour = 15 degrees
   eq.dec = dec;
 
-  log("Calculating local alt az bazed on \tra(h): %lf \tdec: %lf", eq.ra,
+  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf", eq.ra,
       eq.dec);
 
   HorizontalCoordinates altAzCoord =
@@ -227,10 +239,12 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   if (!isNorthernHemisphere())
     altAzCoord.alt = -altAzCoord.alt;
 
-  log("Resulting local altaz\t\t\talt: %lf \t\taz:%lf", altAzCoord.alt,
+  log("Expected local altaz\t\t\talt: %lf \t\taz:%lf", altAzCoord.alt,
       altAzCoord.azi);
 
   float calculatedAlt, calculatedAz;
+  log("Actual endoder values\t\talt: %ld \taz:%ld", altEnc, azEnc);
+
   calculateAltAzFromEncoders(calculatedAlt, calculatedAz, altEnc, azEnc);
 
   log("Calculated alt/az from encoders\t\talt: %lf \taz:%lf", calculatedAlt,
@@ -265,6 +279,9 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   } else if (alignment.getRefs() == 1) {
     secondSyncTime = time;
   }
+
+  log("=====syncPositionRaDec====");
+  log("");
   // // calculate alt/az using current (saved) model
   // double azModeledCounterclockwise;
   // double altModeled;

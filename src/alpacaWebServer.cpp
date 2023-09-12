@@ -116,7 +116,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
   } else {
     platformConnected = true;
   }
-  char buffer[900];
+  char buffer[1500];
   sprintf(buffer,
           R"({
     "altEncoderAlignValue1" : %ld,
@@ -131,12 +131,12 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "calculateAzEncoderStepsPerRevolution" : %ld,
     "actualAltEncoderStepsPerRevolution" : %ld,
     "actualAzEncoderStepsPerRevolution" : %ld,
-    "altOffsetToAddToEncoderResult",%ld,
-    "azOffsetToAddToEncoderResult",%ld,
-    "lastSyncedRa",%ld,
-    "lastSyncedDec",%ld,
-    "lastSyncedAlt",%ld,
-    "lastSyncedAz",%ld,
+    "altOffsetToAddToEncoderResult" : %lf,
+    "azOffsetToAddToEncoderResult":%lf,
+    "lastSyncedRa" : %lf,
+    "lastSyncedDec" : %lf,
+    "lastSyncedAlt" : %lf,
+    "lastSyncedAz" : %lf,
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
     "timeToEnd" : %.1lf,
@@ -149,10 +149,11 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.calculateAltEncoderStepsPerRevolution(),
           model.calculateAzEncoderStepsPerRevolution(),
           model.getAltEncoderStepsPerRevolution(),
-          model.getAzEncoderStepsPerRevolution(), model.lastSyncedRa,
-          model.lastSyncedDec, model.lastSyncedAlt, model.lastSyncedAz,
+          model.getAzEncoderStepsPerRevolution(),
           model.altOffsetToAddToEncoderResult,
-          model.azOffsetToAddToEncoderResult,
+          model.azOffsetToAddToEncoderResult, model.lastSyncedRa,
+          model.lastSyncedDec, model.lastSyncedAlt, model.lastSyncedAz,
+
           currentlyRunning ? "true" : "false", runtimeFromCenter / 60,
           timeToEnd / 60, platformConnected ? "true" : "false");
 
@@ -447,9 +448,11 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
   }
 
   unsigned long timeAtMiddleOfRun = calculateAdjustedTime();
+  log("Encoder values: %ld,%ld", getEncoderAl(), getEncoderAz());
+  model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.syncPositionRaDec(parsedRA, parsedDec, timeAtMiddleOfRun);
   updatePosition(model);
-  model.saveEncoderCalibrationPoint();
+  // model.saveEncoderCalibrationPoint();
 
   returnNoError(request);
 }
