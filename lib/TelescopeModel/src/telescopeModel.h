@@ -71,8 +71,7 @@ public:
                                        long azEncVal, long &altEncOffset,
                                        long &azEncOffset);
 
-  void storeAltAzOffset(float actualAlt, float actualAz, float encoderBasedAlt,
-                        float encoderBasedAz);
+
 
   void adjustAltAzBasedOnOffsets(float &alt, float &az);
 
