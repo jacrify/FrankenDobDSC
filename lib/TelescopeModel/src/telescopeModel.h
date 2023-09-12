@@ -91,15 +91,9 @@ public:
   float getRACoord();
 
   void syncPositionRaDec(float ra, float dec, unsigned long time);
-  // test
-  void setUTCYear(int year);
-  void setUTCMonth(int month);
-  void setUTCDay(int day);
-  void setUTCHour(int hour);
-  void setUTCMinute(int min);
-  void setUTCSecond(int sec);
+
   void calculateCurrentPosition(unsigned long timeMillis);
-  void saveEncoderCalibrationPoint();
+  // void saveEncoderCalibrationPoint();
 
   long getAltEncoderAlignValue1() const;
   long getAltEncoderAlignValue2() const;
@@ -117,12 +111,7 @@ public:
   // Calculate in the future (if positive) or into past (if negative)
   void setRaOffset(double raOffset);
 
-  int year;
-  int month;
-  int day;
-  int hour;
-  int min;
-  int sec;
+
 
   float latitude;
   float longitude;
@@ -164,12 +153,13 @@ public:
   float azAlignValue1;
   float azAlignValue2;
 
-  double raOffset;
+  
 
   double lastSyncedRa;
   double lastSyncedDec;
   double lastSyncedAlt;
   double lastSyncedAz;
+
   unsigned long secondSyncTime; // timestamp in milliseconds  of second sync
   unsigned long firstSyncTime;  // timestamp in milliseconds  of first sync
   unsigned long alignmentModelSyncTime; // t=0 for post alignment. Based on time

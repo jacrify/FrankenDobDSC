@@ -131,6 +131,12 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "calculateAzEncoderStepsPerRevolution" : %ld,
     "actualAltEncoderStepsPerRevolution" : %ld,
     "actualAzEncoderStepsPerRevolution" : %ld,
+    "altOffsetToAddToEncoderResult",%ld,
+    "azOffsetToAddToEncoderResult",%ld,
+    "lastSyncedRa",%ld,
+    "lastSyncedDec",%ld,
+    "lastSyncedAlt",%ld,
+    "lastSyncedAz",%ld,
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
     "timeToEnd" : %.1lf,
@@ -143,7 +149,10 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.calculateAltEncoderStepsPerRevolution(),
           model.calculateAzEncoderStepsPerRevolution(),
           model.getAltEncoderStepsPerRevolution(),
-          model.getAzEncoderStepsPerRevolution(),
+          model.getAzEncoderStepsPerRevolution(), model.lastSyncedRa,
+          model.lastSyncedDec, model.lastSyncedAlt, model.lastSyncedAz,
+          model.altOffsetToAddToEncoderResult,
+          model.azOffsetToAddToEncoderResult,
           currentlyRunning ? "true" : "false", runtimeFromCenter / 60,
           timeToEnd / 60, platformConnected ? "true" : "false");
 
@@ -367,29 +376,27 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   // Set the time
   settimeofday(&tv, NULL);
 
-  model.setUTCYear(year);
-  model.setUTCMonth(month);
-  model.setUTCDay(day);
-  model.setUTCHour(hour);
-  model.setUTCMinute(minute);
-  model.setUTCSecond(second);
-  log("Model date after set: %d /%d/%d %d:%d:%d ", model.day, model.month,
-      model.year, model.hour, model.min, model.sec);
+  log(" date after set: %d /%d/%d %d:%d:%d ", day, month, year, hour, minute,
+      second);
   returnNoError(request);
   log("finished utc");
 }
 
-// Calculate position.
-// Triggered from ra or dec request. Should only run for one of them and then
-// cache for a few millis
-void updatePosition(TelescopeModel &model) {
-  unsigned long nowmillis = millis();
-  if ((nowmillis - lastPositionReceivedTimeMillis) >
-      STALE_EQ_WARNING_THRESHOLD) {
+/**
+ * Returns an time (epoch in millis) to be used for model calculations.
+ * This is obstensibly the time that the platform is
+ * as the middle of the run, it can be in the past or in the future.
+ * Checks to see if a packet arrived from eq platform recently
+ *  If not mark platform as not connected.
+ *
+ */
+unsigned long calculateAdjustedTime() {
+
+  unsigned long now = millis();
+  if ((now - lastPositionReceivedTimeMillis) > STALE_EQ_WARNING_THRESHOLD) {
     log("No EQ platform, or packet loss: last packet recieved %d seconds ago "
         "at %ld",
-        nowmillis - lastPositionReceivedTimeMillis,
-        lastPositionReceivedTimeMillis);
+        now - lastPositionReceivedTimeMillis, lastPositionReceivedTimeMillis);
     platformConnected = false;
   } else {
     platformConnected = true;
@@ -403,60 +410,23 @@ void updatePosition(TelescopeModel &model) {
   if (currentlyRunning) {
     // log("setting interpolation time");
     interpolationTimeInSeconds =
-        (nowmillis - lastPositionReceivedTimeMillis) / 1000.0;
+        (now - lastPositionReceivedTimeMillis) / 1000.0;
   }
 
-  // TODO interpolate platform values
-  model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  // log("Encoder Values %ld %ld", getEncoderAl(), getEncoderAz());
-
-  // Using position from eq platform (expressed as a time delta) adjust
-  // current time for calculation
-  //  1. Get the current time
-  struct tm timeInfo;
-  time_t now; // in seconds
-  time(&now);
-  gmtime_r(&now, &timeInfo);
-
-  // log("Base time for calc is %ld", now);
-  // log("Runtime from center is %lf", runtimeFromCenter);
-  // log("Interpolation time %lf", interpolationTimeInSeconds);
-  // 2. Adjust the time by runtimeFromCenter
-  now += (int)(runtimeFromCenter -
-               interpolationTimeInSeconds); // Adjust by whole seconds
-
-  int fractionalSecs =
-      1000000 *
-      (runtimeFromCenter -
-       (int)runtimeFromCenter); // microseconds adjustment for fractional part
-  timeval currentTimeVal;
-  currentTimeVal.tv_sec = now;
-  currentTimeVal.tv_usec = fractionalSecs;
-
-  gmtime_r(&currentTimeVal.tv_sec, &timeInfo);
-
-  // 3. Break down the time into its components
-  int year =
-      timeInfo.tm_year + 1900; // The tm_year is the number of years since 1900
-  int month = timeInfo.tm_mon + 1; // The tm_mon range is 0-11
-  int day = timeInfo.tm_mday;
-  int hour = timeInfo.tm_hour;
-  int min = timeInfo.tm_min;
-  int sec = timeInfo.tm_sec;
-
-  // 4. Set the time in the model
-  model.setUTCYear(year);
-  model.setUTCMonth(month);
-  model.setUTCDay(day);
-  model.setUTCHour(hour);
-  model.setUTCMinute(min);
-  model.setUTCSecond(sec);
-
-  log("Model date for calcs: %02d/%02d/%02d %02d:%02d:%02d ", model.day,
-      model.month, model.year, model.hour, model.min, model.sec);
-
-  model.calculateCurrentPosition();
+  unsigned long timeAtMiddleOfRun =
+      now + (runtimeFromCenter + interpolationTimeInSeconds) * 1000;
+  return timeAtMiddleOfRun;
 }
+
+// Calculate position.
+// Triggered from ra or dec request. Should only run for one of them and
+// then cache for a few millis
+void updatePosition(TelescopeModel &model) {
+  unsigned long timeAtMiddleOfRun = calculateAdjustedTime();
+  model.setEncoderValues(getEncoderAl(), getEncoderAz());
+  model.calculateCurrentPosition(timeAtMiddleOfRun);
+}
+
 void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
   String ra = request->arg("RightAscension");
   double parsedRA;
@@ -475,8 +445,9 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
     parsedDec = strtod(dec.c_str(), NULL);
     log("Parsed dec value: %lf", parsedDec);
   }
-  // TODO fix time
-  model.syncPositionRaDec(parsedRA, parsedDec, 0);
+
+  unsigned long timeAtMiddleOfRun = calculateAdjustedTime();
+  model.syncPositionRaDec(parsedRA, parsedDec, timeAtMiddleOfRun);
   updatePosition(model);
   model.saveEncoderCalibrationPoint();
 
@@ -498,6 +469,7 @@ void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
     lastPositionCalculatedTime = now;
     updatePosition(model);
   }
+
   returnSingleDouble(request, model.getDecCoord());
 }
 
@@ -758,6 +730,12 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
   alpacaWebServer.on("/saveAzEncoderSteps", HTTP_POST,
                      [&model, &prefs](AsyncWebServerRequest *request) {
                        saveAzEncoderSteps(request, model, prefs);
+                     });
+
+  alpacaWebServer.on("/addRefPoint", HTTP_POST,
+                     [&model, &prefs](AsyncWebServerRequest *request) {
+                      model.addReferencePoint();
+                       
                      });
 
   alpacaWebServer.on("/clearPrefs", HTTP_GET,
