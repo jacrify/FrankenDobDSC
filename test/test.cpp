@@ -207,8 +207,9 @@ void test_telescope_model_takeshi(void) {
   // 1456000 milliseconds since first sync
   model.calculateCurrentPosition(timeMillis + 1456000);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.currentDec, "dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3RADegrees, model.currentRA, "ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3RAHours, model.getRACoord(),
+                                   "ra");
 }
 
 void test_odd_times(void) {
@@ -634,15 +635,14 @@ void test_telescope_model_mylocation_with_offset() {
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
+  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis);
   model.addReferencePoint();
   model.calculateCurrentPosition(timeMillis);
 
-    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees,
-    model.getRACoord(),
-                                     "calculated ra");
-    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
-                                     "calculated dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
+                                   "calculated ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+                                   "calculated dec");
 
   // fomalhut
   double star2AltAxis =
@@ -671,7 +671,7 @@ void test_telescope_model_mylocation_with_offset() {
   log("Star time: %ld ", timeMillis);
 
   // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RADegress, star2Dec, timeMillis);
+  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
 
@@ -715,8 +715,8 @@ void test_telescope_model_mylocation_with_offset() {
   // 1456000 milliseconds since first sync
   model.calculateCurrentPosition(timeMillis);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.currentDec, "dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RADegrees, model.currentRA, "ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
 }
 
 void test_eq_to_horizontal_vega(void) {
@@ -796,12 +796,12 @@ void test_telescope_model_mylocation() {
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
+  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis);
   model.addReferencePoint();
 
   model.calculateCurrentPosition(timeMillis);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
                                    "calculated ra");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
                                    "calculated dec");
@@ -833,13 +833,13 @@ void test_telescope_model_mylocation() {
   log("Star time: %ld ", timeMillis);
 
   // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RADegress, star2Dec, timeMillis);
+  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
 
   model.calculateCurrentPosition(timeMillis);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RADegress, model.getRACoord(),
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RAHours, model.getRACoord(),
                                    "calculated ra");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2Dec, model.getDecCoord(),
                                    "calculated dec");
@@ -882,8 +882,8 @@ void test_telescope_model_mylocation() {
   // 1456000 milliseconds since first sync
   model.calculateCurrentPosition(timeMillis);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.currentDec, "dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RADegrees, model.currentRA, "ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
 }
 
 void test_telescope_model_mylocation_with_time_deltas() {
@@ -939,12 +939,12 @@ void test_telescope_model_mylocation_with_time_deltas() {
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
+  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis);
   model.addReferencePoint();
 
   model.calculateCurrentPosition(timeMillis);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
                                    "calculated ra");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
                                    "calculated dec");
@@ -980,12 +980,12 @@ void test_telescope_model_mylocation_with_time_deltas() {
   log("Star time: %ld ", timeMillis);
 
   // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RADegress, star2Dec, timeMillis);
+  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
   model.calculateCurrentPosition(timeMillis);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RADegress, model.getRACoord(),
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RAHours, model.getRACoord(),
                                    "calculated ra");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2Dec, model.getDecCoord(),
                                    "calculated dec");
@@ -1035,8 +1035,8 @@ void test_telescope_model_mylocation_with_time_deltas() {
   // 1456000 milliseconds since first sync
   model.calculateCurrentPosition(timeMillis);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.currentDec, "dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RADegrees, model.currentRA, "ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
 }
 
 void test_coords() {

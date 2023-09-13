@@ -132,8 +132,10 @@ public:
   double altBaseValue;
   double azBaseValue;
 
-  float currentRA;
-  float currentDec;
+  EqCoord currentEqPosition;
+  // float currentRAHours;
+  // float currentDec;
+  
   float currentAlt;
   float currentAz;
 

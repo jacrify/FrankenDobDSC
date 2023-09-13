@@ -13,3 +13,4 @@ double EqCoord::getRAInDegrees() { return eq.ra * 15; }
 double EqCoord::getDecInDegrees() { return eq.dec; }
 void EqCoord::setDecInDegrees(float dec) { eq.dec = dec; }
 void EqCoord::setRAInDegrees(float ra) { eq.ra = ra / 15.0; }
+void EqCoord::setRAInHours(float raHours) { eq.ra = raHours; }

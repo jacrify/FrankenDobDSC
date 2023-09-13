@@ -431,27 +431,27 @@ void updatePosition(TelescopeModel &model) {
 
 void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
   String ra = request->arg("RightAscension");
-  double parsedRA;
-  double parsedDec;
+  double parsedRAHours;
+  double parsedDecDegrees;
   // TODO handle exceptions
   if (ra != NULL) {
     log("Received parameterName: %s", ra.c_str());
 
-    parsedRA = strtod(ra.c_str(), NULL);
-    log("Parsed ra value: %lf", parsedRA);
+    parsedRAHours = strtod(ra.c_str(), NULL);
+    log("Parsed ra value: %lf", parsedRAHours);
   }
   String dec = request->arg("Declination");
   if (dec != NULL) {
     log("Received parameterName: %s", ra.c_str());
 
-    parsedDec = strtod(dec.c_str(), NULL);
-    log("Parsed dec value: %lf", parsedDec);
+    parsedDecDegrees = strtod(dec.c_str(), NULL);
+    log("Parsed dec value: %lf", parsedDecDegrees);
   }
 
   unsigned long timeAtMiddleOfRun = calculateAdjustedTime();
   log("Encoder values: %ld,%ld", getEncoderAl(), getEncoderAz());
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  model.syncPositionRaDec(parsedRA, parsedDec, timeAtMiddleOfRun);
+  model.syncPositionRaDec(parsedRAHours, parsedDecDegrees, timeAtMiddleOfRun);
   updatePosition(model);
   // model.saveEncoderCalibrationPoint();
 

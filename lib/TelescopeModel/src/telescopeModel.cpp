@@ -32,8 +32,7 @@ TelescopeModel::TelescopeModel() {
   // known encoder values at same
   altEncBaseValue = 0;
   azEncBaseValue = 0;
-  currentRA = 0;
-  currentDec = 0;
+
   currentAlt = 0;
   currentAz = 0;
 
@@ -120,8 +119,8 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   // position as well as the encoder values.
   // So we start by converting that base position into known
   // alt/az coords
-  double ra;
-  double dec;
+  double raInDegrees;
+  double decInDegrees;
   float altEncoderDegrees;
   float azEncoderDegrees;
   // convert encoder values to degrees
@@ -139,12 +138,12 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   log("Taki coord for reference calc: alt: %lf\taz: %lf", takiCoord.altAngle,
       takiCoord.aziAngle);
-  alignment.toReferenceDeg(ra, dec, takiCoord.aziAngle, takiCoord.altAngle);
+  alignment.toReferenceDeg(raInDegrees, decInDegrees, takiCoord.aziAngle, takiCoord.altAngle);
 
-  ra = fmod(fmod(ra, 360) + 360, 360);
+  raInDegrees = fmod(fmod(raInDegrees, 360) + 360, 360);
 
   double raDeltaDegrees = 0;
-  // if (alignment.getRefs() > 0) {
+  
   log("Time passed: %ld \t Sync time: %ld", timeMillis, alignmentModelSyncTime);
 
   unsigned long timedelta = 0;
@@ -154,15 +153,18 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   log("Time delta millis: %ld degrees: %lf", timedelta, raDeltaDegrees);
-  currentRA = ra + raDeltaDegrees;
-  log("RA: %lf", currentRA);
-  currentDec = dec;
-  log("Final position\t\t\tra: %lf\tdec: %lf", currentRA, currentDec);
+
+  currentEqPosition.setRAInDegrees(raInDegrees + raDeltaDegrees);
+  currentEqPosition.setDecInDegrees(decInDegrees);
+      // log("RA: %lf", currentRA);
+      // currentDec = dec;
+  log("Final position\t\t\tra(h): %lf\tdec: %lf", currentEqPosition.getRAInHours(),
+      currentEqPosition.getDecInDegrees());
   log("=====calculateCurrentPosition====");
   log("");
 }
-float TelescopeModel::getDecCoord() { return currentDec; }
-float TelescopeModel::getRACoord() { return currentRA; }
+float TelescopeModel::getDecCoord() { return currentEqPosition.getDecInDegrees(); }
+float TelescopeModel::getRACoord() { return currentEqPosition.getRAInHours(); }
 
 double TelescopeModel::millisecondsToRADeltaInDegrees(
     unsigned long millisecondsDelta) {
@@ -240,7 +242,7 @@ void TelescopeModel::addReferencePoint() {
  *
  *
  */
-void TelescopeModel::syncPositionRaDec(float ra, float dec,
+void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
                                        unsigned long time) {
   log("");
   log("=====syncPositionRaDec====");
@@ -254,8 +256,8 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   Ephemeris::flipLongitude(false); // East is negative and West is positive
   log("lat long set");
 
-  lastSyncedEq.setRAInDegrees(ra);
-  lastSyncedEq.setDecInDegrees(dec);
+  lastSyncedEq.setRAInHours(raInHours);
+  lastSyncedEq.setDecInDegrees(decInDegrees);
 
   log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf",
       lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees());
