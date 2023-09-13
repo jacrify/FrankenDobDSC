@@ -1,6 +1,7 @@
 #ifndef TELESCOPE_MODEL_H
 #define TELESCOPE_MODEL_H
 #include "CoordConv.hpp"
+#include "HorizCoord.h"
 #include <Ephemeris.h>
 
 /**
@@ -64,19 +65,16 @@ public:
   long getAzEncoderStepsPerRevolution();
   long getAltEncoderStepsPerRevolution();
 
-  void calculateAltAzFromEncoders(float &alt, float &az, long altEncVal,
-                                  long azEncVal);
-
   void calculateEncoderOffsetFromAltAz(float alt, float az, long altEncVal,
                                        long azEncVal, long &altEncOffset,
                                        long &azEncOffset);
 
-
-
-  void adjustAltAzBasedOnOffsets(float &alt, float &az);
+  HorizCoord adjustAltAzBasedOnOffsets(float alt, float az);
 
   void addReferencePoint();
 
+  void performOneStarAlignment(HorizCoord altaz, EquatorialCoordinates eq,unsigned long time);
+  
   void setLatitude(float lat);
   void setLongitude(float lng);
 
@@ -107,10 +105,10 @@ public:
   long calculateAzEncoderStepsPerRevolution();
   long calculateAltEncoderStepsPerRevolution();
 
+  HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
+
   // Calculate in the future (if positive) or into past (if negative)
   void setRaOffset(double raOffset);
-
-
 
   float latitude;
   float longitude;
@@ -152,8 +150,6 @@ public:
   float azAlignValue1;
   float azAlignValue2;
 
-  
-
   double lastSyncedRa;
   double lastSyncedDec;
   double lastSyncedAlt;
@@ -164,8 +160,13 @@ public:
   unsigned long alignmentModelSyncTime; // t=0 for post alignment. Based on time
                                         // of first sync
 
-  float altOffsetToAddToEncoderResult;
-  float azOffsetToAddToEncoderResult;
+  bool defaultAlignment;
+  // float altOffsetToAddToEncoderResult;
+  // float azOffsetToAddToEncoderResult;
+  // ;
+
+  float  errorToAddToEncoderResultAlt;
+  float errorToAddToEncoderResultAzi;
 
   bool isNorthernHemisphere();
 

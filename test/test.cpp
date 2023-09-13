@@ -220,7 +220,7 @@ void test_odd_times(void) {
                second = 33;
   unsigned long timeMillis =
       convertDateTimeToMillis(day, month, year, hour, minute, second);
- 
+
   model.setAltEncoderStepsPerRevolution(108229);
   model.setAzEncoderStepsPerRevolution(-30000);
 
@@ -243,11 +243,11 @@ void test_az_encoder_calibration(void) {
       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
-  
+
   model.setEncoderValues(0, 0);
   model.syncPositionRaDec(14.28644, 18.97959, timeMillis);
   // model.calculateCurrentPosition();
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
   HorizontalCoordinates newAltAz;
@@ -265,7 +265,7 @@ void test_az_encoder_calibration(void) {
   model.setEncoderValues(
       0, 100); // Here the azimuth encoder value has increased by 100
   // model.calculateCurrentPosition();
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
 
@@ -285,13 +285,13 @@ void test_alt_encoder_calibration(void) {
       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
-  
+
   model.setEncoderValues(0, 0);
   model.syncPositionRaDec(14.28644, 18.97959, timeMillis);
   // sets alt az
   // model.calculateCurrentPosition();
 
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
   HorizontalCoordinates newAltAz;
@@ -310,7 +310,7 @@ void test_alt_encoder_calibration(void) {
   model.setEncoderValues(
       100, 0); // Here the altitude encoder value has increased by 100
   // model.calculateCurrentPosition();
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
   // Use
@@ -329,11 +329,11 @@ void test_az_encoder_wraparound(void) {
       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
- 
+
   model.setEncoderValues(0, 0);
   model.syncPositionRaDec(14.28644, 18.9795, timeMillis);
   // model.calculateCurrentPosition();
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
   HorizontalCoordinates newAltAz;
@@ -351,7 +351,7 @@ void test_az_encoder_wraparound(void) {
   model.setEncoderValues(
       0, 17000); // Here the azimuth encoder value has increased by 100
   // model.calculateCurrentPosition();
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAzEncoderStepsPerRevolution();
 
@@ -370,13 +370,13 @@ void test_alt_encoder_negative_move(void) {
       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
-  
+
   model.setEncoderValues(100, 0);
   model.syncPositionRaDec(14.28644, 18.97959, timeMillis);
   // sets alt az
   // model.calculateCurrentPosition();
 
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
   HorizontalCoordinates newAltAz;
@@ -395,7 +395,7 @@ void test_alt_encoder_negative_move(void) {
   model.setEncoderValues(
       0, 0); // Here the altitude encoder value has decreased by 100
   // model.calculateCurrentPosition();
-//   model.saveEncoderCalibrationPoint(); // Save this point
+  //   model.saveEncoderCalibrationPoint(); // Save this point
 
   long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
   // Use
@@ -583,7 +583,7 @@ void test_telescope_model_mylocation_with_offset() {
   log("======test_telescope_model_mylocation_with_offset=====");
 
   TelescopeModel model;
-  // alt offset breaks, azi offset is handled in transformation
+  // add arbitary value to encoders. Should be handled by first sync.
   int altEncoderOffset = 5000;
   int aziEncoderOffset = 5000;
 
@@ -636,6 +636,12 @@ void test_telescope_model_mylocation_with_offset() {
 
   model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
   model.addReferencePoint();
+  model.calculateCurrentPosition(timeMillis);
+
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
+//                                    "calculated ra");
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+//                                    "calculated dec");
 
   // fomalhut
   double star2AltAxis =
@@ -773,16 +779,13 @@ void test_telescope_model_mylocation() {
   model.setAzEncoderStepsPerRevolution(36000);
 
   // star 1: Vega
-
-  double star1AltAxis =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
-  // anticlockwise
-  double star1AzmAxis =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(357, 13, 18.8);
+  HorizCoord vega;
+  vega.setAlt(17, 9, 19.5);
+  vega.setAzi(357, 13, 18.8);
 
   // start pointing exactly at star, if zero position of encoders is north
   // and flat.
-  model.setEncoderValues(star1AltAxis * 100, star1AzmAxis * 100);
+  model.setEncoderValues(vega.alt * 100, vega.azi * 100);
 
   // time s::hoursMinutesSecondsToFloatingHours(21, 27, 56);of observation
   double star1Time = timeMillis;
@@ -796,12 +799,19 @@ void test_telescope_model_mylocation() {
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 48, 9.2);
 
   log("Star 1: Vega");
-  log("    \t\t\t\t\talt: %lf\taz: %lf", star1AltAxis, star1AzmAxis);
+  log("    \t\t\t\t\talt: %lf\taz: %lf", vega.alt, vega.azi);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
   model.addReferencePoint();
+
+//   model.calculateCurrentPosition(timeMillis);
+
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
+//                                    "calculated ra");
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+//                                    "calculated dec");
 
   // fomalhut
 
@@ -1018,14 +1028,32 @@ void test_telescope_model_mylocation_with_time_deltas() {
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RADegrees, model.currentRA, "ra");
 }
 
+void test_coords() {
+
+  HorizCoord start;
+  start = HorizCoord(88, 180);
+  HorizCoord changed;
+  changed = start.addOffset(3, 0);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15,89, changed.alt, "alt should loop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 0, changed.azi, "azi should loop");
+
+
+  changed = start.addOffset(0,181 );
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 88, changed.alt, "alt should stay same");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 1, changed.azi, "azi should loop");
+
+  start = HorizCoord(95, 180);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 95, start.alt, "alt should  notloop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 180, start.azi, "azi should loop");
+}
 void setup() {
 
   // test_telescope_model();
   UNITY_BEGIN(); // IMPORTANT LINE!
 
-//   RUN_TEST(test_eq_to_horizontal);
-//   RUN_TEST(test_horizontal_to_eq);
-//   RUN_TEST(test_eq_to_horizontal_vega);
+  //   RUN_TEST(test_eq_to_horizontal);
+  //   RUN_TEST(test_horizontal_to_eq);
+  //   RUN_TEST(test_eq_to_horizontal_vega);
 
   // RUN_TEST(test_telescope_model_starting_offset);
   // RUN_TEST(test_az_encoder_calibration);
@@ -1036,13 +1064,14 @@ void setup() {
 
   // RUN_TEST(test_telescope_model_takeshi);
 
-//   RUN_TEST(test_two_star_alignment_takeshi_example);
-//   RUN_TEST(test_two_star_alignment_mylocation);
+  //   RUN_TEST(test_two_star_alignment_takeshi_example);
+  //   RUN_TEST(test_two_star_alignment_mylocation);
 
   RUN_TEST(test_telescope_model_mylocation_with_offset);
-  RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
 
+    RUN_TEST(test_telescope_model_mylocation);
+    RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
+  RUN_TEST(test_coords);
   UNITY_END(); // IMPORTANT LINE!
 }
 
