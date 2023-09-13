@@ -252,12 +252,14 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   log("lat: %lf, long: %lf", latitude, longitude);
   Ephemeris::setLocationOnEarth(latitude, longitude);
   Ephemeris::flipLongitude(false); // East is negative and West is positive
+  log("lat long set");
 
   lastSyncedEq.setRAInDegrees(ra);
   lastSyncedEq.setDecInDegrees(dec);
 
   log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf",
       lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees());
+      
 
   lastSyncedHoriz = HorizCoord(lastSyncedEq, time);
 

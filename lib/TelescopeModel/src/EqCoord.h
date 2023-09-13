@@ -15,7 +15,7 @@ public:
   double getRAInHours() ;
   double getRAInDegrees() ;
   double getDecInDegrees() ;
-  double setDecInDegrees(float dec);
-  double setRAInDegrees(float ra) ;
+  void setDecInDegrees(float dec);
+  void setRAInDegrees(float ra) ;
 };
 #endif

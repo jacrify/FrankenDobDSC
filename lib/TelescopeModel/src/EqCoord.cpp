@@ -11,5 +11,5 @@ EqCoord::EqCoord(HorizCoord h, unsigned long millis) {
 double EqCoord::getRAInHours() { return eq.ra; }
 double EqCoord::getRAInDegrees() { return eq.ra * 15; }
 double EqCoord::getDecInDegrees() { return eq.dec; }
-double EqCoord::setDecInDegrees(float dec) { eq.dec = dec; }
-double EqCoord::setRAInDegrees(float ra) { eq.ra = ra / 15.0; }
+void EqCoord::setDecInDegrees(float dec) { eq.dec = dec; }
+void EqCoord::setRAInDegrees(float ra) { eq.ra = ra / 15.0; }

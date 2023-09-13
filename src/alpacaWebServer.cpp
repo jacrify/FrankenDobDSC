@@ -117,8 +117,9 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     platformConnected = true;
   }
   char buffer[1500];
-  sprintf(buffer,
-          R"({
+  sprintf(
+      buffer,
+      R"({
     "altEncoderAlignValue1" : %ld,
     "altEncoderAlignValue2": %ld,
     "azEncoderAlignValue1" : %ld,
@@ -142,20 +143,20 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "timeToEnd" : %.1lf,
     "platformConnected" : %s
 })",
-          model.getAltEncoderAlignValue1(), model.getAltEncoderAlignValue2(),
-          model.getAzEncoderAlignValue1(), model.getAzEncoderAlignValue2(),
-          model.getAltAlignValue1(), model.getAltAlignValue2(),
-          model.getAzAlignValue1(), model.getAzAlignValue2(),
-          model.calculateAltEncoderStepsPerRevolution(),
-          model.calculateAzEncoderStepsPerRevolution(),
-          model.getAltEncoderStepsPerRevolution(),
-          model.getAzEncoderStepsPerRevolution(),
-          model.altOffsetToAddToEncoderResult,
-          model.azOffsetToAddToEncoderResult, model.lastSyncedRa,
-          model.lastSyncedDec, model.lastSyncedAlt, model.lastSyncedAz,
+      model.getAltEncoderAlignValue1(), model.getAltEncoderAlignValue2(),
+      model.getAzEncoderAlignValue1(), model.getAzEncoderAlignValue2(),
+      model.getAltAlignValue1(), model.getAltAlignValue2(),
+      model.getAzAlignValue1(), model.getAzAlignValue2(),
+      model.calculateAltEncoderStepsPerRevolution(),
+      model.calculateAzEncoderStepsPerRevolution(),
+      model.getAltEncoderStepsPerRevolution(),
+      model.getAzEncoderStepsPerRevolution(),
+      model.errorToAddToEncoderResultAlt, model.errorToAddToEncoderResultAzi,
+      model.lastSyncedEq.getRAInDegrees(), model.lastSyncedEq.getDecInDegrees(),
+      model.lastSyncedHoriz.alt, model.lastSyncedHoriz.azi,
 
-          currentlyRunning ? "true" : "false", runtimeFromCenter / 60,
-          timeToEnd / 60, platformConnected ? "true" : "false");
+      currentlyRunning ? "true" : "false", runtimeFromCenter / 60,
+      timeToEnd / 60, platformConnected ? "true" : "false");
 
   String json = buffer;
 
