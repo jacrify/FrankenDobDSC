@@ -505,8 +505,8 @@ void test_two_star_alignment_mylocation() {
 
   double star1Dec =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 48, 9.2);
-  alignment.addReferenceDeg(star1RADegrees, star1Dec, star1AzmAxis,
-                            star1AltAxis);
+  alignment.addReferenceDeg(star1AzmAxis, star1AltAxis, star1RADegrees,
+                            star1Dec);
 
   // fomalhaut
   double star2AltAxis =
@@ -523,8 +523,8 @@ void test_two_star_alignment_mylocation() {
   double star2Dec =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(-29, 29, 47.7);
 
-  alignment.addReferenceDeg(star2RADegress, star2Dec, star2AzmAxis,
-                            star2AltAxis);
+  alignment.addReferenceDeg(star2AzmAxis, star2AltAxis, star2RADegress,
+                            star2Dec);
 
   alignment.calculateThirdReference();
 
@@ -557,7 +557,7 @@ void test_two_star_alignment_mylocation() {
 
   double outaxis1;
   double outaxis2;
-  alignment.toInstrumentDeg(outaxis1, outaxis2, star3RADegrees, star3Dec);
+  alignment.toReferenceDeg(outaxis1, outaxis2, star3RADegrees, star3Dec);
 
   std::cout << "Calced Alt axis: " << outaxis2 << "\n\r";
   std::cout << "Calced Azi axis: " << outaxis1 << "\n\r";
@@ -567,7 +567,7 @@ void test_two_star_alignment_mylocation() {
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.55, star3AzmAxis, outaxis1, "az");
 
   double outra, outdec;
-  alignment.toReferenceDeg(outra, outdec, star3AzmAxis, star3AltAxis);
+  alignment.toInstrumentDeg(outra, outdec, star3AzmAxis, star3AltAxis);
 
   outra = outra + 360; // wtf. need to normalise
 
@@ -1076,12 +1076,12 @@ void setup() {
   // RUN_TEST(test_telescope_model_takeshi);
 
   //   RUN_TEST(test_two_star_alignment_takeshi_example);
-  //   RUN_TEST(test_two_star_alignment_mylocation);
+    RUN_TEST(test_two_star_alignment_mylocation);
 
-//   RUN_TEST(test_telescope_model_mylocation_with_offset);
+  RUN_TEST(test_telescope_model_mylocation_with_offset);
 
   RUN_TEST(test_telescope_model_mylocation);
-//   RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
+  RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
   //   RUN_TEST(test_coords);
   UNITY_END(); // IMPORTANT LINE!
 }

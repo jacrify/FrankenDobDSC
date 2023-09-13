@@ -138,7 +138,9 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   log("Taki coord for reference calc: alt: %lf\taz: %lf", takiCoord.altAngle,
       takiCoord.aziAngle);
-  alignment.toReferenceDeg(raInDegrees, decInDegrees, takiCoord.aziAngle, takiCoord.altAngle);
+  // alignment.toReferenceDeg(raInDegrees, decInDegrees, takiCoord.aziAngle, takiCoord.altAngle);
+  alignment.toInstrumentDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
+                           takiCoord.altAngle);
 
   raInDegrees = fmod(fmod(raInDegrees, 360) + 360, 360);
 
@@ -190,8 +192,8 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
 
   TakiHorizCoord taki1 = TakiHorizCoord(horiz1, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(eq1.getRAInDegrees(), eq1.getDecInDegrees(),
-                            taki1.aziAngle, taki1.altAngle);
+  alignment.addReferenceDeg(taki1.aziAngle, taki1.altAngle,eq1.getRAInDegrees(),
+                            eq1.getDecInDegrees() );
 
   HorizCoord horiz2 = horiz1.addOffset(90, 0);
 
@@ -199,8 +201,8 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
 
   TakiHorizCoord taki2 = TakiHorizCoord(horiz2, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(eq2.getRAInDegrees(), eq2.getDecInDegrees(),
-                            taki2.aziAngle, taki2.altAngle);
+  alignment.addReferenceDeg(taki2.aziAngle, taki2.altAngle,eq2.getRAInDegrees(),
+                            eq2.getDecInDegrees() );
   alignment.calculateThirdReference();
   log("===Generated 1 star reference point===");
   log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz1.alt,
@@ -220,9 +222,10 @@ void TelescopeModel::addReferencePoint() {
   }
   TakiHorizCoord taki = TakiHorizCoord(lastSyncedHoriz, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(lastSyncedEq.getRAInDegrees() - raDeltaDegrees,
-                            lastSyncedEq.getDecInDegrees(), taki.aziAngle,
-                            taki.altAngle);
+  alignment.addReferenceDeg(taki.aziAngle,
+                            taki.altAngle,lastSyncedEq.getRAInDegrees() -
+                                raDeltaDegrees,
+                            lastSyncedEq.getDecInDegrees() );
 
   if (alignment.getRefs() == 2) {
     log("Got two refs, calculating model...");
