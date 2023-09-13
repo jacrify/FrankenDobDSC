@@ -2,6 +2,7 @@
 #define TELESCOPE_MODEL_H
 #include "CoordConv.hpp"
 #include "HorizCoord.h"
+#include "EqCoord.h"
 #include <Ephemeris.h>
 
 /**
@@ -73,8 +74,9 @@ public:
 
   void addReferencePoint();
 
-  void performOneStarAlignment(HorizCoord altaz, EquatorialCoordinates eq,unsigned long time);
-  
+  void performOneStarAlignment(HorizCoord altaz, EqCoord eq,
+                               unsigned long time);
+
   void setLatitude(float lat);
   void setLongitude(float lng);
 

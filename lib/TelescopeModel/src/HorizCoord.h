@@ -3,76 +3,32 @@
 #include "Ephemeris.h"
 #include <cmath>
 
+
+class EqCoord;
 /**
  * Represents an alt / az. Largely a wrapper for Ephermeris HorizontalCoord,
  * but exposes add/substact operations.
  */
 class HorizCoord {
 
-  // HorizCoord() {
-  //   alt=0;
-  //   azi=0;
-  // }
 
 public:
   float alt;
   float azi;
 
-  void normalise() {
-    if (alt > 90) {
-      alt = 180 - alt;
-      azi += 180;
-    }
-    if (alt < -90) {
-      alt = 180 - alt;
-      azi += 180;
-    }
-    azi = fmod(fmod(azi, 360) + 360, 360);
-  }
-  HorizCoord() {
-    alt = 0.0;
-    azi = 0.0;
-  }
+  void normalise();
+  HorizCoord() ;
 
-  HorizCoord(float altitude, float azimuth) {
-    alt = altitude;
-    azi = azimuth;
-    // normalise();?
-  }
-
-  HorizCoord(HorizontalCoordinates ephHCoord) {
-    alt = ephHCoord.alt;
-    azi = ephHCoord.azi;
-    // normalise();
-  }
-  
-  /**
-   * Convert to ephemeris
-  */
-  HorizontalCoordinates toHorizontalCoordinates() {
-    HorizontalCoordinates out;
-    out.alt=alt;
-    out.azi=azi;
-  }
-  void
-  setAlt(int degrees, int minutes, float seconds) {
-    alt = Ephemeris::degreesMinutesSecondsToFloatingDegrees(degrees, minutes,
-                                                            seconds);
-    // normalise();
-  }
-  void setAzi(int degrees, int minutes, float seconds) {
-    azi = Ephemeris::degreesMinutesSecondsToFloatingDegrees(degrees, minutes,
-                                                            seconds);
-    // normalise();
-  }
-  HorizCoord addOffset(float altOffset,float aziOffset) {
-    HorizCoord out(alt, azi);
-    out.alt += altOffset;
-    out.azi += aziOffset;
-    out.normalise();
-    return out;
-  }
+  HorizCoord(float altitude, float azimuth);
+  HorizCoord(EqCoord e,unsigned long time) ;
+  HorizCoord(HorizontalCoordinates ephHCoord) ;
+  HorizontalCoordinates toHorizontalCoordinates();
+  void setAlt(int degrees, int minutes, float seconds);
+  void setAzi(int degrees, int minutes, float seconds);
+  HorizCoord addOffset(float altOffset, float aziOffset);
 };
+
+
 /** This class represents the way taki measures angle coords.
  * This is: aziangle is anti clockwise when viewed from north pole
  * (so if viewer location is southern hemisphere azi direction changes)

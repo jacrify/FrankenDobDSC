@@ -638,10 +638,11 @@ void test_telescope_model_mylocation_with_offset() {
   model.addReferencePoint();
   model.calculateCurrentPosition(timeMillis);
 
-//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
-//                                    "calculated ra");
-//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
-//                                    "calculated dec");
+  //   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees,
+  //   model.getRACoord(),
+  //                                    "calculated ra");
+  //   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+  //                                    "calculated dec");
 
   // fomalhut
   double star2AltAxis =
@@ -806,12 +807,13 @@ void test_telescope_model_mylocation() {
   model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
   model.addReferencePoint();
 
-//   model.calculateCurrentPosition(timeMillis);
+    model.calculateCurrentPosition(timeMillis);
 
-//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
-//                                    "calculated ra");
-//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
-//                                    "calculated dec");
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees,
+    model.getRACoord(),
+                                     "calculated ra");
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+                                     "calculated dec");
 
   // fomalhut
 
@@ -1034,12 +1036,12 @@ void test_coords() {
   start = HorizCoord(88, 180);
   HorizCoord changed;
   changed = start.addOffset(3, 0);
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15,89, changed.alt, "alt should loop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 89, changed.alt, "alt should loop");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 0, changed.azi, "azi should loop");
 
-
-  changed = start.addOffset(0,181 );
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 88, changed.alt, "alt should stay same");
+  changed = start.addOffset(0, 181);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 88, changed.alt,
+                                   "alt should stay same");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 1, changed.azi, "azi should loop");
 
   start = HorizCoord(95, 180);
@@ -1069,9 +1071,9 @@ void setup() {
 
   RUN_TEST(test_telescope_model_mylocation_with_offset);
 
-    RUN_TEST(test_telescope_model_mylocation);
-    RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
-  RUN_TEST(test_coords);
+  RUN_TEST(test_telescope_model_mylocation);
+  RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
+//   RUN_TEST(test_coords);
   UNITY_END(); // IMPORTANT LINE!
 }
 

@@ -16,7 +16,7 @@ TelescopeModel::TelescopeModel() {
   // alignment.addReference(0, M_PI_2, M_PI, M_PI_2);//radians
   alignment.addReferenceDeg(0, 90, 180, 90); // degreess
   alignment.calculateThirdReference();
-  defaultAlignment=true;
+  defaultAlignment = true;
 
   latitude = -34.049120;
   longitude = 151.042100;
@@ -176,27 +176,33 @@ double TelescopeModel::millisecondsToRADeltaInDegrees(
  * and no real aligment model is present. If so, after first sync,
  * an alignment point is added for the current ra/dec and calculated alt/az.
  * Then a second alignment point is added. This second point is calculated
- * by taking the calculated alt az, manipulating it so we get a position 
- * on the other side of the sky, calulating ra/dec for that position, then setting
- * a second alignment point for that position.
- * 
- * The net effect should be that after the first sync, the user gets rough alignment.
- * Then they can choose to do more accurate manual alignment points.
-*/
-// void TelescopeModel::performOneStarAlignment(HorizCoord altaz, EquatorialCoordinates eq,unsigned long time)  {
+ * by taking the calculated alt az, manipulating it so we get a position
+ * on the other side of the sky, calulating ra/dec for that position, then
+ * setting a second alignment point for that position.
+ *
+ * The net effect should be that after the first sync, the user gets rough
+ * alignment. Then they can choose to do more accurate manual alignment points.
+ */
+void TelescopeModel::performOneStarAlignment(HorizCoord altaz, EqCoord eq,
+                                             unsigned long time) {
 
-//   if (isNorthernHemisphere()) {
-//     alignment.addReferenceDeg(eq.ra, eq.dec, 360 - altaz.azi, altaz.alt);
-//   } else {
-//     // when in southern hemisphere, pass negative alt and clockwise azi to model
-//     alignment.addReferenceDeg(eq.ra, eq.dec, altaz.azi, -altaz.alt);
-//   }
+  TakiHorizCoord taki1=TakiHorizCoord(altaz,isNorthernHemisphere());
 
-//   HorizCoord generatedSecondPoint = altaz.addOffset(45,180);
-//   EquatorialCoordinates generateRADEC=Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(generatedSecondPoint.toHorizontalCoordinates(),time);
-//   alignment.addReferenceDeg(eq.ra, eq.dec, altaz.azi, -altaz.alt);
+  alignment.addReferenceDeg(eq.getRAInDegrees(),eq.getDecInDegrees(),taki1.aziAngle,taki1.altAngle);
+  
 
-// }
+  HorizCoord generatedSecondPoint = altaz.addOffset(90, 0);
+
+  EqCoord eq2 =
+      EqCoord(generatedSecondPoint, time);
+
+  TakiHorizCoord taki2 =
+      TakiHorizCoord(generatedSecondPoint, isNorthernHemisphere());
+
+  alignment.addReferenceDeg(eq2.getRAInDegrees(), eq2.getDecInDegrees(), taki2.aziAngle, taki2.altAngle);
+  alignment.calculateThirdReference();
+}
+
 void TelescopeModel::addReferencePoint() {
   log("");
   log("=====addReferencePoint====");
@@ -213,9 +219,9 @@ void TelescopeModel::addReferencePoint() {
   }
   // when in northern hemisphere, pass positive alt and counterclockwise azi to
   // model
-  //TODO make lastSyncedHoriz a member
+  // TODO make lastSyncedHoriz a member
   HorizCoord lastSyncedHoriz = HorizCoord(lastSyncedAlt, lastSyncedAz);
-  TakiHorizCoord taki = TakiHorizCoord(lastSyncedHoriz,isNorthernHemisphere());
+  TakiHorizCoord taki = TakiHorizCoord(lastSyncedHoriz, isNorthernHemisphere());
 
   alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
                             taki.aziAngle, taki.altAngle);
@@ -224,8 +230,9 @@ void TelescopeModel::addReferencePoint() {
   //                             360 - lastSyncedAz, lastSyncedAlt);
   // }
   // else {
-  //   // when in southern hemisphere, pass negative alt and clockwise azi to model
-  //   alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
+  //   // when in southern hemisphere, pass negative alt and clockwise azi to
+  //   model alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees,
+  //   lastSyncedDec,
   //                             lastSyncedAz, -lastSyncedAlt);
   // }
   if (alignment.getRefs() == 2) {
@@ -265,15 +272,16 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
       // East is negative and West is positive
       Ephemeris::flipLongitude(false);
 
-  EquatorialCoordinates eq;
-  eq.ra = ra / 15; // Ephemeris uses hours not degrees , 1 hour = 15 degrees
-  eq.dec = dec;
+  EqCoord eq;
+  eq.setRAInDegrees(ra);
+  eq.setDecInDegrees(dec); //
 
-  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf", eq.ra,
-      eq.dec);
 
-  HorizCoord altAzCoord = HorizCoord(
-      Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(eq, time));
+  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf", eq.getRAInHours(),
+      eq.getDecInDegrees());
+
+  HorizCoord altAzCoord = HorizCoord(eq,time);
+  
 
   log("Expected local altaz\t\t\talt: %lf \t\taz:%lf", altAzCoord.alt,
       altAzCoord.azi);
@@ -326,6 +334,10 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
     secondSyncTime = time;
   }
 
+  if (defaultAlignment) {
+    performOneStarAlignment(altAzCoord, eq, time);
+    defaultAlignment = false;
+  }
   log("=====syncPositionRaDec====");
   log("");
   // // calculate alt/az using current (saved) model
