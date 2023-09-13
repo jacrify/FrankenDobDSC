@@ -152,10 +152,14 @@ public:
   float azAlignValue1;
   float azAlignValue2;
 
-  double lastSyncedRa;
-  double lastSyncedDec;
-  double lastSyncedAlt;
-  double lastSyncedAz;
+  HorizCoord lastSyncedHoriz; 
+  EqCoord lastSyncedEq;
+
+
+  // double lastSyncedRa;
+  // double lastSyncedDec;
+  // double lastSyncedAlt;
+  // double lastSyncedAz;
 
   unsigned long secondSyncTime; // timestamp in milliseconds  of second sync
   unsigned long firstSyncTime;  // timestamp in milliseconds  of first sync

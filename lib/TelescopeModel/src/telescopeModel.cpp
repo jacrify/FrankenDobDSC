@@ -209,21 +209,13 @@ void TelescopeModel::addReferencePoint() {
   double raDeltaDegrees = 0;
   if (alignment.getRefs() > 0) {
     unsigned long timedelta = secondSyncTime - firstSyncTime;
-
-    // std::cout << "lastSyncedTime :" << secondSyncTime << "\n\r";
-    // std::cout << "firstSyncTime :" << firstSyncTime << "\n\r";
-    // std::cout << "timedelta :" << timedelta << "\n\r";
-    // std::cout << "raDeltaDegrees :" << raDeltaDegrees << "\n\r";
-
     raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   }
-  // when in northern hemisphere, pass positive alt and counterclockwise azi to
-  // model
   // TODO make lastSyncedHoriz a member
-  HorizCoord lastSyncedHoriz = HorizCoord(lastSyncedAlt, lastSyncedAz);
+  
   TakiHorizCoord taki = TakiHorizCoord(lastSyncedHoriz, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
+  alignment.addReferenceDeg(lastSyncedEq.getRAInDegrees() - raDeltaDegrees, lastSyncedEq.getDecInDegrees(),
                             taki.aziAngle, taki.altAngle);
   // if (isNorthernHemisphere()) {
   //   alignment.addReferenceDeg(lastSyncedRa - raDeltaDegrees, lastSyncedDec,
@@ -258,7 +250,6 @@ void TelescopeModel::addReferencePoint() {
  */
 void TelescopeModel::syncPositionRaDec(float ra, float dec,
                                        unsigned long time) {
-
   log("");
   log("=====syncPositionRaDec====");
 
@@ -268,49 +259,34 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   // alt/az
   log("lat: %lf, long: %lf", latitude, longitude);
   Ephemeris::Ephemeris::setLocationOnEarth(latitude, longitude);
-  Ephemeris::
-      // East is negative and West is positive
-      Ephemeris::flipLongitude(false);
+  Ephemeris::Ephemeris::flipLongitude(false); // East is negative and West is positive
 
-  EqCoord eq;
-  eq.setRAInDegrees(ra);
-  eq.setDecInDegrees(dec); //
-
-
-  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf", eq.getRAInHours(),
-      eq.getDecInDegrees());
-
-  HorizCoord altAzCoord = HorizCoord(eq,time);
   
+  lastSyncedEq.setRAInDegrees(ra);
+  lastSyncedEq.setDecInDegrees(dec);
 
-  log("Expected local altaz\t\t\talt: %lf \t\taz:%lf", altAzCoord.alt,
-      altAzCoord.azi);
+  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf",
+      lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees());
 
+  lastSyncedHoriz = HorizCoord(lastSyncedEq, time);
+
+  log("Expected local altaz\t\t\talt: %lf \t\taz:%lf", lastSyncedHoriz.alt,
+      lastSyncedHoriz.azi);
   log("Actual encoder values\t\t\talt: %ld \t\taz:%ld", altEnc, azEnc);
 
-  HorizCoord calculatedAltAzFromEncoders =
-      calculateAltAzFromEncoders(altEnc, azEnc);
+  HorizCoord calculatedAltAzFromEncoders = calculateAltAzFromEncoders(altEnc, azEnc);
 
-  log("Calculated alt/az from encoders\t\talt: %lf\t\taz:%lf",
-      calculatedAltAzFromEncoders.alt, calculatedAltAzFromEncoders.azi);
+  log("Calculated alt/az from encoders\t\talt: %lf\t\taz:%lf", calculatedAltAzFromEncoders.alt, calculatedAltAzFromEncoders.azi);
 
   errorToAddToEncoderResultAlt =
-      altAzCoord.alt - calculatedAltAzFromEncoders.alt;
+      lastSyncedHoriz.alt - calculatedAltAzFromEncoders.alt;
   errorToAddToEncoderResultAzi =
-      altAzCoord.azi - calculatedAltAzFromEncoders.azi;
+      lastSyncedHoriz.azi - calculatedAltAzFromEncoders.azi;
 
-  //                                              altOffsetToAddToEncoderResult
-  //                                              =
-  //                                 altAzCoord.alt - calculatedAlt;
-  // azOffsetToAddToEncoderResult = altAzCoord.azi - calculatedAz;
   log("Stored alt/az delta\t\t\talt: %lf\t\taz:%lf",
       errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);
 
   // these are used for adding reference points to the model
-  lastSyncedRa = ra;
-  lastSyncedDec = dec;
-  lastSyncedAlt = altAzCoord.alt;
-  lastSyncedAz = altAzCoord.azi;
 
   // these are used for calibrating encoders. Some duplication here.
   //  Shuffle older alignment values into position 2
@@ -320,8 +296,9 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   altAlignValue2 = altAlignValue1;
 
   // Update new alignment values
-  azAlignValue1 = altAzCoord.azi;
-  altAlignValue1 = altAzCoord.alt;
+  azAlignValue1 = lastSyncedHoriz.azi;
+  altAlignValue1 = lastSyncedHoriz.alt;
+
   altEncoderAlignValue1 = altEnc;
   azEncoderAlignValue1 = azEnc;
 
@@ -335,7 +312,7 @@ void TelescopeModel::syncPositionRaDec(float ra, float dec,
   }
 
   if (defaultAlignment) {
-    performOneStarAlignment(altAzCoord, eq, time);
+    performOneStarAlignment(lastSyncedHoriz, lastSyncedEq, time);
     defaultAlignment = false;
   }
   log("=====syncPositionRaDec====");
