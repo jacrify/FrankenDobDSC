@@ -638,11 +638,11 @@ void test_telescope_model_mylocation_with_offset() {
   model.addReferencePoint();
   model.calculateCurrentPosition(timeMillis);
 
-  //   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees,
-  //   model.getRACoord(),
-  //                                    "calculated ra");
-  //   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
-  //                                    "calculated dec");
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees,
+    model.getRACoord(),
+                                     "calculated ra");
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+                                     "calculated dec");
 
   // fomalhut
   double star2AltAxis =
@@ -758,8 +758,7 @@ void test_telescope_model_mylocation() {
   log("======test_telescope_model_mylocation=====");
 
   TelescopeModel model;
-  //   model.setLatitude(-34.0455);
-  //   model.setLongitude(151.0508333);
+
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
   // Choose a date and time (UTC)
@@ -768,13 +767,6 @@ void test_telescope_model_mylocation() {
 
   unsigned long timeMillis =
       convertDateTimeToMillis(day, month, year, hour, minute, second);
-
-  // model.setUTCYear(2023);
-  // model.setUTCMonth(9);
-  // model.setUTCDay(2);
-  // model.setUTCHour(10);
-  // model.setUTCMinute(0);
-  // model.setUTCSecond(0);
 
   model.setAltEncoderStepsPerRevolution(36000); // 100 ticks per degree
   model.setAzEncoderStepsPerRevolution(36000);
@@ -807,13 +799,12 @@ void test_telescope_model_mylocation() {
   model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
   model.addReferencePoint();
 
-    model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(timeMillis);
 
-    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees,
-    model.getRACoord(),
-                                     "calculated ra");
-    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
-                                     "calculated dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
+                                   "calculated ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+                                   "calculated dec");
 
   // fomalhut
 
@@ -846,6 +837,12 @@ void test_telescope_model_mylocation() {
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
 
+  model.calculateCurrentPosition(timeMillis);
+
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RADegress, model.getRACoord(),
+                                   "calculated ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2Dec, model.getDecCoord(),
+                                   "calculated dec");
   // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
   // This calculated telescope coordinates is very close to the measured
   // telescope coordinates,
@@ -945,6 +942,13 @@ void test_telescope_model_mylocation_with_time_deltas() {
   model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
   model.addReferencePoint();
 
+  model.calculateCurrentPosition(timeMillis);
+
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RADegrees, model.getRACoord(),
+                                   "calculated ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1Dec, model.getDecCoord(),
+                                   "calculated dec");
+
   // fomalhaut
   // five minutes later
   day = 2, month = 9, year = 2023, hour = 10, minute = 5, second = 0;
@@ -979,7 +983,12 @@ void test_telescope_model_mylocation_with_time_deltas() {
   model.syncPositionRaDec(star2RADegress, star2Dec, timeMillis);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
+  model.calculateCurrentPosition(timeMillis);
 
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RADegress, model.getRACoord(),
+                                   "calculated ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2Dec, model.getDecCoord(),
+                                   "calculated dec");
   // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
   // This calculated telescope coordinates is very close to the measured
   // telescope coordinates,
@@ -1073,7 +1082,7 @@ void setup() {
 
   RUN_TEST(test_telescope_model_mylocation);
   RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
-//   RUN_TEST(test_coords);
+  //   RUN_TEST(test_coords);
   UNITY_END(); // IMPORTANT LINE!
 }
 
