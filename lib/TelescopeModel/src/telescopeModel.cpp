@@ -27,14 +27,14 @@ TelescopeModel::TelescopeModel() {
   altEncoderStepsPerRevolution = 0;
 
   // known eq position at sync
-  raBasePos = 0;
-  decBasePos = 0;
+  // raBasePos = 0;
+  // decBasePos = 0;
   // known encoder values at same
-  altEncBaseValue = 0;
-  azEncBaseValue = 0;
+  // altEncBaseValue = 0;
+  // azEncBaseValue = 0;
 
-  currentAlt = 0;
-  currentAz = 0;
+  // currentAlt = 0;
+  // currentAz = 0;
 
   firstSyncTime = 0;
   secondSyncTime = 0;
@@ -144,7 +144,7 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   double raDeltaDegrees = 0;
   
-  log("Time passed: %ld \t Sync time: %ld", timeMillis, alignmentModelSyncTime);
+  log("Time passed: %ld \t (since alignment model creation time: %ld)", timeMillis, alignmentModelSyncTime);
 
   unsigned long timedelta = 0;
   if (alignmentModelSyncTime != 0) {
@@ -185,24 +185,29 @@ double TelescopeModel::millisecondsToRADeltaInDegrees(
  * The net effect should be that after the first sync, the user gets rough
  * alignment. Then they can choose to do more accurate manual alignment points.
  */
-void TelescopeModel::performOneStarAlignment(HorizCoord altaz, EqCoord eq,
+void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
                                              unsigned long time) {
 
-  TakiHorizCoord taki1 = TakiHorizCoord(altaz, isNorthernHemisphere());
+  TakiHorizCoord taki1 = TakiHorizCoord(horiz1, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(eq.getRAInDegrees(), eq.getDecInDegrees(),
+  alignment.addReferenceDeg(eq1.getRAInDegrees(), eq1.getDecInDegrees(),
                             taki1.aziAngle, taki1.altAngle);
 
-  HorizCoord generatedSecondPoint = altaz.addOffset(90, 0);
+  HorizCoord horiz2 = horiz1.addOffset(90, 0);
 
-  EqCoord eq2 = EqCoord(generatedSecondPoint, time);
+  EqCoord eq2 = EqCoord(horiz2, time);
 
-  TakiHorizCoord taki2 =
-      TakiHorizCoord(generatedSecondPoint, isNorthernHemisphere());
+  TakiHorizCoord taki2 = TakiHorizCoord(horiz2, isNorthernHemisphere());
 
   alignment.addReferenceDeg(eq2.getRAInDegrees(), eq2.getDecInDegrees(),
                             taki2.aziAngle, taki2.altAngle);
   alignment.calculateThirdReference();
+  log("===Generated 1 star reference point===");
+  log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz1.alt,
+      horiz1.azi, eq1.getRAInHours(), eq1.getDecInDegrees());
+  log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.alt, horiz2.azi,
+      eq2.getRAInHours(), eq2.getDecInDegrees());
+  alignmentModelSyncTime=time;
 }
 
 void TelescopeModel::addReferencePoint() {
@@ -213,8 +218,6 @@ void TelescopeModel::addReferencePoint() {
     unsigned long timedelta = secondSyncTime - firstSyncTime;
     raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   }
-  // TODO make lastSyncedHoriz a member
-
   TakiHorizCoord taki = TakiHorizCoord(lastSyncedHoriz, isNorthernHemisphere());
 
   alignment.addReferenceDeg(lastSyncedEq.getRAInDegrees() - raDeltaDegrees,

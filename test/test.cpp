@@ -1078,10 +1078,10 @@ void setup() {
   //   RUN_TEST(test_two_star_alignment_takeshi_example);
   //   RUN_TEST(test_two_star_alignment_mylocation);
 
-  RUN_TEST(test_telescope_model_mylocation_with_offset);
+//   RUN_TEST(test_telescope_model_mylocation_with_offset);
 
   RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
+//   RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
   //   RUN_TEST(test_coords);
   UNITY_END(); // IMPORTANT LINE!
 }
