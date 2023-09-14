@@ -13,8 +13,8 @@ class HorizCoord {
 
 
 public:
-  float alt;
-  float azi;
+  float altInDegrees;
+  float aziInDegrees;
 
   void normalise();
   HorizCoord() ;
@@ -44,8 +44,8 @@ public:
   float altAngle;
 
   TakiHorizCoord(HorizCoord altAz, bool northernHemisphere) {
-    altAngle = altAz.alt;
-    aziAngle = altAz.azi;
+    altAngle = altAz.altInDegrees;
+    aziAngle = altAz.aziInDegrees;
 
     if (northernHemisphere) {
       // when in northern hemisphere, alt is positive, and azi is counter

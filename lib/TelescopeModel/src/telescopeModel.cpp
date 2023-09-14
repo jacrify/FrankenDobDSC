@@ -125,28 +125,30 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   float azEncoderDegrees;
   // convert encoder values to degrees
   HorizCoord encoderAltAz = calculateAltAzFromEncoders(altEnc, azEnc);
-  log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf", encoderAltAz.alt,
-      encoderAltAz.azi);
+  log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf",
+      encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees);
 
   HorizCoord adjustedAltAz = encoderAltAz.addOffset(
       errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);
 
-  log("Offset alt az from encoders: \talt: %lf\taz:%lf", adjustedAltAz.alt,
-      adjustedAltAz.azi);
+  log("Offset alt az from encoders: \talt: %lf\taz:%lf",
+      adjustedAltAz.altInDegrees, adjustedAltAz.aziInDegrees);
   TakiHorizCoord takiCoord =
       TakiHorizCoord(adjustedAltAz, isNorthernHemisphere());
 
   log("Taki coord for reference calc: alt: %lf\taz: %lf", takiCoord.altAngle,
       takiCoord.aziAngle);
-  // alignment.toReferenceDeg(raInDegrees, decInDegrees, takiCoord.aziAngle, takiCoord.altAngle);
+  // alignment.toReferenceDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
+  // takiCoord.altAngle);
   alignment.toInstrumentDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
-                           takiCoord.altAngle);
+                            takiCoord.altAngle);
 
   raInDegrees = fmod(fmod(raInDegrees, 360) + 360, 360);
 
   double raDeltaDegrees = 0;
-  
-  log("Time passed: %ld \t (since alignment model creation time: %ld)", timeMillis, alignmentModelSyncTime);
+
+  log("Time passed: %ld \t (since alignment model creation time: %ld)",
+      timeMillis, alignmentModelSyncTime);
 
   unsigned long timedelta = 0;
   if (alignmentModelSyncTime != 0) {
@@ -158,14 +160,16 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   currentEqPosition.setRAInDegrees(raInDegrees + raDeltaDegrees);
   currentEqPosition.setDecInDegrees(decInDegrees);
-      // log("RA: %lf", currentRA);
-      // currentDec = dec;
-  log("Final position\t\t\tra(h): %lf\tdec: %lf", currentEqPosition.getRAInHours(),
-      currentEqPosition.getDecInDegrees());
+  // log("RA: %lf", currentRA);
+  // currentDec = dec;
+  log("Final position\t\t\tra(h): %lf\tdec: %lf",
+      currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
   log("=====calculateCurrentPosition====");
   log("");
 }
-float TelescopeModel::getDecCoord() { return currentEqPosition.getDecInDegrees(); }
+float TelescopeModel::getDecCoord() {
+  return currentEqPosition.getDecInDegrees();
+}
 float TelescopeModel::getRACoord() { return currentEqPosition.getRAInHours(); }
 
 double TelescopeModel::millisecondsToRADeltaInDegrees(
@@ -192,8 +196,8 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
 
   TakiHorizCoord taki1 = TakiHorizCoord(horiz1, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(taki1.aziAngle, taki1.altAngle,eq1.getRAInDegrees(),
-                            eq1.getDecInDegrees() );
+  alignment.addReferenceDeg(taki1.aziAngle, taki1.altAngle,
+                            eq1.getRAInDegrees(), eq1.getDecInDegrees());
 
   HorizCoord horiz2 = horiz1.addOffset(90, 0);
 
@@ -201,15 +205,15 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
 
   TakiHorizCoord taki2 = TakiHorizCoord(horiz2, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(taki2.aziAngle, taki2.altAngle,eq2.getRAInDegrees(),
-                            eq2.getDecInDegrees() );
+  alignment.addReferenceDeg(taki2.aziAngle, taki2.altAngle,
+                            eq2.getRAInDegrees(), eq2.getDecInDegrees());
   alignment.calculateThirdReference();
   log("===Generated 1 star reference point===");
-  log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz1.alt,
-      horiz1.azi, eq1.getRAInHours(), eq1.getDecInDegrees());
-  log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.alt, horiz2.azi,
-      eq2.getRAInHours(), eq2.getDecInDegrees());
-  alignmentModelSyncTime=time;
+  log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz1.altInDegrees,
+      horiz1.aziInDegrees, eq1.getRAInHours(), eq1.getDecInDegrees());
+  log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.altInDegrees,
+      horiz2.aziInDegrees, eq2.getRAInHours(), eq2.getDecInDegrees());
+  alignmentModelSyncTime = time;
 }
 
 void TelescopeModel::addReferencePoint() {
@@ -222,10 +226,9 @@ void TelescopeModel::addReferencePoint() {
   }
   TakiHorizCoord taki = TakiHorizCoord(lastSyncedHoriz, isNorthernHemisphere());
 
-  alignment.addReferenceDeg(taki.aziAngle,
-                            taki.altAngle,lastSyncedEq.getRAInDegrees() -
-                                raDeltaDegrees,
-                            lastSyncedEq.getDecInDegrees() );
+  alignment.addReferenceDeg(taki.aziAngle, taki.altAngle,
+                            lastSyncedEq.getRAInDegrees() - raDeltaDegrees,
+                            lastSyncedEq.getDecInDegrees());
 
   if (alignment.getRefs() == 2) {
     log("Got two refs, calculating model...");
@@ -267,24 +270,24 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
 
   log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf",
       lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees());
-      
 
   lastSyncedHoriz = HorizCoord(lastSyncedEq, time);
 
-  log("Expected local altaz\t\t\talt: %lf \t\taz:%lf", lastSyncedHoriz.alt,
-      lastSyncedHoriz.azi);
+  log("Expected local altaz\t\t\talt: %lf \t\taz:%lf",
+      lastSyncedHoriz.altInDegrees, lastSyncedHoriz.aziInDegrees);
   log("Actual encoder values\t\t\talt: %ld \t\taz:%ld", altEnc, azEnc);
 
   HorizCoord calculatedAltAzFromEncoders =
       calculateAltAzFromEncoders(altEnc, azEnc);
 
   log("Calculated alt/az from encoders\t\talt: %lf\t\taz:%lf",
-      calculatedAltAzFromEncoders.alt, calculatedAltAzFromEncoders.azi);
+      calculatedAltAzFromEncoders.altInDegrees,
+      calculatedAltAzFromEncoders.aziInDegrees);
 
   errorToAddToEncoderResultAlt =
-      lastSyncedHoriz.alt - calculatedAltAzFromEncoders.alt;
+      lastSyncedHoriz.altInDegrees - calculatedAltAzFromEncoders.altInDegrees;
   errorToAddToEncoderResultAzi =
-      lastSyncedHoriz.azi - calculatedAltAzFromEncoders.azi;
+      lastSyncedHoriz.aziInDegrees - calculatedAltAzFromEncoders.aziInDegrees;
 
   log("Stored alt/az delta\t\t\talt: %lf\t\taz:%lf",
       errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);
@@ -299,8 +302,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   altAlignValue2 = altAlignValue1;
 
   // Update new alignment values
-  azAlignValue1 = lastSyncedHoriz.azi;
-  altAlignValue1 = lastSyncedHoriz.alt;
+  azAlignValue1 = lastSyncedHoriz.aziInDegrees;
+  altAlignValue1 = lastSyncedHoriz.altInDegrees;
 
   altEncoderAlignValue1 = altEnc;
   azEncoderAlignValue1 = azEnc;

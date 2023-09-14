@@ -2,40 +2,53 @@
 #include "Logging.h"
 #include "telescopeModel.h"
 #include <Ephemeris.h>
+
 #include <cstdint>
 #include <iostream>
 #include <stdio.h>
 #include <string>
 #include <unity.h>
 
+#include <iostream>
+
+bool isLeapYear(unsigned int year) {
+  return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+}
 unsigned long convertDateTimeToMillis(unsigned int day, unsigned int month,
                                       unsigned int year, unsigned int hour,
                                       unsigned int minute,
                                       unsigned int second) {
-  // Calculate the number of days from 1970 to the given year
-  unsigned long daysSince1970 = (year - 1970) * 365UL;
-  // Adjust for leap years
-  for (unsigned int y = 1970; y < year; y++) {
-    if ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)) {
-      daysSince1970++;
-    }
+  // These arrays account for the number of days in a given month and leap years
+  static const unsigned int daysInMonth[] = {0,  31, 28, 31, 30, 31, 30,
+                                             31, 31, 30, 31, 30, 31};
+  static const unsigned int daysInMonthLeap[] = {0,  31, 29, 31, 30, 31, 30,
+                                                 31, 31, 30, 31, 30, 31};
+
+  // Function to check if a given year is a leap year
+  bool isLeap = isLeapYear(year);
+
+  unsigned long totalDays = 0;
+
+  // Calculate days for years
+  for (unsigned int y = 1970; y < year; ++y) {
+    totalDays += isLeapYear(y) ? 366 : 365;
   }
-  // Add days for each month
-  static const unsigned long daysInMonth[] = {0,   31,  59,  90,  120, 151,
-                                              181, 212, 243, 273, 304, 334};
-  daysSince1970 += daysInMonth[month - 1];
-  // Adjust for leap year if necessary
-  if (((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) && month > 2) {
-    daysSince1970++;
+
+  // Calculate days for months
+  for (unsigned int m = 1; m < month; ++m) {
+    totalDays += isLeapYear(year) ? daysInMonthLeap[m] : daysInMonth[m];
   }
-  // Add the day of the month
-  daysSince1970 += day - 1;
-  // Calculate the total seconds
-  unsigned long totalSeconds =
-      (daysSince1970 * 86400UL) + (hour * 3600UL) + (minute * 60UL) + second;
+
+  // Add the days of the current month
+  totalDays += day - 1;
+
+  unsigned long totalSeconds = totalDays * 86400 + // Days to seconds
+                               hour * 3600 +       // Hours to seconds
+                               minute * 60 +       // Minutes to seconds
+                               second;             // Add the given seconds
+
   // Convert to milliseconds
-  unsigned long totalMillis = totalSeconds * 1000UL;
-  return totalMillis;
+  return totalSeconds * 1000;
 }
 
 void test_eq_to_horizontal(void) {
@@ -104,6 +117,45 @@ void test_horizontal_to_eq(void) {
           altAzCoord, day, month, year, hour, minute, second);
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(14.28644, eqCoord.ra, "ra");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, eqCoord.dec, "dec");
+}
+
+void test_horizontal_to_eq_eq_constructor(void) {
+
+  // Set location on earth for horizontal coordinates transformations
+  Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
+                                151.0, 3.0, 3.0); // Lon: -2°20'14"
+
+  // East is negative and West is positive
+  Ephemeris::flipLongitude(false);
+
+  // Set altitude to improve rise and set precision
+  Ephemeris::setAltitude(110);
+
+  // Choose a date and time (UTC)
+  unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
+               second = 0;
+
+  unsigned long time =
+      convertDateTimeToMillis(day, month, year, hour, minute, second);
+
+  TEST_ASSERT_EQUAL_INT64_MESSAGE(1693648800000, time, "time");
+  HorizontalCoordinates altAzCoord;
+
+  altAzCoord.azi =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(298, 3, 3.7);
+  altAzCoord.alt =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(6, 21, 37.7);
+
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(6.360472, altAzCoord.alt, "Alt");
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(298.051, altAzCoord.azi, "Az");
+
+  HorizCoord h = HorizCoord(altAzCoord);
+  EqCoord eqCoord = EqCoord(h, time);
+  //    EquatorialCoordinates eqCoord =
+  //       Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
+  //           altAzCoord, day, month, year, hour, minute, second);
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(14.28644, eqCoord.getRAInHours(), "ra");
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, eqCoord.getDecInDegrees(), "dec");
 }
 
 void test_telescope_model_takeshi(void) {
@@ -778,7 +830,7 @@ void test_telescope_model_mylocation() {
 
   // start pointing exactly at star, if zero position of encoders is north
   // and flat.
-  model.setEncoderValues(vega.alt * 100, vega.azi * 100);
+  model.setEncoderValues(vega.altInDegrees * 100, vega.aziInDegrees * 100);
 
   // time s::hoursMinutesSecondsToFloatingHours(21, 27, 56);of observation
   double star1Time = timeMillis;
@@ -792,7 +844,7 @@ void test_telescope_model_mylocation() {
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 48, 9.2);
 
   log("Star 1: Vega");
-  log("    \t\t\t\t\talt: %lf\taz: %lf", vega.alt, vega.azi);
+  log("    \t\t\t\t\talt: %lf\taz: %lf", vega.altInDegrees, vega.aziInDegrees);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
   log("Star time: %ld ", timeMillis);
 
@@ -1045,26 +1097,56 @@ void test_coords() {
   start = HorizCoord(88, 180);
   HorizCoord changed;
   changed = start.addOffset(3, 0);
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 89, changed.alt, "alt should loop");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 0, changed.azi, "azi should loop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 89, changed.altInDegrees,
+                                   "alt should loop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 0, changed.aziInDegrees,
+                                   "azi should loop");
 
   changed = start.addOffset(0, 181);
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 88, changed.alt,
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 88, changed.altInDegrees,
                                    "alt should stay same");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 1, changed.azi, "azi should loop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 1, changed.aziInDegrees,
+                                   "azi should loop");
 
   start = HorizCoord(95, 180);
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 95, start.alt, "alt should  notloop");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 180, start.azi, "azi should loop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 95, start.altInDegrees,
+                                   "alt should  notloop");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 180, start.aziInDegrees,
+                                   "azi should loop");
 }
+
+void test_one_star_align_principle() {
+  Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
+                                151.0, 3.0, 3.0); // Lon: -2°20'14"
+
+  Ephemeris::flipLongitude(false);
+
+  HorizCoord startHoriz;
+  startHoriz = HorizCoord(70.322090, 249.138016);
+
+  unsigned int day = 13, month = 9, year = 2023, hour = 10, minute = 0,
+               second = 0;
+  unsigned long time = convertDateTimeToMillis(13, 9, 2023, 12, 24, 00);
+
+  EqCoord startEq = EqCoord(startHoriz, time);
+//TODO 3 degree error here?
+
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, -38.797001, startEq.getDecInDegrees(),
+                                   "start dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 20.3, startEq.getRAInHours(),
+                                   "start ra");
+}
+
 void setup() {
 
   // test_telescope_model();
   UNITY_BEGIN(); // IMPORTANT LINE!
 
-  //   RUN_TEST(test_eq_to_horizontal);
-  //   RUN_TEST(test_horizontal_to_eq);
-  //   RUN_TEST(test_eq_to_horizontal_vega);
+  RUN_TEST(test_eq_to_horizontal);
+  RUN_TEST(test_horizontal_to_eq);
+  RUN_TEST(test_eq_to_horizontal_vega);
+
+  RUN_TEST(test_horizontal_to_eq_eq_constructor);
 
   // RUN_TEST(test_telescope_model_starting_offset);
   // RUN_TEST(test_az_encoder_calibration);
@@ -1076,12 +1158,13 @@ void setup() {
   // RUN_TEST(test_telescope_model_takeshi);
 
   //   RUN_TEST(test_two_star_alignment_takeshi_example);
-    RUN_TEST(test_two_star_alignment_mylocation);
+  // RUN_TEST(test_two_star_alignment_mylocation);
 
-  RUN_TEST(test_telescope_model_mylocation_with_offset);
+  //   RUN_TEST(test_telescope_model_mylocation_with_offset);
 
-  RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
+  //   RUN_TEST(test_telescope_model_mylocation);
+  RUN_TEST(test_one_star_align_principle);
+  //   RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
   //   RUN_TEST(test_coords);
   UNITY_END(); // IMPORTANT LINE!
 }

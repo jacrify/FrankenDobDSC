@@ -153,7 +153,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
       model.getAzEncoderStepsPerRevolution(),
       model.errorToAddToEncoderResultAlt, model.errorToAddToEncoderResultAzi,
       model.lastSyncedEq.getRAInDegrees(), model.lastSyncedEq.getDecInDegrees(),
-      model.lastSyncedHoriz.alt, model.lastSyncedHoriz.azi,
+      model.lastSyncedHoriz.altInDegrees, model.lastSyncedHoriz.aziInDegrees,
 
       currentlyRunning ? "true" : "false", runtimeFromCenter / 60,
       timeToEnd / 60, platformConnected ? "true" : "false");
@@ -738,8 +738,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
   alpacaWebServer.on("/addRefPoint", HTTP_POST,
                      [&model, &prefs](AsyncWebServerRequest *request) {
-                      model.addReferencePoint();
-                       
+                       model.addReferencePoint();
                      });
 
   alpacaWebServer.on("/clearPrefs", HTTP_GET,
