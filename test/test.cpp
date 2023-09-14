@@ -1121,8 +1121,7 @@ void test_one_star_align_principle() {
 
   Ephemeris::flipLongitude(false);
 
-  HorizCoord startHoriz;
-  startHoriz = HorizCoord(70.322090, 249.138016);
+  HorizCoord startHoriz = HorizCoord(70.322090, 249.138016);
 
   unsigned int day = 13, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
@@ -1135,6 +1134,19 @@ void test_one_star_align_principle() {
                                    "start dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 20.3, startEq.getRAInHours(),
                                    "start ra");
+
+  HorizCoord endHoriz =   startHoriz.addOffset(90, 0);
+
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 19.67791, endHoriz.altInDegrees,
+                                   "modified alt");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 69.138016, endHoriz.aziInDegrees,
+                                   "modified alt");
+
+  // 69.138016
+  EqCoord endEq = EqCoord(endHoriz, time);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 5, endEq.getDecInDegrees(),
+                                   "start dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 2, endEq.getRAInHours(), "start ra");
 }
 
 void setup() {
