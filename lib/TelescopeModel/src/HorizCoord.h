@@ -2,8 +2,7 @@
 #define TELESCOPE_MODEL_H_COORD_H
 #include "../../Ephemeris/src/Ephemeris.h"
 #include <cmath>
-
-
+#include "TimePoint.h"
 class EqCoord;
 /**
  * Represents an alt / az. Largely a wrapper for Ephermeris HorizontalCoord,
@@ -20,7 +19,7 @@ public:
   HorizCoord() ;
 
   HorizCoord(float altitude, float azimuth);
-  HorizCoord(EqCoord e,unsigned  long epochMillis) ;
+  HorizCoord(EqCoord e,  TimePoint tp) ;
   HorizCoord(HorizontalCoordinates ephHCoord) ;
   HorizontalCoordinates toHorizontalCoordinates();
   void setAlt(int degrees, int minutes, float seconds);

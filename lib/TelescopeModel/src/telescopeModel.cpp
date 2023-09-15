@@ -44,9 +44,9 @@ TelescopeModel::TelescopeModel() {
   // currentAlt = 0;
   // currentAz = 0;
 
-  firstSyncTimeSeconds = 0;
-  secondSyncTimeSeconds = 0;
-  alignmentModelSyncTimeSeconds = 0;
+  firstSyncTime = getNow();
+  secondSyncTime = getNow();
+  alignmentModelSyncTime = getNow();
 
   errorToAddToEncoderResultAlt = 0;
   errorToAddToEncoderResultAzi = 0;
@@ -119,7 +119,7 @@ bool TelescopeModel::isNorthernHemisphere() { return latitude > 0; }
  *
  * @return void
  */
-void TelescopeModel::calculateCurrentPosition(unsigned long epochTimeSeconds) {
+void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   log("");
   log("=====calculateCurrentPosition====");
   // log("Calculating current position for time %ld", timeMillis);
@@ -142,40 +142,29 @@ void TelescopeModel::calculateCurrentPosition(unsigned long epochTimeSeconds) {
       adjustedAltAz.altInDegrees, adjustedAltAz.aziInDegrees);
 
   currentEqPosition = alignment.toReferenceCoord(adjustedAltAz);
-  // alignment.toInstrumentDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
-  //                           takiCoord.altAngle);
 
-  // raInDegrees = fmod(fmod(raInDegrees, 360) + 360, 360);
+  // Work out how many seconds since the model was created. Add this
+  // to the RA to compensate for time passing.
+  unsigned long timeDeltaSeconds =
+      differenceInSeconds(alignmentModelSyncTime, timePoint);
 
-  double raDeltaDegrees = 0;
-
-  log("Time passed: %ld \t (since alignment model creation time: %ld)",
-      epochTimeSeconds, alignmentModelSyncTimeSeconds);
-
-  unsigned long timeDeltaSeconds = 0;
-  if (alignmentModelSyncTimeSeconds != 0) {
-    timeDeltaSeconds = epochTimeSeconds - alignmentModelSyncTimeSeconds;
-  }
-
-  raDeltaDegrees = secondsToRADeltaInDegrees(timeDeltaSeconds);
+  double raDeltaDegrees = secondsToRADeltaInDegrees(timeDeltaSeconds);
   log("Time delta seconds: %ld degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
 
   currentEqPosition.addRAInDegrees(raDeltaDegrees);
 
-  // log("RA: %lf", currentRA);
-  // currentDec = dec;
   log("Final position\t\t\tra(h): %lf\tdec: %lf",
       currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
   log("=====calculateCurrentPosition====");
   log("");
 }
+
 float TelescopeModel::getDecCoord() {
   return currentEqPosition.getDecInDegrees();
 }
 float TelescopeModel::getRACoord() { return currentEqPosition.getRAInHours(); }
 
-double
-TelescopeModel::secondsToRADeltaInDegrees(unsigned long secondsDelta) {
+double TelescopeModel::secondsToRADeltaInDegrees(double secondsDelta) {
   double RA_delta_degrees = (secondsDelta / (24.0 * 3600.0)) * 360.0;
   return RA_delta_degrees;
 }
@@ -193,22 +182,22 @@ TelescopeModel::secondsToRADeltaInDegrees(unsigned long secondsDelta) {
  * alignment. Then they can choose to do more accurate manual alignment points.
  */
 void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
-                                             unsigned long epochTimeSeconds) {
+                                             TimePoint tp) {
 
   alignment.addReferenceCoord(horiz1, eq1);
 
   HorizCoord horiz2 = horiz1.addOffset(90, 0);
-
-  EqCoord eq2 = EqCoord(horiz2, epochTimeSeconds);
-
+  EqCoord eq2 = EqCoord(horiz2, tp);
   alignment.addReferenceCoord(horiz2, eq2);
+
   alignment.calculateThirdReference();
+
   log("===Generated 1 star reference point===");
   log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz1.altInDegrees,
       horiz1.aziInDegrees, eq1.getRAInHours(), eq1.getDecInDegrees());
   log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.altInDegrees,
       horiz2.aziInDegrees, eq2.getRAInHours(), eq2.getDecInDegrees());
-  alignmentModelSyncTimeSeconds = epochTimeSeconds;
+  alignmentModelSyncTime = tp;
 }
 
 void TelescopeModel::addReferencePoint() {
@@ -216,18 +205,18 @@ void TelescopeModel::addReferencePoint() {
   log("=====addReferencePoint====");
   double raDeltaDegrees = 0;
   if (alignment.getRefs() > 0) {
-    unsigned long timedelta = secondSyncTimeSeconds - firstSyncTimeSeconds;
-    raDeltaDegrees = secondsToRADeltaInDegrees(timedelta);
-  }
+    double timeDelta = differenceInSeconds(firstSyncTime, secondSyncTime);
 
+    raDeltaDegrees = secondsToRADeltaInDegrees(timeDelta);
+  }
+  // TODO raDeltaDegrees not used!
   alignment.addReferenceCoord(lastSyncedHoriz, lastSyncedEq);
 
   if (alignment.getRefs() == 2) {
     log("Got two refs, calculating model...");
     alignment.calculateThirdReference();
-    alignmentModelSyncTimeSeconds =
-        firstSyncTimeSeconds; // store this so future partial syncs don't
-                              // clobber
+    alignmentModelSyncTime = firstSyncTime; // store this so future partial
+                                            // syncs don't clobber
   }
 
   log("=====addReferencePoint====");
@@ -245,7 +234,7 @@ void TelescopeModel::addReferencePoint() {
  *
  */
 void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
-                                       unsigned long epochTimeSeconds) {
+                                       TimePoint now) {
   log("");
   log("=====syncPositionRaDec====");
 
@@ -262,11 +251,11 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
   log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and epoch "
-      "time(s) %ld",
+      "time %s",
       lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
-      epochTimeSeconds);
+      timePointToString(now).c_str());
 
-  lastSyncedHoriz = HorizCoord(lastSyncedEq, epochTimeSeconds);
+  lastSyncedHoriz = HorizCoord(lastSyncedEq, now);
 
   log("Expected local altaz\t\t\talt: %lf \t\taz:%lf",
       lastSyncedHoriz.altInDegrees, lastSyncedHoriz.aziInDegrees);
@@ -305,15 +294,15 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
 
   // if no refs set, then mark this as t=0
   if (alignment.getRefs() == 0) {
-    firstSyncTimeSeconds = epochTimeSeconds;
+    firstSyncTime = now;
   } else if (alignment.getRefs() == 1) {
-    secondSyncTimeSeconds = epochTimeSeconds;
+    secondSyncTime = now;
   }
 
   // special case: if this is the first alignment, then do a special one star
   // alignment
   if (defaultAlignment) {
-    performOneStarAlignment(lastSyncedHoriz, lastSyncedEq, epochTimeSeconds);
+    performOneStarAlignment(lastSyncedHoriz, lastSyncedEq, now);
     defaultAlignment = false;
   }
   log("=====syncPositionRaDec====");

@@ -4,9 +4,9 @@
 EqCoord::EqCoord() {}
 EqCoord::EqCoord(EquatorialCoordinates e) { eq = e; }
 
-EqCoord::EqCoord(HorizCoord h, unsigned  long epochMillis) {
+EqCoord::EqCoord(HorizCoord h,TimePoint tp) {
   eq = Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
-      h.toHorizontalCoordinates(), epochMillis);
+      h.toHorizontalCoordinates(), convertTimePointToEpochSeconds(tp));
 }
 
 EqCoord::EqCoord(float raInDegrees, float decInDegrees) {

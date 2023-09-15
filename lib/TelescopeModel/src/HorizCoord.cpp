@@ -22,10 +22,10 @@ HorizCoord::HorizCoord(float altitude, float azimuth) {
   // normalise();?
 }
 
-HorizCoord::HorizCoord(EqCoord e, unsigned  long epochMillis) {
+HorizCoord::HorizCoord(EqCoord e, TimePoint tp) {
   HorizontalCoordinates h =
-      Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(e.eq,
-                                                                epochMillis);
+      Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
+          e.eq, convertTimePointToEpochSeconds(tp));
   altInDegrees = h.alt;
   aziInDegrees = h.azi;
   // normalise();?

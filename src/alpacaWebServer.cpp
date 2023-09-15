@@ -1,6 +1,7 @@
 #include "alpacaWebServer.h"
 #include "AsyncUDP.h"
 #include "Logging.h"
+#include "TimePoint.h"
 #include "encoders.h"
 #include <ArduinoJson.h> // Include the library
 #include <ESPAsyncWebServer.h>
@@ -11,7 +12,7 @@
 #define PREF_ALT_STEPS_KEY "AltStepsKey"
 #define PREF_AZ_STEPS_KEY "AzStepsKey"
 
-unsigned long long epochMillisBase;
+// TimePoint epochMillisBase;
 
 unsigned const int localPort = 32227; // The Alpaca Discovery test port
 unsigned const int alpacaPort =
@@ -30,8 +31,8 @@ double timeToEnd;
 bool currentlyRunning;
 bool platformConnected;
 // used to store last time position was received from EQ
-#define STALE_EQ_WARNING_THRESHOLD 10000 // used to detect packet loss
-unsigned long long lastPositionReceivedTimeMillis;
+#define STALE_EQ_WARNING_THRESHOLD_SECONDS 10 // used to detect packet loss
+TimePoint lastPositionReceivedTime;
 
 AsyncWebServer alpacaWebServer(80);
 
@@ -110,10 +111,10 @@ void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
 }
 void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
   // log("/getStatus");
-  unsigned long nowmillis = millis();
-  if ((nowmillis - lastPositionReceivedTimeMillis) >
-      STALE_EQ_WARNING_THRESHOLD) {
 
+  TimePoint now = getNow();
+  if (differenceInSeconds(lastPositionReceivedTime, now) >
+      STALE_EQ_WARNING_THRESHOLD_SECONDS) {
     platformConnected = false;
   } else {
     platformConnected = true;
@@ -360,33 +361,16 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   log("Parsed Date - Year: %d, Month: %d, Day: %d, Hour: %d, Minute: %d, "
       "Second: %d",
       year, month, day, hour, minute, second);
+  TimePoint tp = createTimePoint(day, month, year, hour, minute, second);
+  setSystemTime(tp);
+  // epochMillisBase = createTimePoint(day, month, year, hour, minute, second);
 
-  struct tm timeinfo;
-  struct timeval tv;
+  // log("Stored base epoch time in millis: %llu", epochMillisBase);
+  // epochMillisBase = addMillisToTime(epochMillisBase,millis());// we'll add
+  // millis every time we need epoch time
 
-  // Setting up your timeinfo structure
-  timeinfo.tm_year = year - 1900; // Years since 1900
-  timeinfo.tm_mon = month - 1;    // Months are 0-based
-  timeinfo.tm_mday = day;
-  timeinfo.tm_hour = hour;
-  timeinfo.tm_min = minute;
-  timeinfo.tm_sec = second;
-
-  // Convert our tm structure to timeval
-  tv.tv_sec =
-      mktime(&timeinfo); // Converts tm struct to seconds since the Unix epoch
-  tv.tv_usec = 0;        // Microseconds - can be set to 0
-
-  // Set the time
-  // settimeofday(&tv, NULL);
-
-  epochMillisBase =
-      ((unsigned long long)tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-
-  log("Stored base epoch time in millis: %llu", epochMillisBase);
-  epochMillisBase -= millis(); // we'll add millis every time we need epoch time
-
-  log("Stored base epoch time in millis after offset : %llu", epochMillisBase);
+  // log("Stored base epoch time in millis after offset : %llu",
+  // epochMillisBase);
   returnNoError(request);
   log("finished utc");
 }
@@ -399,14 +383,16 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
  *  If not mark platform as not connected.
  *
  */
-unsigned long long calculateAdjustedTimeAsEpochSeconds() {
+TimePoint calculateAdjustedTime() {
+  TimePoint now = getNow();
 
-  unsigned long now = millis();
-  log("Now millis since start: %ld", now);
-  if ((now - lastPositionReceivedTimeMillis) > STALE_EQ_WARNING_THRESHOLD) {
-    log("No EQ platform, or packet loss: last packet recieved %d seconds ago "
-        "at %ld",
-        now - lastPositionReceivedTimeMillis, lastPositionReceivedTimeMillis);
+  // unsigned long now = millis();
+  // log("Now millis since start: %ld", now);
+  if (differenceInSeconds(lastPositionReceivedTime, now) >
+      STALE_EQ_WARNING_THRESHOLD_SECONDS) {
+    log("No EQ platform, or packet loss: last packet recieved  "
+        "at %s",
+        timePointToString(lastPositionReceivedTime));
     platformConnected = false;
   } else {
     platformConnected = true;
@@ -416,28 +402,27 @@ unsigned long long calculateAdjustedTimeAsEpochSeconds() {
   // the timeToCenter.
   // eg if time to center is 100s, and packet was received a second ago,
   // time to center should be considered as 99s.
-  double interpolationTimeInSeconds = 0;
+  double interpolationTimeSeconds = 0;
   if (currentlyRunning) {
     // log("setting interpolation time");
-    interpolationTimeInSeconds =
-        (now - lastPositionReceivedTimeMillis) / 1000.0;
+    interpolationTimeSeconds =
+        differenceInSeconds(lastPositionReceivedTime, now);
   }
+  TimePoint adjustedTime = addSecondsToTime(now, runtimeFromCenterSeconds +
+                                                     interpolationTimeSeconds);
 
-  unsigned  long timeAtMiddleOfRunEpochSeconds =
-      now * 1000 + (runtimeFromCenterSeconds + interpolationTimeInSeconds);
-  unsigned long long epochTime = epochMillisBase + timeAtMiddleOfRunEpochSeconds;
-
-  log("Returned epoch time: %llu", epochTime);
-  return epochTime;
+  log("Returned adjusted time: %s", timePointToString(adjustedTime));
+  return adjustedTime;
 }
 
 // Calculate position.
 // Triggered from ra or dec request. Should only run for one of them and
 // then cache for a few millis
 void updatePosition(TelescopeModel &model) {
-  unsigned long long epochTimeAtMiddleOfRun = calculateAdjustedTimeAsEpochSeconds();
+  TimePoint timeAtMiddleOfRun =
+      calculateAdjustedTime();
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  model.calculateCurrentPosition(epochTimeAtMiddleOfRun);
+  model.calculateCurrentPosition(timeAtMiddleOfRun);
 }
 
 void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -463,11 +448,12 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
     log("Could not parse dec arg!");
   }
 
-  unsigned long timeAtMiddleOfRunSeconds = calculateAdjustedTimeAsEpochSeconds();
+  TimePoint timeAtMiddleOfRun =
+      calculateAdjustedTime();
   log("Encoder values: %ld,%ld", getEncoderAl(), getEncoderAz());
-  log("Timestamp for middle of run: %llu", timeAtMiddleOfRunSeconds);
+  // log("Timestamp for middle of run: %llu", timeAtMiddleOfRunSeconds);
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  model.syncPositionRaDec(parsedRAHours, parsedDecDegrees, timeAtMiddleOfRunSeconds);
+  model.syncPositionRaDec(parsedRAHours, parsedDecDegrees, timeAtMiddleOfRun);
   updatePosition(model);
   // model.saveEncoderCalibrationPoint();
 
@@ -497,7 +483,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
   loadPreferences(prefs, model);
 
   lastPositionCalculatedTime = 0;
-  lastPositionReceivedTimeMillis = 0;
+  lastPositionReceivedTime =getNow();
   currentlyRunning = false;
   platformConnected = false;
 
@@ -552,10 +538,9 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           runtimeFromCenterSeconds = doc["timeToCenter"];
           timeToEnd = doc["timeToEnd"];
           currentlyRunning = doc["isTracking"];
-          lastPositionReceivedTimeMillis = now;
-          log("Distance from center %lf, running %d, at time %llu",
-              runtimeFromCenterSeconds, currentlyRunning,
-              lastPositionReceivedTimeMillis);
+          lastPositionReceivedTime = getNow();
+           log("Distance from center %lf, running %d",
+              runtimeFromCenterSeconds, currentlyRunning);
         } else {
           log("Payload missing required fields.");
           return;

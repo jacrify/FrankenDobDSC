@@ -4,6 +4,7 @@
 #include "../../Ephemeris/src/Ephemeris.h"
 
 #include <cmath>
+#include "TimePoint.h"
 class HorizCoord;
 
 class EqCoord {
@@ -13,7 +14,7 @@ public:
   EqCoord(float raInDegrees,float decInDegrees);
   EqCoord(EquatorialCoordinates e);
 
-  EqCoord(HorizCoord h, unsigned long epochMillis);
+  EqCoord(HorizCoord h, TimePoint tp);
   double getRAInHours();
   double getRAInDegrees();
   double getDecInDegrees();

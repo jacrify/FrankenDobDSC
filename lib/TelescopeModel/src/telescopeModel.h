@@ -3,6 +3,7 @@
 #include "CoordConv.hpp"
 #include "EqCoord.h"
 #include "HorizCoord.h"
+#include "TimePoint.h"
 #include <Ephemeris.h>
 
 /**
@@ -74,8 +75,7 @@ public:
 
   void addReferencePoint();
 
-  void performOneStarAlignment(HorizCoord altaz, EqCoord eq,
-                               unsigned long epochTimeSeconds);
+  void performOneStarAlignment(HorizCoord altaz, EqCoord eq, TimePoint tp);
 
   void setLatitude(float lat);
   void setLongitude(float lng);
@@ -89,9 +89,9 @@ public:
   float getDecCoord();
   float getRACoord();
 
-  void syncPositionRaDec(float ra, float dec, unsigned long epochTimeSeconds);
+  void syncPositionRaDec(float ra, float dec, TimePoint tp);
 
-  void calculateCurrentPosition(unsigned long epochTimeSeconds);
+  void calculateCurrentPosition(TimePoint tp);
   // void saveEncoderCalibrationPoint();
 
   long getAltEncoderAlignValue1() const;
@@ -162,12 +162,10 @@ public:
   // double lastSyncedAlt;
   // double lastSyncedAz;
 
-  unsigned long
-      secondSyncTimeSeconds; // epoch timestamp in milliseconds  of second sync
-  unsigned long
-      firstSyncTimeSeconds; // epoch timestamp in milliseconds  of first sync
-  unsigned long alignmentModelSyncTimeSeconds; // t=0 for post alignment. Based
-                                               // on time of first sync
+  TimePoint secondSyncTime; // epoch timestamp in milliseconds  of second sync
+  TimePoint firstSyncTime;  // epoch timestamp in milliseconds  of first sync
+  TimePoint alignmentModelSyncTime; // t=0 for post alignment. Based
+                                    // on time of first sync
 
   bool defaultAlignment;
   // float altOffsetToAddToEncoderResult;
@@ -180,7 +178,7 @@ public:
   bool isNorthernHemisphere();
 
   CoordConv alignment;
-  double secondsToRADeltaInDegrees(unsigned long millisecondsDelta);
+  double secondsToRADeltaInDegrees(double secondsDelta);
 };
 
 #endif

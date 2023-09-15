@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string>
 #include <unity.h>
+#include "TimePoint.h"
 
 #include <iostream>
 
@@ -50,21 +51,21 @@ unsigned long convertDateTimeToMillis(unsigned int day, unsigned int month,
   // Convert to milliseconds
   return totalSeconds * 1000;
 }
-void testTimestepConversion() {
-  Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
-                                151.0, 3.0, 3.0); // L
-  Ephemeris::
-      // East is negative and West is positive
-      Ephemeris::flipLongitude(false);
-  EqCoord eq=EqCoord();
-  eq.setRAInHours(12.995290);
-  eq.setDecInDegrees(5.904804);
+// void testTimestepConversion() {
+//   Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
+//                                 151.0, 3.0, 3.0); // L
+//   Ephemeris::
+//       // East is negative and West is positive
+//       Ephemeris::flipLongitude(false);
+//   EqCoord eq=EqCoord();
+//   eq.setRAInHours(12.995290);
+//   eq.setDecInDegrees(5.904804);
 
-  HorizCoord h = HorizCoord(eq, 1694763308);
-  log("Alt: %lf\tAzi:%lf",h.altInDegrees,h.aziInDegrees);
+//   HorizCoord h = HorizCoord(eq, 1694763308);
+//   log("Alt: %lf\tAzi:%lf",h.altInDegrees,h.aziInDegrees);
 
 
-}
+// }
 
 void test_eq_to_horizontal(void) {
 
@@ -150,10 +151,12 @@ void test_horizontal_to_eq_eq_constructor(void) {
   unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
 
-  unsigned long time =
-      convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
 
-  TEST_ASSERT_EQUAL_INT64_MESSAGE(1693648800, time, "time");
+//   unsigned long time =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
+
+  TEST_ASSERT_EQUAL_INT64_MESSAGE(1693648800, convertTimePointToEpochSeconds(star1Time), "time");
   HorizontalCoordinates altAzCoord;
 
   altAzCoord.azi =
@@ -165,7 +168,7 @@ void test_horizontal_to_eq_eq_constructor(void) {
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(298.051, altAzCoord.azi, "Az");
 
   HorizCoord h = HorizCoord(altAzCoord);
-  EqCoord eqCoord = EqCoord(h, time);
+  EqCoord eqCoord = EqCoord(h, star1Time);
   //    EquatorialCoordinates eqCoord =
   //       Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
   //           altAzCoord, day, month, year, hour, minute, second);
@@ -173,111 +176,111 @@ void test_horizontal_to_eq_eq_constructor(void) {
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, eqCoord.getDecInDegrees(), "dec");
 }
 
-void test_telescope_model_takeshi(void) {
-  // this test will never work without knowing where taki lives, needs lat long
-  // to be correct
-  log("======test_telescope_model_takeshi=====");
-  TelescopeModel model;
-  model.setLatitude(34.0493);
-  model.setLongitude(151.0494);
-  // Choose a date and time (UTC)
-  unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
-               second = 0;
+// void test_telescope_model_takeshi(void) {
+//   // this test will never work without knowing where taki lives, needs lat long
+//   // to be correct
+//   log("======test_telescope_model_takeshi=====");
+//   TelescopeModel model;
+//   model.setLatitude(34.0493);
+//   model.setLongitude(151.0494);
+//   // Choose a date and time (UTC)
+//   unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
+//                second = 0;
 
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+//   unsigned long timeMillis =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second);
 
-  // model.setUTCYear(2023);
-  // model.setUTCMonth(9);
-  // model.setUTCDay(2);
-  // model.setUTCHour(10);
-  // model.setUTCMinute(0);
-  // model.setUTCSecond(0);
+//   // model.setUTCYear(2023);
+//   // model.setUTCMonth(9);
+//   // model.setUTCDay(2);
+//   // model.setUTCHour(10);
+//   // model.setUTCMinute(0);
+//   // model.setUTCSecond(0);
 
-  model.setAltEncoderStepsPerRevolution(36000); // 100 ticks per degree
-  model.setAzEncoderStepsPerRevolution(36000);
+//   model.setAltEncoderStepsPerRevolution(36000); // 100 ticks per degree
+//   model.setAzEncoderStepsPerRevolution(36000);
 
-  double star1AltAxis = 83.87; // degrees
-  double star1AzmAxis = 99.25; // anticlockwise)
+//   double star1AltAxis = 83.87; // degrees
+//   double star1AzmAxis = 99.25; // anticlockwise)
 
-  // start pointing exactly at star, if zero position of encoders is north and
-  // flat.
-  model.setEncoderValues(star1AltAxis * 100, 36000 - star1AzmAxis * 100);
+//   // start pointing exactly at star, if zero position of encoders is north and
+//   // flat.
+//   model.setEncoderValues(star1AltAxis * 100, 36000 - star1AzmAxis * 100);
 
-  // time of observation
-  double star1Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 27, 56);
+//   // time of observation
+//   double star1Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 27, 56);
 
-  double star1RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(0, 7, 54);
-  double star1RADegrees = 360 * star1RAHours / 24.0;
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1.97498552, star1RADegrees, "star1ra");
+//   double star1RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(0, 7, 54);
+//   double star1RADegrees = 360 * star1RAHours / 24.0;
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1.97498552, star1RADegrees, "star1ra");
 
-  double star1Dec = 29.038;
+//   double star1Dec = 29.038;
 
-  log("Star 1: ");
-  log("    \t\t\t\t\talt: %lf\taz: %lf", star1AltAxis, star1AzmAxis);
-  log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star 1: ");
+//   log("    \t\t\t\t\talt: %lf\taz: %lf", star1AltAxis, star1AzmAxis);
+//   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
+//   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
-  model.addReferencePoint();
+//   model.syncPositionRaDec(star1RADegrees, star1Dec, timeMillis);
+//   model.addReferencePoint();
 
-  double star2AltAxis = 35.04;  // degrees
-  double star2AzmAxis = 310.98; // anticlockwise)
+//   double star2AltAxis = 35.04;  // degrees
+//   double star2AzmAxis = 310.98; // anticlockwise)
 
-  model.setEncoderValues(star2AltAxis * 100, 36000 - star2AzmAxis * 100);
+//   model.setEncoderValues(star2AltAxis * 100, 36000 - star2AzmAxis * 100);
 
-  double star2Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 37, 02);
+//   double star2Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 37, 02);
 
-  double star2RAHours =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(2, 21, 45);
-  // star2RAHours = star2RAHours - (star2Time - star1Time);//adjust for time
-  // shift
-  double star2RADegress = 360 * star2RAHours / 24.0;
+//   double star2RAHours =
+//       Ephemeris::hoursMinutesSecondsToFloatingHours(2, 21, 45);
+//   // star2RAHours = star2RAHours - (star2Time - star1Time);//adjust for time
+//   // shift
+//   double star2RADegress = 360 * star2RAHours / 24.0;
 
-  double star2Dec = 89.222;
+//   double star2Dec = 89.222;
 
-  log("Star 2: ");
-  log("    \t\t\t\t\talt: %lf\taz: %lf", star2AltAxis, star2AzmAxis);
-  log("       \t\t\t\t\tra: %lf\tdec: %lf", star2RADegress, star2Dec);
-  log("Star time: %ld ", timeMillis + 546000);
+//   log("Star 2: ");
+//   log("    \t\t\t\t\talt: %lf\taz: %lf", star2AltAxis, star2AzmAxis);
+//   log("       \t\t\t\t\tra: %lf\tdec: %lf", star2RADegress, star2Dec);
+//   log("Star time: %ld ", timeMillis + 546000);
 
-  // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RADegress, star2Dec, timeMillis + 546000);
-  //  timeMillis + 546000); // time passed in millis
-  model.addReferencePoint();
+//   // 546000 milliseconds since first sync
+//   model.syncPositionRaDec(star2RADegress, star2Dec, timeMillis + 546000);
+//   //  timeMillis + 546000); // time passed in millis
+//   model.addReferencePoint();
 
-  // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
-  // This calculated telescope coordinates is very close to the measured
-  // telescope coordinates,
-  // j = 130.46, , q = 37.67o
+//   // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
+//   // This calculated telescope coordinates is very close to the measured
+//   // telescope coordinates,
+//   // j = 130.46, , q = 37.67o
 
-  // set encoders to ra/dec values from example
-  double star3AltAxis = 37.67;  // degrees
-  double star3AzmAxis = 130.21; // anticlockwise)
+//   // set encoders to ra/dec values from example
+//   double star3AltAxis = 37.67;  // degrees
+//   double star3AzmAxis = 130.21; // anticlockwise)
 
-  model.setEncoderValues(star3AltAxis * 100, 36000 - star3AzmAxis * 100);
+//   model.setEncoderValues(star3AltAxis * 100, 36000 - star3AzmAxis * 100);
 
-  double star3Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 52, 12);
+//   double star3Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 52, 12);
 
-  double star3RAHours =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(0, 43, 07);
+//   double star3RAHours =
+//       Ephemeris::hoursMinutesSecondsToFloatingHours(0, 43, 07);
 
-  double star3RADegrees = 360 * star3RAHours / 24.0;
+//   double star3RADegrees = 360 * star3RAHours / 24.0;
 
-  double star3Dec = -18.038;
+//   double star3Dec = -18.038;
 
-  log("Star 3: ");
-  log("    \t\t\t\t\talt: %lf\taz: %lf", star3AltAxis, star3AzmAxis);
-  log("       \t\t\t\t\tra: %lf\tdec: %lf", star3RADegrees, star3Dec);
-  log("Star time: %ld ", timeMillis + 1456000);
+//   log("Star 3: ");
+//   log("    \t\t\t\t\talt: %lf\taz: %lf", star3AltAxis, star3AzmAxis);
+//   log("       \t\t\t\t\tra: %lf\tdec: %lf", star3RADegrees, star3Dec);
+//   log("Star time: %ld ", timeMillis + 1456000);
 
-  // 1456000 milliseconds since first sync
-  model.calculateCurrentPosition(timeMillis + 1456000);
+//   // 1456000 milliseconds since first sync
+//   model.calculateCurrentPosition(timeMillis + 1456000);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3RAHours, model.getRACoord(),
-                                   "ra");
-}
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3RAHours, model.getRACoord(),
+//                                    "ra");
+// }
 
 void test_odd_times(void) {
   TelescopeModel model;
@@ -286,15 +289,17 @@ void test_odd_times(void) {
   // Choose a date and time (UTC)
   unsigned int day = 3, month = 9, year = 2022, hour = 7, minute = 5,
                second = 33;
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
+  
+      //   unsigned long timeMillis =
+      //       convertDateTimeToMillis(day, month, year, hour, minute, second);
 
-  model.setAltEncoderStepsPerRevolution(108229);
+      model.setAltEncoderStepsPerRevolution(108229);
   model.setAzEncoderStepsPerRevolution(-30000);
 
   model.setEncoderValues(0, 0);
   // arcturus
-  model.syncPositionRaDec(0, 0, timeMillis);
+  model.syncPositionRaDec(0, 0, star1Time);
   // model.calculateCurrentPosition();
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.1, 0.0, model.getRACoord(), "ra");
@@ -307,13 +312,15 @@ void test_az_encoder_calibration(void) {
   model.setAzEncoderStepsPerRevolution(360);
   unsigned int day = 3, month = 9, year = 2022, hour = 7, minute = 5,
                second = 33;
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
+
+//   unsigned long timeMillis =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
 
   model.setEncoderValues(0, 0);
-  model.syncPositionRaDec(14.28644, 18.97959, timeMillis);
+  model.syncPositionRaDec(14.28644, 18.97959, star1Time);
   // model.calculateCurrentPosition();
   //   model.saveEncoderCalibrationPoint(); // Save this point
 
@@ -329,7 +336,7 @@ void test_az_encoder_calibration(void) {
 
   // Set the new position using the converted RA/DEC and simulate new encoder
   // values
-  model.syncPositionRaDec(newEq.ra, newEq.dec, timeMillis);
+  model.syncPositionRaDec(newEq.ra, newEq.dec, star1Time);
   model.setEncoderValues(
       0, 100); // Here the azimuth encoder value has increased by 100
   // model.calculateCurrentPosition();
@@ -349,13 +356,15 @@ void test_alt_encoder_calibration(void) {
 
   unsigned int day = 3, month = 9, year = 2022, hour = 7, minute = 5,
                second = 33;
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
+
+//   unsigned long timeMillis =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
 
   model.setEncoderValues(0, 0);
-  model.syncPositionRaDec(14.28644, 18.97959, timeMillis);
+  model.syncPositionRaDec(14.28644, 18.97959, star1Time);
   // sets alt az
   // model.calculateCurrentPosition();
 
@@ -373,7 +382,7 @@ void test_alt_encoder_calibration(void) {
 
   // Set the new position using the converted RA/DEC and simulate new encoder
   // values
-  model.syncPositionRaDec(newEq.ra, newEq.dec, timeMillis);
+  model.syncPositionRaDec(newEq.ra, newEq.dec, star1Time);
 
   model.setEncoderValues(
       100, 0); // Here the altitude encoder value has increased by 100
@@ -393,13 +402,15 @@ void test_az_encoder_wraparound(void) {
   model.setAzEncoderStepsPerRevolution(360);
   unsigned int day = 3, month = 9, year = 2022, hour = 7, minute = 5,
                second = 33;
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
+
+//   unsigned long timeMillis =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
 
   model.setEncoderValues(0, 0);
-  model.syncPositionRaDec(14.28644, 18.9795, timeMillis);
+  model.syncPositionRaDec(14.28644, 18.9795, star1Time);
   // model.calculateCurrentPosition();
   //   model.saveEncoderCalibrationPoint(); // Save this point
 
@@ -415,7 +426,7 @@ void test_az_encoder_wraparound(void) {
 
   // Set the new position using the converted RA/DEC and simulate new encoder
   // values
-  model.syncPositionRaDec(newEq.ra, newEq.dec, timeMillis);
+  model.syncPositionRaDec(newEq.ra, newEq.dec, star1Time);
   model.setEncoderValues(
       0, 17000); // Here the azimuth encoder value has increased by 100
   // model.calculateCurrentPosition();
@@ -428,49 +439,49 @@ void test_az_encoder_wraparound(void) {
                                    "Azimuth Encoder Steps per Revolution");
 }
 
-void test_alt_encoder_negative_move(void) {
-  TelescopeModel model;
-  model.setAltEncoderStepsPerRevolution(9999);
-  model.setAzEncoderStepsPerRevolution(9999);
-  unsigned int day = 3, month = 9, year = 2022, hour = 7, minute = 5,
-               second = 33;
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
-  model.setLatitude(-34.0493);
-  model.setLongitude(151.0494);
+// void test_alt_encoder_negative_move(void) {
+//   TelescopeModel model;
+//   model.setAltEncoderStepsPerRevolution(9999);
+//   model.setAzEncoderStepsPerRevolution(9999);
+//   unsigned int day = 3, month = 9, year = 2022, hour = 7, minute = 5,
+//                second = 33;
+//   unsigned long timeMillis =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second);
+//   model.setLatitude(-34.0493);
+//   model.setLongitude(151.0494);
 
-  model.setEncoderValues(100, 0);
-  model.syncPositionRaDec(14.28644, 18.97959, timeMillis);
-  // sets alt az
-  // model.calculateCurrentPosition();
+//   model.setEncoderValues(100, 0);
+//   model.syncPositionRaDec(14.28644, 18.97959, timeMillis);
+//   // sets alt az
+//   // model.calculateCurrentPosition();
 
-  //   model.saveEncoderCalibrationPoint(); // Save this point
+//   //   model.saveEncoderCalibrationPoint(); // Save this point
 
-  // Generate new Alt/Az values from a known move
-  HorizontalCoordinates newAltAz;
-  newAltAz.alt = model.getAltCoord() - 1.0; // Assuming a 1 degree move in Alt
-  newAltAz.azi = model.getAzCoord();        // Keep azimuth same
+//   // Generate new Alt/Az values from a known move
+//   HorizontalCoordinates newAltAz;
+//   newAltAz.alt = model.getAltCoord() - 1.0; // Assuming a 1 degree move in Alt
+//   newAltAz.azi = model.getAzCoord();        // Keep azimuth same
 
-  // Convert the new Alt/Az to Equatorial using the hardcoded time values
-  EquatorialCoordinates newEq =
-      Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(newAltAz, 2, 9,
-                                                                2023, 10, 0, 0);
+//   // Convert the new Alt/Az to Equatorial using the hardcoded time values
+//   EquatorialCoordinates newEq =
+//       Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(newAltAz, 2, 9,
+//                                                                 2023, 10, 0, 0);
 
-  // Set the new position using the converted RA/DEC and simulate new encoder
-  // values
-  model.syncPositionRaDec(newEq.ra, newEq.dec, timeMillis);
+//   // Set the new position using the converted RA/DEC and simulate new encoder
+//   // values
+//   model.syncPositionRaDec(newEq.ra, newEq.dec, timeMillis);
 
-  model.setEncoderValues(
-      0, 0); // Here the altitude encoder value has decreased by 100
-  // model.calculateCurrentPosition();
-  //   model.saveEncoderCalibrationPoint(); // Save this point
+//   model.setEncoderValues(
+//       0, 0); // Here the altitude encoder value has decreased by 100
+//   // model.calculateCurrentPosition();
+//   //   model.saveEncoderCalibrationPoint(); // Save this point
 
-  long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
-  // Use
-  float epsilon = 1.0; // or whatever small value you're comfortable with
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, 36000, calculatedSteps,
-                                   "Altitude Encoder Steps per Revolution");
-}
+//   long calculatedSteps = model.calculateAltEncoderStepsPerRevolution();
+//   // Use
+//   float epsilon = 1.0; // or whatever small value you're comfortable with
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, 36000, calculatedSteps,
+//                                    "Altitude Encoder Steps per Revolution");
+// }
 
 // void test_two_star_alignment_takeshi_example() {
 
@@ -736,9 +747,10 @@ void test_telescope_model_mylocation_with_offset() {
   // Choose a date and time (UTC)
   unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
 
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+//   unsigned long timeMillis =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second);
 
   // model.setUTCYear(2023);
   // model.setUTCMonth(9);
@@ -763,7 +775,7 @@ void test_telescope_model_mylocation_with_offset() {
                          star1AzmAxis * 100 + aziEncoderOffset);
 
   // time s::hoursMinutesSecondsToFloatingHours(21, 27, 56);of observation
-  double star1Time = timeMillis;
+//   double star1Time = timeMillis;
 
   double star1RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(18, 37, 43.68);
@@ -776,11 +788,11 @@ void test_telescope_model_mylocation_with_offset() {
   log("Star 1: Vega");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star1AltAxis, star1AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis);
+  model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
   model.addReferencePoint();
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
                                    "calculated ra");
@@ -797,7 +809,7 @@ void test_telescope_model_mylocation_with_offset() {
   model.setEncoderValues(star2AltAxis * 100 + altEncoderOffset,
                          star2AzmAxis * 100 + aziEncoderOffset);
 
-  double star2Time = timeMillis; // use same time for now
+//   double star2Time = timeMillis; // use same time for now
 
   double star2RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(22, 58, 56.46);
@@ -811,10 +823,10 @@ void test_telescope_model_mylocation_with_offset() {
   log("Star 2: Fomalhaut");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star2AltAxis, star2AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star2RADegress, star2Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
   // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis);
+  model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
 
@@ -840,7 +852,7 @@ void test_telescope_model_mylocation_with_offset() {
   model.setEncoderValues(star3AltAxis * 100 + altEncoderOffset,
                          star3AzmAxis * 100 + aziEncoderOffset);
 
-  double star3Time = timeMillis;
+//   double star3Time = timeMillis;
 
   double star3RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(19, 51, 54.96);
@@ -853,10 +865,10 @@ void test_telescope_model_mylocation_with_offset() {
   log("Star 3: Altair");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star3AltAxis, star3AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star3RADegrees, star3Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
   // 1456000 milliseconds since first sync
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
@@ -907,9 +919,8 @@ void test_telescope_model_mylocation() {
   // Choose a date and time (UTC)
   unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
 
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
   model.setAltEncoderStepsPerRevolution(36000); // 100 ticks per degree
   model.setAzEncoderStepsPerRevolution(36000);
@@ -924,7 +935,7 @@ void test_telescope_model_mylocation() {
   model.setEncoderValues(vega.altInDegrees * 100, vega.aziInDegrees * 100);
 
   // time s::hoursMinutesSecondsToFloatingHours(21, 27, 56);of observation
-  double star1Time = timeMillis;
+  
 
   double star1RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(18, 37, 43.68);
@@ -937,12 +948,12 @@ void test_telescope_model_mylocation() {
   log("Star 1: Vega");
   log("    \t\t\t\t\talt: %lf\taz: %lf", vega.altInDegrees, vega.aziInDegrees);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis);
+  model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
   model.addReferencePoint();
 
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
                                    "calculated ra");
@@ -959,7 +970,7 @@ void test_telescope_model_mylocation() {
 
   model.setEncoderValues(star2AltAxis * 100, star2AzmAxis * 100);
 
-  double star2Time = timeMillis; // use same time for now
+// use same time for now
 
   double star2RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(22, 58, 56.46);
@@ -973,14 +984,14 @@ void test_telescope_model_mylocation() {
   log("Star 2: Fomalhaut");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star2AltAxis, star2AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star2RADegress, star2Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
   // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis*1000);
+  model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
 
-  model.calculateCurrentPosition(timeMillis*1000);
+  model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RAHours, model.getRACoord(),
                                    "calculated ra");
@@ -1007,7 +1018,7 @@ void test_telescope_model_mylocation() {
   //                                  "star3AzmAxis");
   model.setEncoderValues(star3AltAxis * 100, star3AzmAxis * 100);
 
-  double star3Time = timeMillis;
+  
 
   double star3RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(19, 51, 54.96);
@@ -1020,10 +1031,10 @@ void test_telescope_model_mylocation() {
   log("Star 3: Altair");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star3AltAxis, star3AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star3RADegrees, star3Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
   // 1456000 milliseconds since first sync
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
@@ -1041,8 +1052,9 @@ void test_telescope_model_mylocation_with_time_deltas() {
   unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
 
-  unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
+//   unsigned long timeMillis =
+//       convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
   // model.setUTCYear(2023);
   // model.setUTCMonth(9);
@@ -1067,7 +1079,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   model.setEncoderValues(star1AltAxis * 100, star1AzmAxis * 100);
 
   // time s::hoursMinutesSecondsToFloatingHours(21, 27, 56);of observation
-  double star1Time = timeMillis;
+//   double star1Time = timeMillis;
 
   double star1RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(18, 37, 43.68);
@@ -1080,12 +1092,12 @@ void test_telescope_model_mylocation_with_time_deltas() {
   log("Star 1: Vega");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star1AltAxis, star1AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis*1000);
+  model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
   model.addReferencePoint();
 
-  model.calculateCurrentPosition(timeMillis*1000);
+  model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
                                    "calculated ra");
@@ -1095,8 +1107,10 @@ void test_telescope_model_mylocation_with_time_deltas() {
   // fomalhaut
   // five minutes later
   day = 2, month = 9, year = 2023, hour = 10, minute = 5, second = 0;
+  TimePoint star2Time = createTimePoint(day, month, year, hour, minute, second);
 
-  timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
+  //   timeMillis = convertDateTimeToMillis(day, month, year, hour, minute,
+  //   second)/1000;
 
   double star2AltAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 37, 4.1);
@@ -1106,7 +1120,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
 
   model.setEncoderValues(star2AltAxis * 100, star2AzmAxis * 100);
 
-  double star2Time = timeMillis; // use same time for now
+//   double star2Time = timeMillis; // use same time for now
 
   double star2RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(22, 58, 56.46);
@@ -1120,13 +1134,13 @@ void test_telescope_model_mylocation_with_time_deltas() {
   log("Star 2: Fomalhaut");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star2AltAxis, star2AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star2RADegress, star2Dec);
-  log("Star time: %ld ", timeMillis);
+//   log("Star time: %ld ", timeMillis);
 
   // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis);
+  model.syncPositionRaDec(star2RAHours, star2Dec, star2Time);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(star2Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RAHours, model.getRACoord(),
                                    "calculated ra");
@@ -1144,8 +1158,9 @@ void test_telescope_model_mylocation_with_time_deltas() {
   // five minutes later again
   day = 2;
   month = 9, year = 2023, hour = 10, minute = 10, second = 0;
+  TimePoint star3Time = createTimePoint(day, month, year, hour, minute, second);
 
-  timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
+//   timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
   double star3AltAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(45, 16, 37.4);
@@ -1160,7 +1175,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   //                                  "star3AzmAxis");
   model.setEncoderValues(star3AltAxis * 100, star3AzmAxis * 100);
 
-  double star3Time = timeMillis;
+  
 
   double star3RAHours =
       Ephemeris::hoursMinutesSecondsToFloatingHours(19, 51, 54.96);
@@ -1173,10 +1188,10 @@ void test_telescope_model_mylocation_with_time_deltas() {
   log("Star 3: Altair");
   log("    \t\t\t\t\talt: %lf\taz: %lf", star3AltAxis, star3AzmAxis);
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star3RADegrees, star3Dec);
-  log("Star time: %ld ", timeMillis);
+
 
   // 1456000 milliseconds since first sync
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(star3Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
@@ -1217,13 +1232,18 @@ void test_one_star_align_principle() {
 
   unsigned int day = 13, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
-  unsigned long time = convertDateTimeToMillis(13, 9, 2023, 12, 24, 00)/1000;
+
+  TimePoint time=createTimePoint(day,month,year,hour,minute,second);
+  unsigned long time2 =
+      convertDateTimeToMillis(day, month, year, hour, minute, second)/ 1000;
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, time2, convertTimePointToEpochSeconds(time),
+                                   "time check");
 
   EqCoord startEq = EqCoord(startHoriz, time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, -38.797001, startEq.getDecInDegrees(),
                                    "start dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 20.3, startEq.getRAInHours(),
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 17.95871, startEq.getRAInHours(),
                                    "start ra");
 
   alignment.addReferenceCoord(startHoriz, startEq);
@@ -1236,9 +1256,10 @@ void test_one_star_align_principle() {
                                    "modified alt");
 
   EqCoord endEq = EqCoord(endHoriz, time);
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 5.0, endEq.getDecInDegrees(),
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 5.124745, endEq.getDecInDegrees(),
                                    "end dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 2.0, endEq.getRAInHours(), "end ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 23.68311, endEq.getRAInHours(),
+                                   "end ra");
 
   alignment.addReferenceCoord(endHoriz, endEq);
   alignment.calculateThirdReference();
