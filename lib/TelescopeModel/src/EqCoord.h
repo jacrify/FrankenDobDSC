@@ -1,6 +1,6 @@
 #ifndef TELESCOPE_MODEL_E_COORD_H
 #define TELESCOPE_MODEL_E_COORD_H
-#include "Ephemeris.h"
+#include  "Ephemeris.h"
 
 #include <cmath>
 class HorizCoord;

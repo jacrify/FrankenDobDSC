@@ -141,7 +141,7 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   log("Offset alt az from encoders: \talt: %lf\taz:%lf",
       adjustedAltAz.altInDegrees, adjustedAltAz.aziInDegrees);
 
-  EqCoord currentEqPosition = alignment.toReferenceCoord(adjustedAltAz);
+  currentEqPosition = alignment.toReferenceCoord(adjustedAltAz);
   // alignment.toInstrumentDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
   //                           takiCoord.altAngle);
 
