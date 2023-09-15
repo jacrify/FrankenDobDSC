@@ -9,14 +9,21 @@ class EqCoord {
 public:
   EquatorialCoordinates eq;
   EqCoord();
+  EqCoord(float raInDegrees,float decInDegrees);
   EqCoord(EquatorialCoordinates e);
 
   EqCoord(HorizCoord h, unsigned long millis);
-  double getRAInHours() ;
-  double getRAInDegrees() ;
-  double getDecInDegrees() ;
+  double getRAInHours();
+  double getRAInDegrees();
+  double getDecInDegrees();
   void setDecInDegrees(float dec);
-  void setRAInDegrees(float ra) ;
+  void setDecInDegrees(int degrees, int minutes, float seconds);
+  void setRAInDegrees(int degrees, int minutes, float seconds);
+  void setRAInDegrees(float ra);
   void setRAInHours(float ra);
+  void setRAInHours(int hours, int minutes, float seconds);
+  void addRAInDegrees(float raToAdd);
+  
+  
 };
 #endif

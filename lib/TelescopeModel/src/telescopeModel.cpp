@@ -11,10 +11,18 @@
 TelescopeModel::TelescopeModel() {
   // Default alignment for alt az in south
   // alignment.addReference(0, 0, M_PI, 0);//radians
-  alignment.addReferenceDeg(0, 0, 180, 0); // degrees
+  HorizCoord h = HorizCoord(0, 0);
+  EqCoord eq = EqCoord(180, 0);
+
+  alignment.setNorthernHemisphere(false);
+  alignment.addReferenceCoord(h, eq);
+
+  // alignment.addReferenceDeg(0, 0, 180, 0); // degrees
 
   // alignment.addReference(0, M_PI_2, M_PI, M_PI_2);//radians
-  alignment.addReferenceDeg(0, 90, 180, 90); // degreess
+  h = HorizCoord(0, 90);
+  eq = EqCoord(180, 90);
+  alignment.addReferenceCoord(h, eq); // degreess
   alignment.calculateThirdReference();
   defaultAlignment = true;
 
@@ -119,8 +127,7 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   // position as well as the encoder values.
   // So we start by converting that base position into known
   // alt/az coords
-  double raInDegrees;
-  double decInDegrees;
+
   float altEncoderDegrees;
   float azEncoderDegrees;
   // convert encoder values to degrees
@@ -133,17 +140,12 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
 
   log("Offset alt az from encoders: \talt: %lf\taz:%lf",
       adjustedAltAz.altInDegrees, adjustedAltAz.aziInDegrees);
-  TakiHorizCoord takiCoord =
-      TakiHorizCoord(adjustedAltAz, isNorthernHemisphere());
 
-  log("Taki coord for reference calc: alt: %lf\taz: %lf", takiCoord.altAngle,
-      takiCoord.aziAngle);
-  // alignment.toReferenceDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
-  // takiCoord.altAngle);
-  alignment.toInstrumentDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
-                            takiCoord.altAngle);
+  EqCoord currentEqPosition = alignment.toReferenceCoord(adjustedAltAz);
+  // alignment.toInstrumentDeg(raInDegrees, decInDegrees, takiCoord.aziAngle,
+  //                           takiCoord.altAngle);
 
-  raInDegrees = fmod(fmod(raInDegrees, 360) + 360, 360);
+  // raInDegrees = fmod(fmod(raInDegrees, 360) + 360, 360);
 
   double raDeltaDegrees = 0;
 
@@ -158,8 +160,8 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   log("Time delta millis: %ld degrees: %lf", timedelta, raDeltaDegrees);
 
-  currentEqPosition.setRAInDegrees(raInDegrees + raDeltaDegrees);
-  currentEqPosition.setDecInDegrees(decInDegrees);
+  currentEqPosition.addRAInDegrees(raDeltaDegrees);
+
   // log("RA: %lf", currentRA);
   // currentDec = dec;
   log("Final position\t\t\tra(h): %lf\tdec: %lf",
@@ -194,19 +196,13 @@ double TelescopeModel::millisecondsToRADeltaInDegrees(
 void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
                                              unsigned long time) {
 
-  TakiHorizCoord taki1 = TakiHorizCoord(horiz1, isNorthernHemisphere());
-
-  alignment.addReferenceDeg(taki1.aziAngle, taki1.altAngle,
-                            eq1.getRAInDegrees(), eq1.getDecInDegrees());
+  alignment.addReferenceCoord(horiz1,eq1);
 
   HorizCoord horiz2 = horiz1.addOffset(90, 0);
 
   EqCoord eq2 = EqCoord(horiz2, time);
 
-  TakiHorizCoord taki2 = TakiHorizCoord(horiz2, isNorthernHemisphere());
-
-  alignment.addReferenceDeg(taki2.aziAngle, taki2.altAngle,
-                            eq2.getRAInDegrees(), eq2.getDecInDegrees());
+  alignment.addReferenceCoord(horiz2, eq2);
   alignment.calculateThirdReference();
   log("===Generated 1 star reference point===");
   log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz1.altInDegrees,
@@ -224,11 +220,9 @@ void TelescopeModel::addReferencePoint() {
     unsigned long timedelta = secondSyncTime - firstSyncTime;
     raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
   }
-  TakiHorizCoord taki = TakiHorizCoord(lastSyncedHoriz, isNorthernHemisphere());
+  
+  alignment.addReferenceCoord(lastSyncedHoriz,lastSyncedEq);
 
-  alignment.addReferenceDeg(taki.aziAngle, taki.altAngle,
-                            lastSyncedEq.getRAInDegrees() - raDeltaDegrees,
-                            lastSyncedEq.getDecInDegrees());
 
   if (alignment.getRefs() == 2) {
     log("Got two refs, calculating model...");

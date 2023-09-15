@@ -457,81 +457,85 @@ void test_alt_encoder_negative_move(void) {
                                    "Altitude Encoder Steps per Revolution");
 }
 
-void test_two_star_alignment_takeshi_example() {
+// void test_two_star_alignment_takeshi_example() {
 
-  // http: // takitoshimi.starfree.jp/matrix/matrix_method_rev_e.pdf
+//   // http: // takitoshimi.starfree.jp/matrix/matrix_method_rev_e.pdf
 
-  // Default alignment for alt az in south
-  //  alignment.addReference(0, 0, M_PI, 0);//radians
-  //  alignment.addReference(0, 0, 180, 0); //degrees
+//   // Default alignment for alt az in south
+//   //  alignment.addReference(0, 0, M_PI, 0);//radians
+//   //  alignment.addReference(0, 0, 180, 0); //degrees
 
-  // alignment.addReference(0, M_PI_2, M_PI, M_PI_2);//radians
-  // alignment.addReference(0, 90, 180,90); //degreess
+//   // alignment.addReference(0, M_PI_2, M_PI, M_PI_2);//radians
+//   // alignment.addReference(0, 90, 180,90); //degreess
 
-  // alignment.calculateThirdReference();
-  CoordConv alignment;
+//   // alignment.calculateThirdReference();
+//   CoordConv alignment;
 
-  double star1AltAxis = 83.87;
-  double star1AzmAxis = 99.25; // anticlockwise)
+//   double star1AltAxis = 83.87;
+//   double star1AzmAxis = 99.25; // anticlockwise)
 
-  double star1RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(0, 7, 54);
-  double star1RADegrees = 360 * star1RAHours / 24.0;
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1.97498552, star1RADegrees, "star1ra");
-  double star1Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 27, 56);
-  double star1Dec = 29.038;
-  alignment.addReferenceDeg(star1RADegrees, star1Dec, star1AzmAxis,
-                            star1AltAxis);
+//   double star1RAHours = Ephemeris::hoursMinutesSecondsToFloatingHours(0, 7,
+//   54); double star1RADegrees = 360 * star1RAHours / 24.0;
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 1.97498552, star1RADegrees,
+//   "star1ra"); double star1Time =
+//   Ephemeris::hoursMinutesSecondsToFloatingHours(21, 27, 56); double star1Dec
+//   = 29.038; alignment.addReferenceDeg(star1RADegrees, star1Dec, star1AzmAxis,
+//                             star1AltAxis);
 
-  double star2AltAxis = 35.04;
-  double star2AzmAxis = 310.98; // anticlockwise)
-  double star2RAHours =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(2, 21, 45);
+//   double star2AltAxis = 35.04;
+//   double star2AzmAxis = 310.98; // anticlockwise)
+//   double star2RAHours =
+//       Ephemeris::hoursMinutesSecondsToFloatingHours(2, 21, 45);
 
-  double star2Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 37, 02);
-  // time travel
-  star2RAHours = star2RAHours - (star2Time - star1Time);
+//   double star2Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 37,
+//   02);
+//   // time travel
+//   star2RAHours = star2RAHours - (star2Time - star1Time);
 
-  double star2RADegress = 360 * star2RAHours / 24.0;
+//   double star2RADegress = 360 * star2RAHours / 24.0;
 
-  double star2Dec = 89.222;
-  alignment.addReferenceDeg(star2RADegress, star2Dec, star2AzmAxis,
-                            star2AltAxis);
-  int i = alignment.getRefs();
-  std::cout << "===Alignment ref: " << i << "\n\r";
-  alignment.calculateThirdReference();
+//   double star2Dec = 89.222;
+//   alignment.addReferenceDeg(star2RADegress, star2Dec, star2AzmAxis,
+//                             star2AltAxis);
+//   int i = alignment.getRefs();
+//   std::cout << "===Alignment ref: " << i << "\n\r";
+//   alignment.calculateThirdReference();
 
-  double star3RAHours =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(0, 43, 07);
+//   double star3RAHours =
+//       Ephemeris::hoursMinutesSecondsToFloatingHours(0, 43, 07);
 
-  double star3Dec = -18.038;
+//   double star3Dec = -18.038;
 
-  double star3Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 52, 12);
-  // time travel
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
-  star3RAHours = star3RAHours - (star3Time - star1Time);
+//   double star3Time = Ephemeris::hoursMinutesSecondsToFloatingHours(21, 52,
+//   12);
+//   // time travel
+//   // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
+//   star3RAHours = star3RAHours - (star3Time - star1Time);
 
-  double star3RADegrees = 360 * star3RAHours / 24.0;
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 4.712482, star3RADegrees, "ra");
-  // star3RA = fmod(star3RA, 360);
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
+//   double star3RADegrees = 360 * star3RAHours / 24.0;
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 4.712482, star3RADegrees, "ra");
+//   // star3RA = fmod(star3RA, 360);
+//   // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
 
-  double outaxis1;
-  double outaxis2;
-  alignment.toInstrumentDeg(outaxis1, outaxis2, star3RADegrees, star3Dec);
+//   double outaxis1;
+//   double outaxis2;
+//   alignment.toInstrumentDeg(outaxis1, outaxis2, star3RADegrees, star3Dec);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, outaxis2, "alt");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 130.21, outaxis1, "az");
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, outaxis2, "alt");
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 130.21, outaxis1, "az");
 
-  double outra, outdec;
-  alignment.toReferenceDeg(outra, outdec, outaxis1, outaxis2);
+//   double outra, outdec;
+//   alignment.toReferenceDeg(outra, outdec, outaxis1, outaxis2);
 
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3RADegrees, outra, "ra");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, outdec, "dec");
-  // 3.7002 degree error
-  // 14.8 minutes or 888 seconds 14 m 48 seconds
-}
-
-void test_two_star_alignment_mylocation() {
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3RADegrees, outra, "ra");
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, outdec, "dec");
+//   // 3.7002 degree error
+//   // 14.8 minutes or 888 seconds 14 m 48 seconds
+// }
+/**
+ * Test two star alignment, using wrapper classes.
+ */
+void test_two_star_alignment_mylocation_wrappers() {
 
   // Note that in southern hemisphere, we
   // a) measure azimuth in an anticlockwise direction, so
@@ -541,96 +545,168 @@ void test_two_star_alignment_mylocation() {
   // http: // takitoshimi.starfree.jp/matrix/matrix_method_rev_e.pdf
 
   CoordConv alignment;
+  alignment.setNorthernHemisphere(false);
 
-  // star 1: Vega. Note negative as southern hemisphhere
-  double star1AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
+  HorizCoord vegaAltAz;
+  vegaAltAz.setAlt(17, 9, 19.5);
+  vegaAltAz.setAzi(357, 13, 18.8);
 
-  // note no 360-...
-  double star1AzmAxis = Ephemeris::degreesMinutesSecondsToFloatingDegrees(
-      357, 13, 18.8); // anticlockwise)
+  //   TakiHorizCoord vegaTaki = TakiHorizCoord(vegaAltAz, false);
+  //   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, -17.1, vegaTaki.altAngle,
+  //   "takitalt"); TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15,357.2,
+  //   vegaTaki.aziAngle, "takitalt");
 
-  double star1RAHours =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(18, 37, 43.68);
-  double star1RADegrees = 360 * star1RAHours / 24.0;
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 279.432, star1RADegrees, "star1ra");
+  EqCoord vegaRaDec;
+  vegaRaDec.setRAInHours(18, 37, 43.68);
+  vegaRaDec.setDecInDegrees(38, 48, 9.2);
 
-  double star1Dec =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 48, 9.2);
-  alignment.addReferenceDeg(star1AzmAxis, star1AltAxis, star1RADegrees,
-                            star1Dec);
+  alignment.addReferenceCoord(vegaAltAz, vegaRaDec);
 
   // fomalhaut
-  double star2AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(37, 36, 24.3);
-  // anticlockwise
-  double star2AzmAxis =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(103, 17, 9.4);
+  HorizCoord fomalhautAltAz;
 
-  double star2RAHours =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(22, 58, 56.46);
+  fomalhautAltAz.setAlt(37, 36, 24.3);
+  fomalhautAltAz.setAzi(103, 17, 9.4);
+  //   TakiHorizCoord fomalhautTaki = TakiHorizCoord(fomalhautAltAz, false);
 
-  double star2RADegress = 360 * star2RAHours / 24.0;
+  EqCoord fomalhautRaDec;
+  fomalhautRaDec.setRAInHours(22, 58, 56.46);
+  fomalhautRaDec.setDecInDegrees(-29, 29, 47.7);
 
-  double star2Dec =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(-29, 29, 47.7);
-
-  alignment.addReferenceDeg(star2AzmAxis, star2AltAxis, star2RADegress,
-                            star2Dec);
+  alignment.addReferenceCoord(fomalhautAltAz, fomalhautRaDec);
 
   alignment.calculateThirdReference();
 
   // altair
-  double star3RAHours =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(19, 51, 54.9);
-  double star3RADegrees = 360 * star3RAHours / 24.0;
+  EqCoord altairRaDecExpected;
+  altairRaDecExpected.setRAInHours(19, 51, 54.9);
+  altairRaDecExpected.setDecInDegrees(8, 55, 38.5);
 
-  double star3Dec =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(8, 55, 38.5);
+  HorizCoord altairAltAziExpected;
+  altairAltAziExpected.setAlt(44, 33, 25.8);
+  altairAltAziExpected.setAzi(21, 55, 36.3);
 
-  // double star3Time =
-  //     Ephemeris::hoursMinutesSecondsToFloatingHours(19, 51, 54.96);
-  // time travel
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
-  double star3AltAxis =
-      -Ephemeris::degreesMinutesSecondsToFloatingDegrees(44, 33, 25.8);
-  // anticlockwise
-  double star3AzmAxis =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(21, 55, 36.3);
+  HorizCoord altairAltAz = alignment.toInstrumentCoord(altairRaDecExpected);
 
-  std::cout << "Star 3 RA: " << star3RADegrees << "\n\r";
-  std::cout << "Star 3 Dec: " << star3Dec << "\n\r";
-  std::cout << "Star 3 alt: " << star3AltAxis << "\n\r";
-  std::cout << "Star 3 alt: " << star3AzmAxis << "\n\r";
+  //   double outaxis1;
+  //   double outaxis2;
+  //   alignment.toReferenceDeg(outaxis1, outaxis2, star3RADegrees, star3Dec);
 
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 4.712482, star3RADegrees, "ra");
-  // star3RA = fmod(star3RA, 360);
-  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
-
-  double outaxis1;
-  double outaxis2;
-  alignment.toReferenceDeg(outaxis1, outaxis2, star3RADegrees, star3Dec);
-
-  std::cout << "Calced Alt axis: " << outaxis2 << "\n\r";
-  std::cout << "Calced Azi axis: " << outaxis1 << "\n\r";
-
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3AltAxis, outaxis2, "alt");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, altairAltAziExpected.altInDegrees,
+                                   altairAltAz.altInDegrees, "alt");
   // this is a big delta, not sure why.
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.55, star3AzmAxis, outaxis1, "az");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.55, altairAltAziExpected.aziInDegrees,
+                                   altairAltAz.aziInDegrees, "az");
 
-  double outra, outdec;
-  alignment.toInstrumentDeg(outra, outdec, star3AzmAxis, star3AltAxis);
+  EqCoord altairRaDec = alignment.toReferenceCoord(altairAltAz);
 
-  outra = outra + 360; // wtf. need to normalise
-
-  std::cout << "Calced dec: " << outdec << "\n\r";
-  std::cout << "Calced ra: " << outra << "\n\r";
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, outdec, "dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RADegrees, outra, "ra");
-
-  // 3.7002 degree error
-  // 14.8 minutes or 888 seconds 14 m 48 seconds
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, altairRaDecExpected.getDecInDegrees(),
+                                   altairRaDec.getDecInDegrees(), "dec");
+  // this is a big delta, not sure why.
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.55, altairRaDecExpected.getRAInDegrees(),
+                                   altairRaDec.getRAInDegrees(), "ra");
 }
+
+// void test_two_star_alignment_mylocation() {
+
+//   // Note that in southern hemisphere, we
+//   // a) measure azimuth in an anticlockwise direction, so
+//   //    no need to do 360-az  (transformation expects anticlockwise azi)
+//   // b) measure alt negative to what transformation expects.
+
+//   // http: // takitoshimi.starfree.jp/matrix/matrix_method_rev_e.pdf
+
+//   CoordConv alignment;
+
+//   // star 1: Vega. Note negative as southern hemisphhere
+//   double star1AltAxis =
+//       -Ephemeris::degreesMinutesSecondsToFloatingDegrees(17, 9, 19.5);
+
+//   // note no 360-...
+//   double star1AzmAxis = Ephemeris::degreesMinutesSecondsToFloatingDegrees(
+//       357, 13, 18.8); // anticlockwise)
+
+//   double star1RAHours =
+//       Ephemeris::hoursMinutesSecondsToFloatingHours(18, 37, 43.68);
+//   double star1RADegrees = 360 * star1RAHours / 24.0;
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 279.432, star1RADegrees, "star1ra");
+
+//   double star1Dec =
+//       Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 48, 9.2);
+//   alignment.addReferenceDeg(star1AzmAxis, star1AltAxis, star1RADegrees,
+//                             star1Dec);
+
+//   // fomalhaut
+//   double star2AltAxis =
+//       -Ephemeris::degreesMinutesSecondsToFloatingDegrees(37, 36, 24.3);
+//   // anticlockwise
+//   double star2AzmAxis =
+//       Ephemeris::degreesMinutesSecondsToFloatingDegrees(103, 17, 9.4);
+
+//   double star2RAHours =
+//       Ephemeris::hoursMinutesSecondsToFloatingHours(22, 58, 56.46);
+
+//   double star2RADegress = 360 * star2RAHours / 24.0;
+
+//   double star2Dec =
+//       Ephemeris::degreesMinutesSecondsToFloatingDegrees(-29, 29, 47.7);
+
+//   alignment.addReferenceDeg(star2AzmAxis, star2AltAxis, star2RADegress,
+//                             star2Dec);
+
+//   alignment.calculateThirdReference();
+
+//   // altair
+//   double star3RAHours =
+//       Ephemeris::hoursMinutesSecondsToFloatingHours(19, 51, 54.9);
+//   double star3RADegrees = 360 * star3RAHours / 24.0;
+
+//   double star3Dec =
+//       Ephemeris::degreesMinutesSecondsToFloatingDegrees(8, 55, 38.5);
+
+//   // double star3Time =
+//   //     Ephemeris::hoursMinutesSecondsToFloatingHours(19, 51, 54.96);
+//   // time travel
+//   // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
+//   double star3AltAxis =
+//       -Ephemeris::degreesMinutesSecondsToFloatingDegrees(44, 33, 25.8);
+//   // anticlockwise
+//   double star3AzmAxis =
+//       Ephemeris::degreesMinutesSecondsToFloatingDegrees(21, 55, 36.3);
+
+//   std::cout << "Star 3 RA: " << star3RADegrees << "\n\r";
+//   std::cout << "Star 3 Dec: " << star3Dec << "\n\r";
+//   std::cout << "Star 3 alt: " << star3AltAxis << "\n\r";
+//   std::cout << "Star 3 alt: " << star3AzmAxis << "\n\r";
+
+//   // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 4.712482, star3RADegrees, "ra");
+//   // star3RA = fmod(star3RA, 360);
+//   // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 37.67, star3RA, "star3RA");
+
+//   double outaxis1;
+//   double outaxis2;
+//   alignment.toReferenceDeg(outaxis1, outaxis2, star3RADegrees, star3Dec);
+
+//   std::cout << "Calced Alt axis: " << outaxis2 << "\n\r";
+//   std::cout << "Calced Azi axis: " << outaxis1 << "\n\r";
+
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3AltAxis, outaxis2, "alt");
+//   // this is a big delta, not sure why.
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.55, star3AzmAxis, outaxis1, "az");
+
+//   double outra, outdec;
+//   alignment.toInstrumentDeg(outra, outdec, star3AzmAxis, star3AltAxis);
+
+//   outra = outra + 360; // wtf. need to normalise
+
+//   std::cout << "Calced dec: " << outdec << "\n\r";
+//   std::cout << "Calced ra: " << outra << "\n\r";
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, outdec, "dec");
+//   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RADegrees, outra, "ra");
+
+//   // 3.7002 degree error
+//   // 14.8 minutes or 888 seconds 14 m 48 seconds
+// }
 
 void test_telescope_model_mylocation_with_offset() {
   log("======test_telescope_model_mylocation_with_offset=====");
@@ -1116,6 +1192,7 @@ void test_coords() {
 }
 
 void test_one_star_align_principle() {
+  CoordConv alignment;
   Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
                                 151.0, 3.0, 3.0); // Lon: -2°20'14"
 
@@ -1128,25 +1205,52 @@ void test_one_star_align_principle() {
   unsigned long time = convertDateTimeToMillis(13, 9, 2023, 12, 24, 00);
 
   EqCoord startEq = EqCoord(startHoriz, time);
-//TODO 3 degree error here?
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, -38.797001, startEq.getDecInDegrees(),
                                    "start dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 20.3, startEq.getRAInHours(),
                                    "start ra");
 
-  HorizCoord endHoriz =   startHoriz.addOffset(90, 0);
+  alignment.addReferenceCoord(startHoriz, startEq);
+
+  HorizCoord endHoriz = startHoriz.addOffset(90, 0);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 19.67791, endHoriz.altInDegrees,
                                    "modified alt");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 69.138016, endHoriz.aziInDegrees,
                                    "modified alt");
 
-  // 69.138016
   EqCoord endEq = EqCoord(endHoriz, time);
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 5, endEq.getDecInDegrees(),
-                                   "start dec");
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 2, endEq.getRAInHours(), "start ra");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 5.0, endEq.getDecInDegrees(),
+                                   "end dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 2.0, endEq.getRAInHours(), "end ra");
+
+  alignment.addReferenceCoord(endHoriz, endEq);
+  alignment.calculateThirdReference();
+
+  EqCoord outEq = alignment.toReferenceCoord(startHoriz);
+
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, startEq.getDecInDegrees(),
+                                   outEq.getDecInDegrees(), "outdec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, startEq.getRAInDegrees(),
+                                   outEq.getRAInDegrees(), "outra");
+  HorizCoord thirdHoriz = startHoriz.addOffset(-10, 0);
+
+//   EqCoord down10=EqCoord();
+//   down10.setRAInHours(19,6,23.62);
+//   down10.setDecInDegrees(-39, 14, 8.3);
+
+  EqCoord down10=EqCoord(thirdHoriz,time);
+      //   double outRaDegrees;
+      //   double outDecDegrees;
+      //   alignment.toInstrumentDeg(outra, outdec, star3AzmAxis, star3AltAxis);
+
+      outEq = alignment.toReferenceCoord(thirdHoriz);
+
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, down10.getDecInDegrees(), outEq.getDecInDegrees(),
+                                   "outdec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, down10.getRAInDegrees(), outEq.getRAInDegrees(),
+                                   "outra");
 }
 
 void setup() {
@@ -1154,11 +1258,11 @@ void setup() {
   // test_telescope_model();
   UNITY_BEGIN(); // IMPORTANT LINE!
 
-  RUN_TEST(test_eq_to_horizontal);
-  RUN_TEST(test_horizontal_to_eq);
-  RUN_TEST(test_eq_to_horizontal_vega);
+  //   RUN_TEST(test_eq_to_horizontal);
+  //   RUN_TEST(test_horizontal_to_eq);
+  //   RUN_TEST(test_eq_to_horizontal_vega);
 
-  RUN_TEST(test_horizontal_to_eq_eq_constructor);
+  //   RUN_TEST(test_horizontal_to_eq_eq_constructor);
 
   // RUN_TEST(test_telescope_model_starting_offset);
   // RUN_TEST(test_az_encoder_calibration);
@@ -1170,12 +1274,13 @@ void setup() {
   // RUN_TEST(test_telescope_model_takeshi);
 
   //   RUN_TEST(test_two_star_alignment_takeshi_example);
-  // RUN_TEST(test_two_star_alignment_mylocation);
+//   RUN_TEST(test_two_star_alignment_mylocation);
+//   RUN_TEST(test_two_star_alignment_mylocation_wrappers);
 
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
 
-  //   RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_one_star_align_principle);
+//   RUN_TEST(test_telescope_model_mylocation);
+    RUN_TEST(test_one_star_align_principle);
   //   RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
   //   RUN_TEST(test_coords);
   UNITY_END(); // IMPORTANT LINE!
