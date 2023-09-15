@@ -25,7 +25,7 @@ AsyncUDP alpacaUdp;
 AsyncUDP eqUdp;
 #define IPBROADCASTPORT 50375
 
-double runtimeFromCenter;
+double runtimeFromCenterSeconds;
 double timeToEnd;
 bool currentlyRunning;
 bool platformConnected;
@@ -157,7 +157,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
       model.lastSyncedEq.getRAInDegrees(), model.lastSyncedEq.getDecInDegrees(),
       model.lastSyncedHoriz.altInDegrees, model.lastSyncedHoriz.aziInDegrees,
 
-      currentlyRunning ? "true" : "false", runtimeFromCenter / 60,
+      currentlyRunning ? "true" : "false", runtimeFromCenterSeconds / 60,
       timeToEnd / 60, platformConnected ? "true" : "false");
 
   String json = buffer;
@@ -399,7 +399,7 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
  *  If not mark platform as not connected.
  *
  */
-unsigned long long calculateAdjustedTimeAsEpochMillis() {
+unsigned long long calculateAdjustedTimeAsEpochSeconds() {
 
   unsigned long now = millis();
   log("Now millis since start: %ld", now);
@@ -423,9 +423,9 @@ unsigned long long calculateAdjustedTimeAsEpochMillis() {
         (now - lastPositionReceivedTimeMillis) / 1000.0;
   }
 
-  unsigned  long timeAtMiddleOfRun =
-      now + (runtimeFromCenter + interpolationTimeInSeconds) * 1000;
-  unsigned long long epochTime = epochMillisBase + timeAtMiddleOfRun;
+  unsigned  long timeAtMiddleOfRunEpochSeconds =
+      now * 1000 + (runtimeFromCenterSeconds + interpolationTimeInSeconds);
+  unsigned long long epochTime = epochMillisBase + timeAtMiddleOfRunEpochSeconds;
 
   log("Returned epoch time: %llu", epochTime);
   return epochTime;
@@ -435,7 +435,7 @@ unsigned long long calculateAdjustedTimeAsEpochMillis() {
 // Triggered from ra or dec request. Should only run for one of them and
 // then cache for a few millis
 void updatePosition(TelescopeModel &model) {
-  unsigned long long epochTimeAtMiddleOfRun = calculateAdjustedTimeAsEpochMillis();
+  unsigned long long epochTimeAtMiddleOfRun = calculateAdjustedTimeAsEpochSeconds();
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.calculateCurrentPosition(epochTimeAtMiddleOfRun);
 }
@@ -463,11 +463,11 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
     log("Could not parse dec arg!");
   }
 
-  long long timeAtMiddleOfRun = calculateAdjustedTimeAsEpochMillis();
+  unsigned long timeAtMiddleOfRunSeconds = calculateAdjustedTimeAsEpochSeconds();
   log("Encoder values: %ld,%ld", getEncoderAl(), getEncoderAz());
-  log("Timestamp for middle of run: %llu", timeAtMiddleOfRun);
+  log("Timestamp for middle of run: %llu", timeAtMiddleOfRunSeconds);
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  model.syncPositionRaDec(parsedRAHours, parsedDecDegrees, timeAtMiddleOfRun);
+  model.syncPositionRaDec(parsedRAHours, parsedDecDegrees, timeAtMiddleOfRunSeconds);
   updatePosition(model);
   // model.saveEncoderCalibrationPoint();
 
@@ -549,12 +549,12 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
         if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
             doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
             doc["timeToEnd"].is<double>()) {
-          runtimeFromCenter = doc["timeToCenter"];
+          runtimeFromCenterSeconds = doc["timeToCenter"];
           timeToEnd = doc["timeToEnd"];
           currentlyRunning = doc["isTracking"];
           lastPositionReceivedTimeMillis = now;
           log("Distance from center %lf, running %d, at time %llu",
-              runtimeFromCenter, currentlyRunning,
+              runtimeFromCenterSeconds, currentlyRunning,
               lastPositionReceivedTimeMillis);
         } else {
           log("Payload missing required fields.");

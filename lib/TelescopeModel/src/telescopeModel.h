@@ -1,8 +1,8 @@
 #ifndef TELESCOPE_MODEL_H
 #define TELESCOPE_MODEL_H
 #include "CoordConv.hpp"
-#include "HorizCoord.h"
 #include "EqCoord.h"
+#include "HorizCoord.h"
 #include <Ephemeris.h>
 
 /**
@@ -75,7 +75,7 @@ public:
   void addReferencePoint();
 
   void performOneStarAlignment(HorizCoord altaz, EqCoord eq,
-                               unsigned long long time);
+                               unsigned long epochTimeSeconds);
 
   void setLatitude(float lat);
   void setLongitude(float lng);
@@ -89,9 +89,9 @@ public:
   float getDecCoord();
   float getRACoord();
 
-  void syncPositionRaDec(float ra, float dec, unsigned long long timeMillis);
+  void syncPositionRaDec(float ra, float dec, unsigned long epochTimeSeconds);
 
-  void calculateCurrentPosition(unsigned long long timeMillis);
+  void calculateCurrentPosition(unsigned long epochTimeSeconds);
   // void saveEncoderCalibrationPoint();
 
   long getAltEncoderAlignValue1() const;
@@ -127,8 +127,6 @@ public:
   long altEncBaseValue;
   long azEncBaseValue;
 
-
-
   double baseRaOffset;
 
   double altBaseValue;
@@ -137,7 +135,7 @@ public:
   EqCoord currentEqPosition;
   // float currentRAHours;
   // float currentDec;
-  
+
   float currentAlt;
   float currentAz;
 
@@ -156,33 +154,33 @@ public:
   float azAlignValue1;
   float azAlignValue2;
 
-  HorizCoord lastSyncedHoriz; 
+  HorizCoord lastSyncedHoriz;
   EqCoord lastSyncedEq;
-
 
   // double lastSyncedRa;
   // double lastSyncedDec;
   // double lastSyncedAlt;
   // double lastSyncedAz;
 
-  unsigned long long secondSyncTime; // epoch timestamp in milliseconds  of second sync
-  unsigned long long
-      firstSyncTime; // epoch timestamp in milliseconds  of first sync
-  unsigned long long alignmentModelSyncTime; // t=0 for post alignment. Based on
-                                             // time of first sync
+  unsigned long
+      secondSyncTimeSeconds; // epoch timestamp in milliseconds  of second sync
+  unsigned long
+      firstSyncTimeSeconds; // epoch timestamp in milliseconds  of first sync
+  unsigned long alignmentModelSyncTimeSeconds; // t=0 for post alignment. Based
+                                               // on time of first sync
 
   bool defaultAlignment;
   // float altOffsetToAddToEncoderResult;
   // float azOffsetToAddToEncoderResult;
   // ;
 
-  float  errorToAddToEncoderResultAlt;
+  float errorToAddToEncoderResultAlt;
   float errorToAddToEncoderResultAzi;
 
   bool isNorthernHemisphere();
 
   CoordConv alignment;
-  double millisecondsToRADeltaInDegrees(unsigned long millisecondsDelta);
+  double secondsToRADeltaInDegrees(unsigned long millisecondsDelta);
 };
 
 #endif
