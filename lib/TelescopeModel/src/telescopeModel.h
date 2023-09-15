@@ -75,7 +75,7 @@ public:
   void addReferencePoint();
 
   void performOneStarAlignment(HorizCoord altaz, EqCoord eq,
-                               unsigned long time);
+                               unsigned long long time);
 
   void setLatitude(float lat);
   void setLongitude(float lng);
@@ -89,9 +89,9 @@ public:
   float getDecCoord();
   float getRACoord();
 
-  void syncPositionRaDec(float ra, float dec, unsigned long time);
+  void syncPositionRaDec(float ra, float dec, unsigned long long timeMillis);
 
-  void calculateCurrentPosition(unsigned long timeMillis);
+  void calculateCurrentPosition(unsigned long long timeMillis);
   // void saveEncoderCalibrationPoint();
 
   long getAltEncoderAlignValue1() const;
@@ -126,7 +126,9 @@ public:
   // known encoder values at same
   long altEncBaseValue;
   long azEncBaseValue;
-  unsigned long baseTime;
+
+
+
   double baseRaOffset;
 
   double altBaseValue;
@@ -163,10 +165,11 @@ public:
   // double lastSyncedAlt;
   // double lastSyncedAz;
 
-  unsigned long secondSyncTime; // timestamp in milliseconds  of second sync
-  unsigned long firstSyncTime;  // timestamp in milliseconds  of first sync
-  unsigned long alignmentModelSyncTime; // t=0 for post alignment. Based on time
-                                        // of first sync
+  unsigned long long secondSyncTime; // epoch timestamp in milliseconds  of second sync
+  unsigned long long
+      firstSyncTime; // epoch timestamp in milliseconds  of first sync
+  unsigned long long alignmentModelSyncTime; // t=0 for post alignment. Based on
+                                             // time of first sync
 
   bool defaultAlignment;
   // float altOffsetToAddToEncoderResult;

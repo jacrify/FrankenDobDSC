@@ -1,6 +1,7 @@
 #ifndef TELESCOPE_MODEL_E_COORD_H
 #define TELESCOPE_MODEL_E_COORD_H
-#include  "Ephemeris.h"
+
+#include "../../Ephemeris/src/Ephemeris.h"
 
 #include <cmath>
 class HorizCoord;
@@ -12,7 +13,7 @@ public:
   EqCoord(float raInDegrees,float decInDegrees);
   EqCoord(EquatorialCoordinates e);
 
-  EqCoord(HorizCoord h, unsigned long millis);
+  EqCoord(HorizCoord h, unsigned long epochMillis);
   double getRAInHours();
   double getRAInDegrees();
   double getDecInDegrees();

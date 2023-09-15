@@ -50,6 +50,21 @@ unsigned long convertDateTimeToMillis(unsigned int day, unsigned int month,
   // Convert to milliseconds
   return totalSeconds * 1000;
 }
+void testTimestepConversion() {
+  Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
+                                151.0, 3.0, 3.0); // L
+  Ephemeris::
+      // East is negative and West is positive
+      Ephemeris::flipLongitude(false);
+  EqCoord eq=EqCoord();
+  eq.setRAInHours(12.995290);
+  eq.setDecInDegrees(5.904804);
+
+  HorizCoord h = HorizCoord(eq, 1694763308);
+  log("Alt: %lf\tAzi:%lf",h.altInDegrees,h.aziInDegrees);
+
+
+}
 
 void test_eq_to_horizontal(void) {
 
@@ -136,9 +151,9 @@ void test_horizontal_to_eq_eq_constructor(void) {
                second = 0;
 
   unsigned long time =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+      convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
-  TEST_ASSERT_EQUAL_INT64_MESSAGE(1693648800000, time, "time");
+  TEST_ASSERT_EQUAL_INT64_MESSAGE(1693648800, time, "time");
   HorizontalCoordinates altAzCoord;
 
   altAzCoord.azi =
@@ -894,7 +909,7 @@ void test_telescope_model_mylocation() {
                second = 0;
 
   unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+      convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
   model.setAltEncoderStepsPerRevolution(36000); // 100 ticks per degree
   model.setAzEncoderStepsPerRevolution(36000);
@@ -961,11 +976,11 @@ void test_telescope_model_mylocation() {
   log("Star time: %ld ", timeMillis);
 
   // 546000 milliseconds since first sync
-  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis);
+  model.syncPositionRaDec(star2RAHours, star2Dec, timeMillis*1000);
   //  timeMillis + 546000); // time passed in millis
   model.addReferencePoint();
 
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(timeMillis*1000);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RAHours, model.getRACoord(),
                                    "calculated ra");
@@ -1027,7 +1042,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
                second = 0;
 
   unsigned long timeMillis =
-      convertDateTimeToMillis(day, month, year, hour, minute, second);
+      convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
   // model.setUTCYear(2023);
   // model.setUTCMonth(9);
@@ -1067,10 +1082,10 @@ void test_telescope_model_mylocation_with_time_deltas() {
   log("       \t\t\t\t\tra: %lf\tdec: %lf", star1RADegrees, star1Dec);
   log("Star time: %ld ", timeMillis);
 
-  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis);
+  model.syncPositionRaDec(star1RAHours, star1Dec, timeMillis*1000);
   model.addReferencePoint();
 
-  model.calculateCurrentPosition(timeMillis);
+  model.calculateCurrentPosition(timeMillis*1000);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
                                    "calculated ra");
@@ -1081,7 +1096,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   // five minutes later
   day = 2, month = 9, year = 2023, hour = 10, minute = 5, second = 0;
 
-  timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second);
+  timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
   double star2AltAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 37, 4.1);
@@ -1130,7 +1145,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   day = 2;
   month = 9, year = 2023, hour = 10, minute = 10, second = 0;
 
-  timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second);
+  timeMillis = convertDateTimeToMillis(day, month, year, hour, minute, second)/1000;
 
   double star3AltAxis =
       Ephemeris::degreesMinutesSecondsToFloatingDegrees(45, 16, 37.4);
@@ -1202,7 +1217,7 @@ void test_one_star_align_principle() {
 
   unsigned int day = 13, month = 9, year = 2023, hour = 10, minute = 0,
                second = 0;
-  unsigned long time = convertDateTimeToMillis(13, 9, 2023, 12, 24, 00);
+  unsigned long time = convertDateTimeToMillis(13, 9, 2023, 12, 24, 00)/1000;
 
   EqCoord startEq = EqCoord(startHoriz, time);
 
@@ -1258,11 +1273,7 @@ void setup() {
   // test_telescope_model();
   UNITY_BEGIN(); // IMPORTANT LINE!
 
-  //   RUN_TEST(test_eq_to_horizontal);
-  //   RUN_TEST(test_horizontal_to_eq);
-  //   RUN_TEST(test_eq_to_horizontal_vega);
-
-  //   RUN_TEST(test_horizontal_to_eq_eq_constructor);
+   
 
   // RUN_TEST(test_telescope_model_starting_offset);
   // RUN_TEST(test_az_encoder_calibration);
@@ -1275,14 +1286,25 @@ void setup() {
 
   //   RUN_TEST(test_two_star_alignment_takeshi_example);
 //   RUN_TEST(test_two_star_alignment_mylocation);
-//   RUN_TEST(test_two_star_alignment_mylocation_wrappers);
+  
 
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
+//====
+  RUN_TEST(test_eq_to_horizontal);
+  RUN_TEST(test_horizontal_to_eq);
+  RUN_TEST(test_eq_to_horizontal_vega);
 
+  RUN_TEST(test_horizontal_to_eq_eq_constructor);
+  RUN_TEST(test_two_star_alignment_mylocation_wrappers);
   RUN_TEST(test_telescope_model_mylocation);
-    // RUN_TEST(test_one_star_align_principle);
-  //   RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
-    // RUN_TEST(test_coords);
+  RUN_TEST(test_one_star_align_principle);
+  RUN_TEST(test_coords);
+  //====
+
+  // RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
+
+//   RUN_TEST(testTimestepConversion);
+
   UNITY_END(); // IMPORTANT LINE!
 }
 

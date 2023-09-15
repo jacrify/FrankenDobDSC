@@ -128,12 +128,10 @@ FLOAT Ephemeris::degreesMinutesSecondsToFloatingDegrees(int degrees,
 }
 
 HorizontalCoordinates Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
-    EquatorialCoordinates eq, unsigned long epochTimeMillis)
-
-{
+    EquatorialCoordinates eqCoordinates, unsigned long epochTimeSeconds) {
 
   // Convert epoch time to seconds (divide by 1000)
-  unsigned long epochTimeSeconds = epochTimeMillis / 1000;
+  // unsigned long epochTimeSeconds = epochTimeMillis / 1000;
 
   // Create a tm structure to hold the time elements
   struct tm timeInfo;
@@ -150,7 +148,7 @@ HorizontalCoordinates Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
   unsigned int second = timeInfo.tm_sec;
 
   return equatorialToHorizontalCoordinatesAtDateAndTime(
-             eq, day, month, year, hour, minute, second);
+      eqCoordinates, day, month, year, hour, minute, second);
 }
 HorizontalCoordinates Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
     EquatorialCoordinates eqCoordinates, unsigned int day, unsigned int month,
@@ -192,10 +190,10 @@ HorizontalCoordinates Ephemeris::equatorialToHorizontalCoordinatesAtDateAndTime(
 }
 
 EquatorialCoordinates Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
-    HorizontalCoordinates hCoordinates, unsigned long epochTimeMillis) {
+    HorizontalCoordinates hCoordinates, unsigned  long epochTimeSeconds) {
 
   // Convert epoch time to seconds (divide by 1000)
-  unsigned long epochTimeSeconds = epochTimeMillis / 1000;
+  // unsigned long epochTimeSeconds = epochTimeMillis / 1000;
 
   // Create a tm structure to hold the time elements
   struct tm timeInfo;
@@ -210,131 +208,131 @@ EquatorialCoordinates Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
   unsigned int hour = timeInfo.tm_hour;
   unsigned int minute = timeInfo.tm_min;
   unsigned int second = timeInfo.tm_sec;
-return horizontalToEquatorialCoordinatesAtDateAndTime(hCoordinates,day,month,year,hour,minute,second);
+  return horizontalToEquatorialCoordinatesAtDateAndTime(
+      hCoordinates, day, month, year, hour, minute, second);
 }
 
-  EquatorialCoordinates
-  Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
-      HorizontalCoordinates hCoordinates, unsigned int day, unsigned int month,
-      unsigned int year, unsigned int hours, unsigned int minutes,
-      unsigned int seconds) {
-    EquatorialCoordinates eqCoordinates;
+EquatorialCoordinates Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
+    HorizontalCoordinates hCoordinates, unsigned int day, unsigned int month,
+    unsigned int year, unsigned int hours, unsigned int minutes,
+    unsigned int seconds) {
+  EquatorialCoordinates eqCoordinates;
 
-    if (!isnan(longitudeOnEarth) && !isnan(latitudeOnEarth)) {
+  if (!isnan(longitudeOnEarth) && !isnan(latitudeOnEarth)) {
 
-      JulianDay jd = Calendar::julianDayForDate(day, month, year);
-
-      FLOAT T = T_WITH_JD(jd.day, jd.time);
-
-      FLOAT meanSideralTime = meanGreenwichSiderealTimeAtDateAndTime(
-          day, month, year, hours, minutes, seconds);
-
-      FLOAT deltaNutation;
-      FLOAT epsilon = obliquityAndNutationForT(T, NULL, &deltaNutation);
-
-      // Apparent sideral time in floating hours
-      FLOAT theta0 =
-          meanSideralTime + (deltaNutation / 15 * COSD(epsilon)) / 3600;
-
-      // Geographic longitude in floating hours
-      FLOAT L = DEGREES_TO_HOURS(longitudeOnEarth * longitudeOnEarthSign);
-
-      // Geographic latitude in floating degrees
-      FLOAT phi = latitudeOnEarth;
-
-      // Compute local horizontal coordinates (note: RA will contain H)
-      eqCoordinates =
-          horizontalToEquatorial(hCoordinates.azi, hCoordinates.alt, phi);
-
-      // Compute RA according to H
-      // RA = theta0 - L - H;
-      eqCoordinates.ra = theta0 - L - eqCoordinates.ra;
-      eqCoordinates.ra = LIMIT_HOURS_TO_24(eqCoordinates.ra);
-    } else {
-      eqCoordinates.ra = NAN;
-      eqCoordinates.dec = NAN;
-    }
-
-    return eqCoordinates;
-  }
-
-  FLOAT Ephemeris::apparentSideralTime(
-      unsigned int day, unsigned int month, unsigned int year,
-      unsigned int hours, unsigned int minutes, unsigned int seconds) {
     JulianDay jd = Calendar::julianDayForDate(day, month, year);
 
     FLOAT T = T_WITH_JD(jd.day, jd.time);
-    FLOAT TSquared = T * T;
-    FLOAT TCubed = TSquared * T;
 
-    FLOAT theta0 = 100.46061837 + T * 36000.770053608 + TSquared * 0.000387933 -
-                   TCubed / 38710000;
-    theta0 = LIMIT_DEGREES_TO_360(theta0);
-    theta0 = DEGREES_TO_HOURS(theta0);
+    FLOAT meanSideralTime = meanGreenwichSiderealTimeAtDateAndTime(
+        day, month, year, hours, minutes, seconds);
 
-    FLOAT time =
-        HOURS_MINUTES_SECONDS_TO_DECIMAL_HOURS(hours, minutes, seconds);
+    FLOAT deltaNutation;
+    FLOAT epsilon = obliquityAndNutationForT(T, NULL, &deltaNutation);
 
-    FLOAT apparentSideralTime = theta0 + 1.00273790935 * time;
-    apparentSideralTime = LIMIT_HOURS_TO_24(apparentSideralTime);
+    // Apparent sideral time in floating hours
+    FLOAT theta0 =
+        meanSideralTime + (deltaNutation / 15 * COSD(epsilon)) / 3600;
 
-    return apparentSideralTime;
+    // Geographic longitude in floating hours
+    FLOAT L = DEGREES_TO_HOURS(longitudeOnEarth * longitudeOnEarthSign);
+
+    // Geographic latitude in floating degrees
+    FLOAT phi = latitudeOnEarth;
+
+    // Compute local horizontal coordinates (note: RA will contain H)
+    eqCoordinates =
+        horizontalToEquatorial(hCoordinates.azi, hCoordinates.alt, phi);
+
+    // Compute RA according to H
+    // RA = theta0 - L - H;
+    eqCoordinates.ra = theta0 - L - eqCoordinates.ra;
+    eqCoordinates.ra = LIMIT_HOURS_TO_24(eqCoordinates.ra);
+  } else {
+    eqCoordinates.ra = NAN;
+    eqCoordinates.dec = NAN;
   }
 
-  FLOAT Ephemeris::obliquityAndNutationForT(FLOAT T, FLOAT * deltaObliquity,
-                                            FLOAT * deltaNutation) {
-    FLOAT TSquared = T * T;
-    FLOAT TCubed = TSquared * T;
+  return eqCoordinates;
+}
 
-    FLOAT Ls = 280.4565 + T * 36000.7698 + TSquared * 0.000303;
-    Ls = LIMIT_DEGREES_TO_360(Ls);
+FLOAT Ephemeris::apparentSideralTime(unsigned int day, unsigned int month,
+                                     unsigned int year, unsigned int hours,
+                                     unsigned int minutes,
+                                     unsigned int seconds) {
+  JulianDay jd = Calendar::julianDayForDate(day, month, year);
 
-    FLOAT Lm = 218.3164 + T * 481267.8812 - TSquared * 0.001599;
-    Lm = LIMIT_DEGREES_TO_360(Lm);
+  FLOAT T = T_WITH_JD(jd.day, jd.time);
+  FLOAT TSquared = T * T;
+  FLOAT TCubed = TSquared * T;
 
-    FLOAT Ms = 357.5291 + T * 35999.0503 - TSquared * 0.000154;
-    Ms = LIMIT_DEGREES_TO_360(Ms);
+  FLOAT theta0 = 100.46061837 + T * 36000.770053608 + TSquared * 0.000387933 -
+                 TCubed / 38710000;
+  theta0 = LIMIT_DEGREES_TO_360(theta0);
+  theta0 = DEGREES_TO_HOURS(theta0);
 
-    FLOAT Mm = 134.9634 + T * 477198.8675 + TSquared * 0.008721;
-    Mm = LIMIT_DEGREES_TO_360(Mm);
+  FLOAT time = HOURS_MINUTES_SECONDS_TO_DECIMAL_HOURS(hours, minutes, seconds);
 
-    FLOAT omega = 125.0443 - T * 1934.1363 + TSquared * 0.008721;
-    omega = LIMIT_DEGREES_TO_360(omega);
+  FLOAT apparentSideralTime = theta0 + 1.00273790935 * time;
+  apparentSideralTime = LIMIT_HOURS_TO_24(apparentSideralTime);
 
-    // Delta Phi
-    FLOAT dNutation =
-        -(17.1996 + 0.01742 * T) * SIND(omega) -
-        (1.3187 + 0.00016 * T) * SIND(2 * Ls) - 0.2274 * SIND(2 * Lm) +
-        0.2062 * SIND(2 * omega) + (0.1426 - 0.00034 * T) * SIND(Ms) +
-        0.0712 * SIND(Mm) - (0.0517 - 0.00012 * T) * SIND(2 * Ls + Ms) -
-        0.0386 * SIND(2 * Lm - omega) - 0.0301 * SIND(2 * Lm + Mm) +
-        0.0217 * SIND(2 * Ls - Ms) - 0.0158 * SIND(2 * Ls - 2 * Lm + Mm) +
-        0.0129 * SIND(2 * Ls - omega) + 0.0123 * SIND(2 * Lm - Mm);
+  return apparentSideralTime;
+}
 
-    if (deltaNutation) {
-      *deltaNutation = dNutation;
-    }
+FLOAT Ephemeris::obliquityAndNutationForT(FLOAT T, FLOAT *deltaObliquity,
+                                          FLOAT *deltaNutation) {
+  FLOAT TSquared = T * T;
+  FLOAT TCubed = TSquared * T;
 
-    // Delta Eps
-    FLOAT dObliquity =
-        +(9.2025 + 0.00089 * T) * COSD(omega) +
-        (0.5736 - 0.00031 * T) * COSD(2 * Ls) + 0.0977 * COSD(2 * Lm) -
-        0.0895 * COSD(2 * omega) + 0.0224 * COSD(2 * Ls + Ms) +
-        0.0200 * COSD(2 * Lm - omega) + 0.0129 * COSD(2 * Lm + Mm) -
-        0.0095 * COSD(2 * Ls - Ms) - 0.0070 * COSD(2 * Ls - omega);
+  FLOAT Ls = 280.4565 + T * 36000.7698 + TSquared * 0.000303;
+  Ls = LIMIT_DEGREES_TO_360(Ls);
 
-    if (deltaObliquity) {
-      *deltaObliquity = dObliquity;
-    }
+  FLOAT Lm = 218.3164 + T * 481267.8812 - TSquared * 0.001599;
+  Lm = LIMIT_DEGREES_TO_360(Lm);
 
-    FLOAT eps0 = DEGREES_MINUTES_SECONDES_TO_SECONDS(23, 26, 21.448) -
-                 T * 46.8150 - TSquared * 0.00059 + TCubed * 0.001813;
+  FLOAT Ms = 357.5291 + T * 35999.0503 - TSquared * 0.000154;
+  Ms = LIMIT_DEGREES_TO_360(Ms);
 
-    FLOAT obliquity = eps0 + dObliquity;
-    obliquity = SECONDS_TO_DECIMAL_DEGREES(obliquity);
+  FLOAT Mm = 134.9634 + T * 477198.8675 + TSquared * 0.008721;
+  Mm = LIMIT_DEGREES_TO_360(Mm);
 
-    return obliquity;
+  FLOAT omega = 125.0443 - T * 1934.1363 + TSquared * 0.008721;
+  omega = LIMIT_DEGREES_TO_360(omega);
+
+  // Delta Phi
+  FLOAT dNutation =
+      -(17.1996 + 0.01742 * T) * SIND(omega) -
+      (1.3187 + 0.00016 * T) * SIND(2 * Ls) - 0.2274 * SIND(2 * Lm) +
+      0.2062 * SIND(2 * omega) + (0.1426 - 0.00034 * T) * SIND(Ms) +
+      0.0712 * SIND(Mm) - (0.0517 - 0.00012 * T) * SIND(2 * Ls + Ms) -
+      0.0386 * SIND(2 * Lm - omega) - 0.0301 * SIND(2 * Lm + Mm) +
+      0.0217 * SIND(2 * Ls - Ms) - 0.0158 * SIND(2 * Ls - 2 * Lm + Mm) +
+      0.0129 * SIND(2 * Ls - omega) + 0.0123 * SIND(2 * Lm - Mm);
+
+  if (deltaNutation) {
+    *deltaNutation = dNutation;
   }
+
+  // Delta Eps
+  FLOAT dObliquity =
+      +(9.2025 + 0.00089 * T) * COSD(omega) +
+      (0.5736 - 0.00031 * T) * COSD(2 * Ls) + 0.0977 * COSD(2 * Lm) -
+      0.0895 * COSD(2 * omega) + 0.0224 * COSD(2 * Ls + Ms) +
+      0.0200 * COSD(2 * Lm - omega) + 0.0129 * COSD(2 * Lm + Mm) -
+      0.0095 * COSD(2 * Ls - Ms) - 0.0070 * COSD(2 * Ls - omega);
+
+  if (deltaObliquity) {
+    *deltaObliquity = dObliquity;
+  }
+
+  FLOAT eps0 = DEGREES_MINUTES_SECONDES_TO_SECONDS(23, 26, 21.448) -
+               T * 46.8150 - TSquared * 0.00059 + TCubed * 0.001813;
+
+  FLOAT obliquity = eps0 + dObliquity;
+  obliquity = SECONDS_TO_DECIMAL_DEGREES(obliquity);
+
+  return obliquity;
+}
 
 #if !DISABLE_PLANETS
 FLOAT Ephemeris::sumELP2000Coefs(

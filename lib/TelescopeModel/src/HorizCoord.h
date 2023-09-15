@@ -1,6 +1,6 @@
 #ifndef TELESCOPE_MODEL_H_COORD_H
 #define TELESCOPE_MODEL_H_COORD_H
-#include "Ephemeris.h"
+#include "../../Ephemeris/src/Ephemeris.h"
 #include <cmath>
 
 
@@ -20,7 +20,7 @@ public:
   HorizCoord() ;
 
   HorizCoord(float altitude, float azimuth);
-  HorizCoord(EqCoord e,unsigned long time) ;
+  HorizCoord(EqCoord e,unsigned  long epochMillis) ;
   HorizCoord(HorizontalCoordinates ephHCoord) ;
   HorizontalCoordinates toHorizontalCoordinates();
   void setAlt(int degrees, int minutes, float seconds);

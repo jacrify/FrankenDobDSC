@@ -119,7 +119,7 @@ bool TelescopeModel::isNorthernHemisphere() { return latitude > 0; }
  *
  * @return void
  */
-void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
+void TelescopeModel::calculateCurrentPosition(unsigned long long epochTime) {
   log("");
   log("=====calculateCurrentPosition====");
   // log("Calculating current position for time %ld", timeMillis);
@@ -150,11 +150,11 @@ void TelescopeModel::calculateCurrentPosition(unsigned long timeMillis) {
   double raDeltaDegrees = 0;
 
   log("Time passed: %ld \t (since alignment model creation time: %ld)",
-      timeMillis, alignmentModelSyncTime);
+      epochTime, alignmentModelSyncTime);
 
   unsigned long timedelta = 0;
   if (alignmentModelSyncTime != 0) {
-    timedelta = timeMillis - alignmentModelSyncTime;
+    timedelta = epochTime - alignmentModelSyncTime;
   }
 
   raDeltaDegrees = millisecondsToRADeltaInDegrees(timedelta);
@@ -194,13 +194,13 @@ double TelescopeModel::millisecondsToRADeltaInDegrees(
  * alignment. Then they can choose to do more accurate manual alignment points.
  */
 void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
-                                             unsigned long time) {
+                                             unsigned long long epochTimeMillis) {
 
   alignment.addReferenceCoord(horiz1,eq1);
 
   HorizCoord horiz2 = horiz1.addOffset(90, 0);
 
-  EqCoord eq2 = EqCoord(horiz2, time);
+  EqCoord eq2 = EqCoord(horiz2, epochTimeMillis / 1000);
 
   alignment.addReferenceCoord(horiz2, eq2);
   alignment.calculateThirdReference();
@@ -209,7 +209,7 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
       horiz1.aziInDegrees, eq1.getRAInHours(), eq1.getDecInDegrees());
   log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.altInDegrees,
       horiz2.aziInDegrees, eq2.getRAInHours(), eq2.getDecInDegrees());
-  alignmentModelSyncTime = time;
+  alignmentModelSyncTime = epochTimeMillis;
 }
 
 void TelescopeModel::addReferencePoint() {
@@ -246,7 +246,7 @@ void TelescopeModel::addReferencePoint() {
  *
  */
 void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
-                                       unsigned long time) {
+                                       unsigned long long epochtimemillis) {
   log("");
   log("=====syncPositionRaDec====");
 
@@ -262,10 +262,10 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
-  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf",
-      lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees());
+  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and epoch time %lld",
+      lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),epochtimemillis);
 
-  lastSyncedHoriz = HorizCoord(lastSyncedEq, time);
+  lastSyncedHoriz = HorizCoord(lastSyncedEq, epochtimemillis/1000);
 
   log("Expected local altaz\t\t\talt: %lf \t\taz:%lf",
       lastSyncedHoriz.altInDegrees, lastSyncedHoriz.aziInDegrees);
@@ -304,15 +304,15 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
 
   // if no refs set, then mark this as t=0
   if (alignment.getRefs() == 0) {
-    firstSyncTime = time;
+    firstSyncTime = epochtimemillis;
   } else if (alignment.getRefs() == 1) {
-    secondSyncTime = time;
+    secondSyncTime = epochtimemillis;
   }
 
   // special case: if this is the first alignment, then do a special one star
   // alignment
   if (defaultAlignment) {
-    performOneStarAlignment(lastSyncedHoriz, lastSyncedEq, time);
+    performOneStarAlignment(lastSyncedHoriz, lastSyncedEq, epochtimemillis);
     defaultAlignment = false;
   }
   log("=====syncPositionRaDec====");

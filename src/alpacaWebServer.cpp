@@ -11,12 +11,14 @@
 #define PREF_ALT_STEPS_KEY "AltStepsKey"
 #define PREF_AZ_STEPS_KEY "AzStepsKey"
 
+unsigned long long epochMillisBase;
+
 unsigned const int localPort = 32227; // The Alpaca Discovery test port
 unsigned const int alpacaPort =
     80; // The  port that the Alpaca API would be available on
 
 // used to track ra/dec requests, so we do for one but not both
-unsigned long lastPositionCalculatedTime;
+unsigned long long lastPositionCalculatedTime;
 #define STALE_POSITION_TIME 200
 
 AsyncUDP alpacaUdp;
@@ -29,7 +31,7 @@ bool currentlyRunning;
 bool platformConnected;
 // used to store last time position was received from EQ
 #define STALE_EQ_WARNING_THRESHOLD 10000 // used to detect packet loss
-unsigned long lastPositionReceivedTimeMillis;
+unsigned long long lastPositionReceivedTimeMillis;
 
 AsyncWebServer alpacaWebServer(80);
 
@@ -376,10 +378,15 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   tv.tv_usec = 0;        // Microseconds - can be set to 0
 
   // Set the time
-  settimeofday(&tv, NULL);
+  // settimeofday(&tv, NULL);
 
-  log(" date after set: %d /%d/%d %d:%d:%d ", day, month, year, hour, minute,
-      second);
+  epochMillisBase =
+      ((unsigned long long)tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+
+  log("Stored base epoch time in millis: %llu", epochMillisBase);
+  epochMillisBase -= millis(); // we'll add millis every time we need epoch time
+
+  log("Stored base epoch time in millis after offset : %llu", epochMillisBase);
   returnNoError(request);
   log("finished utc");
 }
@@ -392,9 +399,10 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
  *  If not mark platform as not connected.
  *
  */
-unsigned long calculateAdjustedTime() {
+unsigned long long calculateAdjustedTimeAsEpochMillis() {
 
   unsigned long now = millis();
+  log("Now millis since start: %ld", now);
   if ((now - lastPositionReceivedTimeMillis) > STALE_EQ_WARNING_THRESHOLD) {
     log("No EQ platform, or packet loss: last packet recieved %d seconds ago "
         "at %ld",
@@ -415,18 +423,21 @@ unsigned long calculateAdjustedTime() {
         (now - lastPositionReceivedTimeMillis) / 1000.0;
   }
 
-  unsigned long timeAtMiddleOfRun =
+  unsigned  long timeAtMiddleOfRun =
       now + (runtimeFromCenter + interpolationTimeInSeconds) * 1000;
-  return timeAtMiddleOfRun;
+  unsigned long long epochTime = epochMillisBase + timeAtMiddleOfRun;
+
+  log("Returned epoch time: %llu", epochTime);
+  return epochTime;
 }
 
 // Calculate position.
 // Triggered from ra or dec request. Should only run for one of them and
 // then cache for a few millis
 void updatePosition(TelescopeModel &model) {
-  unsigned long timeAtMiddleOfRun = calculateAdjustedTime();
+  unsigned long long epochTimeAtMiddleOfRun = calculateAdjustedTimeAsEpochMillis();
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
-  model.calculateCurrentPosition(timeAtMiddleOfRun);
+  model.calculateCurrentPosition(epochTimeAtMiddleOfRun);
 }
 
 void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -439,6 +450,8 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
 
     parsedRAHours = strtod(ra.c_str(), NULL);
     log("Parsed ra value: %lf", parsedRAHours);
+  } else {
+    log("Could not parse ra arg!");
   }
   String dec = request->arg("Declination");
   if (dec != NULL) {
@@ -446,10 +459,13 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
 
     parsedDecDegrees = strtod(dec.c_str(), NULL);
     log("Parsed dec value: %lf", parsedDecDegrees);
+  } else {
+    log("Could not parse dec arg!");
   }
 
-  unsigned long timeAtMiddleOfRun = calculateAdjustedTime();
+  long long timeAtMiddleOfRun = calculateAdjustedTimeAsEpochMillis();
   log("Encoder values: %ld,%ld", getEncoderAl(), getEncoderAz());
+  log("Timestamp for middle of run: %llu", timeAtMiddleOfRun);
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.syncPositionRaDec(parsedRAHours, parsedDecDegrees, timeAtMiddleOfRun);
   updatePosition(model);
@@ -537,7 +553,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           timeToEnd = doc["timeToEnd"];
           currentlyRunning = doc["isTracking"];
           lastPositionReceivedTimeMillis = now;
-          log("Distance from center %lf, running %d, at time %ld",
+          log("Distance from center %lf, running %d, at time %llu",
               runtimeFromCenter, currentlyRunning,
               lastPositionReceivedTimeMillis);
         } else {
