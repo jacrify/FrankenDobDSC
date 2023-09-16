@@ -222,9 +222,10 @@ void TelescopeModel::addReferencePoint() {
  * system: the two star alignment model gives broad stroke location, then the
  * encoders can be used to find targets in a local area. Encoder errors matter
  * most over long distances, this approach minimises them.
- * 5) Saves the encoder values in case we want to use it to work out encoder resolutions
- * 6) If this is the first sync after startup, do a special one off one star align
- * 
+ * 5) Saves the encoder values in case we want to use it to work out encoder
+ * resolutions 6) If this is the first sync after startup, do a special one off
+ * one star align
+ *
  * */
 void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
                                        TimePoint now) {
@@ -242,29 +243,36 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
-  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and epoch "
-      "time %s",
-      lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
-      timePointToString(now).c_str());
+  // log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and epoch
+  // "
+  //     "time %s",
+  //     lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
+  //     timePointToString(now).c_str());
 
-  //this uses lat/long/time to work out where scope should be pointing.
-  lastSyncedHoriz = HorizCoord(lastSyncedEq, now);
+  // //this uses lat/long/time to work out where scope should be pointing.
+  // lastSyncedHoriz = HorizCoord(lastSyncedEq, now);
 
-  log("Expected local altaz\t\t\talt: %lf \t\taz:%lf",
-      lastSyncedHoriz.altInDegrees, lastSyncedHoriz.aziInDegrees);
-  log("Actual encoder values\t\t\talt: %ld \t\taz:%ld", altEnc, azEnc);
+  // log("Expected lat long alt az \t\talt: %lf \t\taz:%lf",
+  //     lastSyncedHoriz.altInDegrees, lastSyncedHoriz.aziInDegrees);
+  // log("Actual encoder values\t\t\talt: %ld \t\taz:%ld", altEnc, azEnc);
 
   HorizCoord calculatedAltAzFromEncoders =
       calculateAltAzFromEncoders(altEnc, azEnc);
+  // assumes alt is zeroed to horizon at power on
+  lastSyncedHoriz = calculatedAltAzFromEncoders;
 
   log("Calculated alt/az from encoders\t\talt: %lf\t\taz:%lf",
       calculatedAltAzFromEncoders.altInDegrees,
       calculatedAltAzFromEncoders.aziInDegrees);
 
+   HorizCoord altAzFromModel= alignment.toInstrumentCoord(lastSyncedEq);
+
+  log("Expected model altaz  \t\t\talt: %lf \t\taz:%lf",
+      altAzFromModel.altInDegrees, altAzFromModel.aziInDegrees);
   errorToAddToEncoderResultAlt =
-      lastSyncedHoriz.altInDegrees - calculatedAltAzFromEncoders.altInDegrees;
+      altAzFromModel.altInDegrees - calculatedAltAzFromEncoders.altInDegrees;
   errorToAddToEncoderResultAzi =
-      lastSyncedHoriz.aziInDegrees - calculatedAltAzFromEncoders.aziInDegrees;
+      altAzFromModel.aziInDegrees - calculatedAltAzFromEncoders.aziInDegrees;
 
   log("Stored alt/az delta\t\t\talt: %lf\t\taz:%lf",
       errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);
@@ -273,7 +281,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
 
   // these are used for calibrating encoders. Some duplication here.
   //  Shuffle older alignment values into position 2
-  //TODO make these coords
+  // TODO make these coords
   altEncoderAlignValue2 = altEncoderAlignValue1;
   azEncoderAlignValue2 = azEncoderAlignValue1;
   azAlignValue2 = azAlignValue1;
