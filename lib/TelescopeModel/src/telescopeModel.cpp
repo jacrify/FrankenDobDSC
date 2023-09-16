@@ -95,11 +95,6 @@ HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
 void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   log("");
   log("=====calculateCurrentPosition====");
-  // log("Calculating current position for time %ld", timeMillis);
-  // When client syncs the position, we store the ra/dec of that
-  // position as well as the encoder values.
-  // So we start by converting that base position into known
-  // alt/az coords
 
   float altEncoderDegrees;
   float azEncoderDegrees;
@@ -229,6 +224,7 @@ void TelescopeModel::addReferencePoint() {
  * most over long distances, this approach minimises them.
  * 5) Saves the encoder values in case we want to use it to work out encoder resolutions
  * 6) If this is the first sync after startup, do a special one off one star align
+ * 
  * */
 void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
                                        TimePoint now) {
@@ -251,6 +247,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
       lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
       timePointToString(now).c_str());
 
+  //this uses lat/long/time to work out where scope should be pointing.
   lastSyncedHoriz = HorizCoord(lastSyncedEq, now);
 
   log("Expected local altaz\t\t\talt: %lf \t\taz:%lf",
