@@ -24,8 +24,6 @@ public:
   void setRAInDegrees(float ra);
   void setRAInHours(float ra);
   void setRAInHours(int hours, int minutes, float seconds);
-  void addRAInDegrees(float raToAdd);
-  
-  
+  EqCoord addRAInDegrees(float raToAdd);
 };
 #endif

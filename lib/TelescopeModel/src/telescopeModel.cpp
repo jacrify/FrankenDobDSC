@@ -13,13 +13,8 @@ TelescopeModel::TelescopeModel() {
   // alignment.addReference(0, 0, M_PI, 0);//radians
   HorizCoord h = HorizCoord(0, 0);
   EqCoord eq = EqCoord(180, 0);
-
   alignment.setNorthernHemisphere(false);
   alignment.addReferenceCoord(h, eq);
-
-  // alignment.addReferenceDeg(0, 0, 180, 0); // degrees
-
-  // alignment.addReference(0, M_PI_2, M_PI, M_PI_2);//radians
   h = HorizCoord(0, 90);
   eq = EqCoord(180, 90);
   alignment.addReferenceCoord(h, eq); // degreess
@@ -70,28 +65,12 @@ void TelescopeModel::setLongitude(float lng) { longitude = lng; }
 float TelescopeModel::getLatitude() { return latitude; }
 float TelescopeModel::getLongitude() { return longitude; }
 
-// TODO implement
 float TelescopeModel::getAltCoord() { return currentAlt; }
 float TelescopeModel::getAzCoord() { return currentAz; }
 
-// // given known alt and az values, and known encoder values, return offsets
-// // such that calculateAltAzFromEncoders() for these encoder values
-// // would always return these alt az values.
-// // TODO delete if not used
-// void TelescopeModel::calculateEncoderOffsetFromAltAz(float alt, float az,
-//                                                      long altEncVal,
-//                                                      long azEncVal,
-//                                                      long &altEncOffset,
-//                                                      long &azEncOffset) {
-
-//   float calculatedAlt =
-//       360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
-//   float calculatedAz =
-//       360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
-//   altEncOffset = calculatedAlt - alt;
-//   azEncOffset = calculatedAz - az;
-// }
-
+/**
+ * Perform straight interpolation to alt/az using encoders
+ */
 HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
                                                       long azEncVal) {
 
@@ -100,23 +79,17 @@ HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
   float az = 360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
   return HorizCoord(alt, az);
 }
-bool TelescopeModel::isNorthernHemisphere() { return latitude > 0; }
+
 /**
  * @brief Calculates the current position of the telescope based on encoder
- * values.
+ * values, at a point in time.
  *
  * This method performs the following steps:
- * 1. Converts the base equatorial (RA/Dec) coordinates to horizontal
- * (Alt/Az) coordinates.
- * 2. Adjusts the Alt/Az coordinates based on the encoder values.
- * 3. Checks for the Altitude value going "over the top" (beyond 90
- * degrees). If so, adjusts the Altitude and Azimuth values accordingly.
- * 4. Converts the adjusted Alt/Az coordinates back to equatorial
- * coordinates to get the new RA/Dec values.
- *
- * @note The method uses the Ephemeris library for coordinate
- * transformations.
- *
+ * 1. Calculates alt az positon using encoder values
+ * 2. Adjust that position based on error offsets, calcuated at last sync
+ * 3. Convert that alt/az to equatorial coords, using the two star aligned model
+ * 4. Adjust the ra of the result to reflect time that has passed since model
+ * creation
  * @return void
  */
 void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
@@ -151,7 +124,7 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   double raDeltaDegrees = secondsToRADeltaInDegrees(timeDeltaSeconds);
   log("Time delta seconds: %ld degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
 
-  currentEqPosition.addRAInDegrees(raDeltaDegrees);
+  currentEqPosition = currentEqPosition.addRAInDegrees(raDeltaDegrees);
 
   log("Final position\t\t\tra(h): %lf\tdec: %lf",
       currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
@@ -164,6 +137,10 @@ float TelescopeModel::getDecCoord() {
 }
 float TelescopeModel::getRACoord() { return currentEqPosition.getRAInHours(); }
 
+/**
+ * Convert a time period, in seconds to an ra delta.
+ * Used to work out how much to adjust ra by over time.
+ */
 double TelescopeModel::secondsToRADeltaInDegrees(double secondsDelta) {
   double RA_delta_degrees = (secondsDelta / (24.0 * 3600.0)) * 360.0;
   return RA_delta_degrees;
@@ -182,12 +159,12 @@ double TelescopeModel::secondsToRADeltaInDegrees(double secondsDelta) {
  * alignment. Then they can choose to do more accurate manual alignment points.
  */
 void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
-                                             TimePoint tp) {
+                                             TimePoint now) {
 
   alignment.addReferenceCoord(horiz1, eq1);
 
   HorizCoord horiz2 = horiz1.addOffset(90, 0);
-  EqCoord eq2 = EqCoord(horiz2, tp);
+  EqCoord eq2 = EqCoord(horiz2, now);
   alignment.addReferenceCoord(horiz2, eq2);
 
   alignment.calculateThirdReference();
@@ -197,9 +174,18 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
       horiz1.aziInDegrees, eq1.getRAInHours(), eq1.getDecInDegrees());
   log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.altInDegrees,
       horiz2.aziInDegrees, eq2.getRAInHours(), eq2.getDecInDegrees());
-  alignmentModelSyncTime = tp;
+  alignmentModelSyncTime = now;
 }
 
+/**
+ * Add a reference point to the two star alignment model.
+ * Takes the last synced point as the point to put into the model.
+ * Once two points are added, a third is calculated, and then the model is
+ * built. The time of the first sync is used as the base time of the model (this
+ * is stored in alignmentModelSyncTime for later offsets).
+ * As there is a time gap between the first reference point being added and the
+ * second, the ra of the second point is adjusted backwards by this time gap.
+ */
 void TelescopeModel::addReferencePoint() {
   log("");
   log("=====addReferencePoint====");
@@ -209,7 +195,7 @@ void TelescopeModel::addReferencePoint() {
 
     raDeltaDegrees = secondsToRADeltaInDegrees(timeDelta);
   }
-  // TODO raDeltaDegrees not used!
+  EqCoord adjustedLastSyncEQ = lastSyncedEq.addRAInDegrees(-raDeltaDegrees);
   alignment.addReferenceCoord(lastSyncedHoriz, lastSyncedEq);
 
   if (alignment.getRefs() == 2) {
@@ -225,14 +211,25 @@ void TelescopeModel::addReferencePoint() {
 /**
  * @brief calibrates a position in the sky with current encoder values
  *
- * Two main functions:
- * 1) Store the passed ra,dec, enoder, and time values for use in reference
- * point sync
- * 2) Calculate local alt/az values, and store them for use as
- * offsets
+ * Called after a plate solve, or Sky Sarafi, passed an ra/dec.
+ * Lat long and time are assumed to have been set (sky sarafi does this at
+ * connect).
  *
- *
- */
+ * Performs the following steps:
+ * 1) Saves ra/dec as lastSyncedEq
+ * 2) Converts this ra/dec into local alt az based on tie and location (not
+ * using alignment model). This is where we'd expect the scope to be pointing,
+ * all things being equal.
+ * 3) Calculates actual alt/az using encoders
+ * 4) Store the delta between actual and expect alt/az as an error offset. This
+ * will be added to all position responses going forward. This allows us not to
+ * set a neutral position for the encoders, and also gives us a "two speed"
+ * system: the two star alignment model gives broad stroke location, then the
+ * encoders can be used to find targets in a local area. Encoder errors matter
+ * most over long distances, this approach minimises them.
+ * 5) Saves the encoder values in case we want to use it to work out encoder resolutions
+ * 6) If this is the first sync after startup, do a special one off one star align
+ * */
 void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
                                        TimePoint now) {
   log("");
@@ -242,10 +239,9 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   // Work out alt/az offset required, such that when added to
   // values calculated from encoder, we end up with this target
   // alt/az
-  log("lat: %lf, long: %lf", latitude, longitude);
+
   Ephemeris::setLocationOnEarth(latitude, longitude);
   Ephemeris::flipLongitude(false); // East is negative and West is positive
-  log("lat long set");
 
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
@@ -280,6 +276,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
 
   // these are used for calibrating encoders. Some duplication here.
   //  Shuffle older alignment values into position 2
+  //TODO make these coords
   altEncoderAlignValue2 = altEncoderAlignValue1;
   azEncoderAlignValue2 = azEncoderAlignValue1;
   azAlignValue2 = azAlignValue1;

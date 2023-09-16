@@ -175,7 +175,6 @@ public:
   float errorToAddToEncoderResultAlt;
   float errorToAddToEncoderResultAzi;
 
-  bool isNorthernHemisphere();
 
   CoordConv alignment;
   double secondsToRADeltaInDegrees(double secondsDelta);

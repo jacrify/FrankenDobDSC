@@ -38,7 +38,7 @@ void EqCoord::setRAInDegrees(int degrees, int minutes, float seconds) {
       degrees, minutes, seconds));
 }
 
-void EqCoord::addRAInDegrees(float raToAdd) {
+EqCoord EqCoord::addRAInDegrees(float raToAdd) {
   float raHours = eq.ra + raToAdd / 15.0; //convert minutes to hours
   setRAInHours(raHours);
 }
