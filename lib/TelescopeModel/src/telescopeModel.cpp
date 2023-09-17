@@ -157,7 +157,7 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
 
   double raDeltaDegrees = secondsToRADeltaInDegrees(timeDeltaSeconds);
   // log("Time delta seconds: %ld degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
-`
+
   currentEqPosition = currentEqPosition.addRAInDegrees(raDeltaDegrees);
 
   // log("Final position\t\t\tra(h): %lf\tdec: %lf",
