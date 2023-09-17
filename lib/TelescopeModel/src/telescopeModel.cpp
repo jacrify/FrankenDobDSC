@@ -135,23 +135,16 @@ HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
  * @return void
  */
 void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
-  log("");
-  log("=====calculateCurrentPosition====");
+  // log("");
+  // log("=====calculateCurrentPosition====");
 
   float altEncoderDegrees;
   float azEncoderDegrees;
   // convert encoder values to degrees
   HorizCoord encoderAltAz = calculateAltAzFromEncoders(altEnc, azEnc);
-  log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf",
-      encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees);
-
-  log("Calculating current position at time %s",
-      timePointToString(timePoint).c_str());
-  // HorizCoord adjustedAltAz = encoderAltAz.addOffset(
-  //     errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);
-
-  // log("Offset alt az from encoders: \talt: %lf\taz:%lf",
-  //     adjustedAltAz.altInDegrees, adjustedAltAz.aziInDegrees);
+  // log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
+  //     encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees,
+  //     timePointToString(timePoint).c_str());
 
   currentEqPosition = alignment.toReferenceCoord(encoderAltAz);
 
@@ -163,14 +156,14 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   }
 
   double raDeltaDegrees = secondsToRADeltaInDegrees(timeDeltaSeconds);
-  log("Time delta seconds: %ld degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
-
+  // log("Time delta seconds: %ld degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
+`
   currentEqPosition = currentEqPosition.addRAInDegrees(raDeltaDegrees);
 
-  log("Final position\t\t\tra(h): %lf\tdec: %lf",
-      currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
-  log("=====calculateCurrentPosition====");
-  log("");
+  // log("Final position\t\t\tra(h): %lf\tdec: %lf",
+  //     currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
+  // log("=====calculateCurrentPosition====");
+  // log("");
 }
 
 float TelescopeModel::getDecCoord() {
@@ -340,14 +333,17 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
       calculatedAltAzFromEncoders.altInDegrees,
       calculatedAltAzFromEncoders.aziInDegrees);
 
-  EqCoord modeledEq = alignment.toReferenceCoord(calculatedAltAzFromEncoders);
+  // check where model would say we are. Stored in currentEqPosition to use as error calc
+  calculateCurrentPosition(now);
 
-  lastSyncPoint =
-      SynchPoint(lastSyncedEq, calculatedAltAzFromEncoders, now, modeledEq);
+  lastSyncPoint = SynchPoint(lastSyncedEq, calculatedAltAzFromEncoders, now,
+                             currentEqPosition);
+
   lastSyncPoint.altEncoder = altEnc;
   lastSyncPoint.azEncoder = azEnc;
 
-  SynchPoint furthest = addSynchPointAndFindFarthest(lastSyncPoint, 10);
+  SynchPoint furthest = addSynchPointAndFindFarthest(
+      lastSyncPoint, SYNCHPOINT_FILTER_DISTANCE_DEGREES);
 
   if (furthest.isValid) {
     log("Recalculating model...");

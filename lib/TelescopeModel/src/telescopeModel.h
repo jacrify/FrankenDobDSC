@@ -7,6 +7,9 @@
 #include <Ephemeris.h>
 #include <vector>
 
+//when adding syncpoints, any existing points closer than this are deleted.
+#define SYNCHPOINT_FILTER_DISTANCE_DEGREES 10
+
 struct SynchPoint {
   EqCoord eqCoord;
   HorizCoord horizCoord;
