@@ -5,6 +5,26 @@
 #include "HorizCoord.h"
 #include "TimePoint.h"
 #include <Ephemeris.h>
+#include <vector>
+
+struct SynchPoint {
+  EqCoord eqCoord;
+  HorizCoord horizCoord;
+  TimePoint timePoint;
+  double errorInDegreesAtCreation;
+  bool isValid;
+
+  SynchPoint()
+      : errorInDegreesAtCreation(0), isValid(false) {
+  } // Initialize members as needed
+
+  // Constructor to initialize the object
+  SynchPoint(const EqCoord &eq, const HorizCoord &hz, const TimePoint &tp,
+             const EqCoord &calculatedeq)
+      : eqCoord(eq), horizCoord(hz), timePoint(tp), isValid(true) {
+    errorInDegreesAtCreation = eq.calculateDistanceInDegrees(calculatedeq);
+  }
+};
 
 /**
  *  This class does the heavy lifting of modeling where the telescope
@@ -61,6 +81,21 @@
 class TelescopeModel {
 public:
   TelescopeModel();
+
+  std::vector<SynchPoint> synchPoints;
+
+  /**
+   * This does the following:
+   * 1: Iterates through synchPoints and removes all items where the distance
+   * (calculated using double calculateDistanceInDegrees(EqCoord delta) )
+   * is less than trimRadius.
+   * 2: Adds sp to synchPoints
+   * 3: Returns the synchPoint where distance is greatests, found in step 1
+   * Cannot return sp. Cannot return removed item. If no item return syncpoint with 
+   * "isvalid" set to false. New one is still added.
+   */
+  SynchPoint addSynchPoint(SynchPoint sp, double trimRadius);
+
   void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
   void setAltEncoderStepsPerRevolution(long altResolution);
@@ -96,7 +131,7 @@ public:
 
   long getAltEncoderAlignValue1() const;
   long getAltEncoderAlignValue2() const;
-  long getAzEncoderAlignValue1() const;
+   long getAzEncoderAlignValue1() const;
   long getAzEncoderAlignValue2() const;
 
   float getAltAlignValue1() const;
@@ -174,7 +209,6 @@ public:
 
   float errorToAddToEncoderResultAlt;
   float errorToAddToEncoderResultAzi;
-
 
   CoordConv alignment;
   double secondsToRADeltaInDegrees(double secondsDelta);

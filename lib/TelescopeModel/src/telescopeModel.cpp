@@ -1,5 +1,6 @@
 #include "telescopeModel.h"
 #include "Logging.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -45,6 +46,36 @@ TelescopeModel::TelescopeModel() {
 
   errorToAddToEncoderResultAlt = 0;
   errorToAddToEncoderResultAzi = 0;
+}
+SynchPoint TelescopeModel::addSynchPoint(SynchPoint sp, double trimRadius) {
+
+  SynchPoint maxDistPoint;
+  double maxDistance = -1.0;
+
+  auto it = std::remove_if(
+      synchPoints.begin(), synchPoints.end(), [&](const SynchPoint &point) {
+        double distance = sp.eqCoord.calculateDistanceInDegrees(point.eqCoord);
+
+        // Only update maxDistance and maxDistPoint for points that are not
+        // being removed
+        if (distance >= trimRadius && distance > maxDistance) {
+          maxDistance = distance;
+          maxDistPoint = point;
+        }
+
+        return distance < trimRadius;
+      });
+
+  synchPoints.erase(it, synchPoints.end());
+  synchPoints.push_back(sp);
+
+  if (maxDistance < 0) {
+    return SynchPoint(); // Return an invalid SynchPoint
+  } else {
+    maxDistPoint.isValid =
+        true; // Ensure the returned SynchPoint is marked as valid
+    return maxDistPoint;
+  }
 }
 
 void TelescopeModel::setEncoderValues(long encAlt, long encAz) {
@@ -103,7 +134,8 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf",
       encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees);
 
-  log("Calculating current position at time %s",timePointToString(timePoint).c_str());
+  log("Calculating current position at time %s",
+      timePointToString(timePoint).c_str());
   HorizCoord adjustedAltAz = encoderAltAz.addOffset(
       errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);
 
@@ -158,11 +190,12 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
                                              TimePoint now) {
 
   alignment.addReferenceCoord(horiz1, eq1);
-  log("Time (local) for one star alignment: %ld",timePointToString(now).c_str());
+  log("Time (local) for one star alignment: %ld",
+      timePointToString(now).c_str());
 
   HorizCoord horiz2 = horiz1.addOffset(91, 0);
   // this is calculated based on current lat long time
-  
+
   EqCoord eq2 = EqCoord(horiz2, now);
   alignment.addReferenceCoord(horiz2, eq2);
 
@@ -194,6 +227,9 @@ void TelescopeModel::addReferencePoint() {
 
     raDeltaDegrees = secondsToRADeltaInDegrees(timeDelta);
   }
+  // BUG? what happens when platform is running?
+  //
+
   EqCoord adjustedLastSyncEQ = lastSyncedEq.addRAInDegrees(-raDeltaDegrees);
   alignment.addReferenceCoord(lastSyncedHoriz, lastSyncedEq);
 

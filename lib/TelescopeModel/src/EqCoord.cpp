@@ -1,8 +1,23 @@
 #include "EqCoord.h"
 #include "HorizCoord.h"
+#include <cmath>
 
 EqCoord::EqCoord() {}
 EqCoord::EqCoord(EquatorialCoordinates e) { eq = e; }
+
+double EqCoord::calculateDistanceInDegrees(EqCoord delta) const {
+
+  double ra1 = getRAInDegrees() * DEG_TO_RAD;
+  double dec1 = getDecInDegrees() * DEG_TO_RAD;
+  double ra2 = delta.getRAInDegrees() * DEG_TO_RAD;
+  double dec2 = delta.getDecInDegrees() * DEG_TO_RAD;
+
+  // Spherical law of cosines
+  double distance_in_degrees =
+      acos(sin(dec1) * sin(dec2) + cos(dec1) * cos(dec2) * cos(ra2 - ra1));
+
+  return distance_in_degrees / DEG_TO_RAD; // Conversion back to degrees
+}
 
 /** 
  * Bug here! This give odd result when h.alt = exactly 90
@@ -17,9 +32,9 @@ EqCoord::EqCoord(float raInDegrees, float decInDegrees) {
   setDecInDegrees(decInDegrees);
 }
 
-double EqCoord::getRAInHours() { return eq.ra; }
-double EqCoord::getRAInDegrees() { return eq.ra * 15; }
-double EqCoord::getDecInDegrees() { return eq.dec; }
+double EqCoord::getRAInHours() const { return eq.ra; }
+double EqCoord::getRAInDegrees() const { return eq.ra * 15; }
+double EqCoord::getDecInDegrees() const { return eq.dec; }
 void EqCoord::setDecInDegrees(float dec) { eq.dec = dec; }
 void EqCoord::setRAInDegrees(float ra) { setRAInHours(ra / 15.0); }
 void EqCoord::setRAInHours(float raHours) {

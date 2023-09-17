@@ -6,10 +6,11 @@
 #include "TimePoint.h"
 #include <cstdint>
 #include <iostream>
+#include <math.h>
 #include <stdio.h>
 #include <string>
 #include <unity.h>
-
+#define PI 3.14159265
 #include <iostream>
 
 bool isLeapYear(unsigned int year) {
@@ -102,36 +103,102 @@ void test_eq_to_horizontal(void) {
   //       altAzCoord.azi, "Az");
 }
 
-void test_horizontal_to_eq(void) {
+void test_addSynchPoint_trimLogic(void) {
+  TelescopeModel model;
 
-  // Set location on earth for horizontal coordinates transformations
-  Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
-                                151.0, 3.0, 3.0); // Lon: -2°20'14"
+  // Create some initial SynchPoints
+  EqCoord eq1(10, 90);
+  EqCoord eq2(10, 91);
+  EqCoord eq3(10, 92);
+  HorizCoord hz;
+  TimePoint tp = getNow();
 
-  // East is negative and West is positive
-  Ephemeris::flipLongitude(false);
+  // Add SynchPoints using addSynchPoint method with a large trim radius to
+  // ensure they aren't trimmed
+  model.addSynchPoint(SynchPoint(eq1, hz, tp, eq1), 100);
+  model.addSynchPoint(SynchPoint(eq2, hz, tp, eq2), 100);
+  model.addSynchPoint(SynchPoint(eq3, hz, tp, eq3), 100);
 
-  // Set altitude to improve rise and set precision
-  Ephemeris::setAltitude(110);
+  // Add a new SynchPoint close to eq1 and eq2
+  EqCoord eqNew(10, 90.5);
+  SynchPoint spNew(eqNew, hz, tp, eqNew);
+  model.addSynchPoint(spNew, 1); // Using a trim radius of 1 degree
 
-  // Choose a date and time (UTC)
-  unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
-               second = 0;
+  // Check that eq1 and eq2 are removed, but eq3 remains
+  TEST_ASSERT_EQUAL_MESSAGE(2, model.synchPoints.size(),
+                            "Expected only 2 SynchPoints to remain");
+  // Check that the first SynchPoint is eq3
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
+      0.5, eq3.calculateDistanceInDegrees(model.synchPoints[0].eqCoord), 0,
+      "Expected the first SynchPoint to be eq3");
 
-  HorizontalCoordinates altAzCoord;
+  // Check that the second SynchPoint is eqNew
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
+      0.5, eqNew.calculateDistanceInDegrees(model.synchPoints[1].eqCoord), 0,
+      "Expected the second SynchPoint to be eqNew");
 
-  altAzCoord.azi =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(298, 3, 3.7);
-  altAzCoord.alt =
-      Ephemeris::degreesMinutesSecondsToFloatingDegrees(6, 21, 37.7);
+}
 
-  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(6.360472, altAzCoord.alt, "Alt");
-  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(298.051, altAzCoord.azi, "Az");
-  EquatorialCoordinates eqCoord =
-      Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
-          altAzCoord, day, month, year, hour, minute, second);
-  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(14.28644, eqCoord.ra, "ra");
-  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, eqCoord.dec, "dec");
+void test_addSingleSyncPoint(void) {
+  TelescopeModel model;
+
+  EqCoord eq1(10, 90);
+  HorizCoord hz;
+  TimePoint tp = getNow();
+
+  // Add a single SynchPoint
+  SynchPoint result = model.addSynchPoint(SynchPoint(eq1, hz, tp, eq1), 100);
+
+  // Check that the returned SynchPoint is invalid
+  TEST_ASSERT_FALSE_MESSAGE(
+      result.isValid,
+      "Expected an invalid SynchPoint when adding a single point");
+}
+
+void test_addTwoSyncPointsWithFirstTrimmed(void) {
+  TelescopeModel model;
+
+  EqCoord eq1(10, 90);
+  EqCoord eq2(10, 90.5); // Close to eq1
+  HorizCoord hz;
+  TimePoint tp = getNow();
+
+  // Add the first SynchPoint
+  SynchPoint result1 = model.addSynchPoint(SynchPoint(eq1, hz, tp, eq1), 1);
+  TEST_ASSERT_FALSE_MESSAGE(
+      result1.isValid,
+      "Expected an invalid SynchPoint when adding the first point");
+
+  // Add the second SynchPoint, which should trim the first one
+  SynchPoint result2 = model.addSynchPoint(SynchPoint(eq2, hz, tp, eq2), 1);
+  TEST_ASSERT_FALSE_MESSAGE(
+      result2.isValid,
+      "Expected an invalid SynchPoint when adding the second point");
+}
+
+void test_eq_coord_distance(void) {
+  // First set of coordinates
+  EqCoord eq1;
+  eq1.setDecInDegrees(10);
+  eq1.setRAInDegrees(90);
+
+  // Second set of coordinates
+  EqCoord eq2;
+  eq2.setDecInDegrees(10);
+  eq2.setRAInDegrees(10);
+
+  // Expected distance
+  double expected_distance = 78.85;
+  float epsilon = .5; // or whatever small value you're comfortable with
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon,expected_distance,
+                                   eq1.calculateDistanceInDegrees(eq2),
+                                   "distance is wrong");
+
+  eq1.setRAInDegrees(40);
+  eq2.setRAInDegrees(360-40);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, expected_distance,
+                                   eq1.calculateDistanceInDegrees(eq2),
+                                   "distance is wrong");
 }
 
 void test_horizontal_to_eq_eq_constructor(void) {
@@ -644,10 +711,10 @@ void test_two_star_alignment_mylocation_wrappers() {
 
 void test_two_star_alignment_mylocation_wrappers_offset() {
 
-  //test what happens if there is an offset on the encoders
-  //at the start. We assume always that alt=0 on encoders
-  //is horizontal: the alignment model can handle azi rotation
-  //but not alt.
+  // test what happens if there is an offset on the encoders
+  // at the start. We assume always that alt=0 on encoders
+  // is horizontal: the alignment model can handle azi rotation
+  // but not alt.
 
   double altOffset = 0;
   double aziOffset = 15;
@@ -697,7 +764,7 @@ void test_two_star_alignment_mylocation_wrappers_offset() {
   altairAltAziExpected.setAlt(44, 33, 25.8);
   altairAltAziExpected.setAzi(21, 55, 36.3);
 
-  altairAltAziExpected=altairAltAziExpected.addOffset(altOffset, aziOffset);
+  altairAltAziExpected = altairAltAziExpected.addOffset(altOffset, aziOffset);
 
   EqCoord altairRaDec = alignment.toReferenceCoord(altairAltAziExpected);
 
@@ -1439,7 +1506,6 @@ void test_model_one_star_align() {
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
 
-
   Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
                                 151.0, 3.0, 3.0); // Lon: -2°20'14"
 
@@ -1450,12 +1516,12 @@ void test_model_one_star_align() {
 
   TimePoint time = createTimePoint(day, month, year, hour, minute, second);
 
-  HorizCoord h1=HorizCoord(0,0);
-  EqCoord e1=EqCoord();
+  HorizCoord h1 = HorizCoord(0, 0);
+  EqCoord e1 = EqCoord();
   e1.setDecInDegrees(38.8);
   e1.setRAInHours(18.6288);
-  //vega
-  model.performOneStarAlignment(h1,e1,time);
+  // vega
+  model.performOneStarAlignment(h1, e1, time);
 }
 void test_one_star_align_principle() {
   CoordConv alignment;
@@ -1557,7 +1623,12 @@ void setup() {
   // RUN_TEST(test_one_star_align_principle);
   // RUN_TEST(test_coords);
 
-  RUN_TEST(test_model_one_star_align);
+  //   RUN_TEST(test_model_one_star_align);
+//   RUN_TEST(test_eq_coord_distance);
+  RUN_TEST(test_addSynchPoint_trimLogic);
+  RUN_TEST(test_addSingleSyncPoint);
+  RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);
+
   //====
 
   // RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
