@@ -1,7 +1,7 @@
 #include "HorizCoord.h"
 #include "EqCoord.h"
 void HorizCoord::normalise() {
-  if (altInDegrees > 90) {
+  if (altInDegrees >= 90) {
     altInDegrees = 180 - altInDegrees;
     aziInDegrees += 180;
   }

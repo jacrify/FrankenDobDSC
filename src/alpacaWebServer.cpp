@@ -362,6 +362,7 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
       "Second: %d",
       year, month, day, hour, minute, second);
   TimePoint tp = createTimePoint(day, month, year, hour, minute, second);
+  log("Setting system data to %s",timePointToString(tp).c_str());
   setSystemTime(tp);
   // epochMillisBase = createTimePoint(day, month, year, hour, minute, second);
 
@@ -385,14 +386,15 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
  */
 TimePoint calculateAdjustedTime() {
   TimePoint now = getNow();
-
+  log("Calculating  adjusted time from (now): %s",
+      timePointToString(now).c_str());
   // unsigned long now = millis();
   // log("Now millis since start: %ld", now);
   if (differenceInSeconds(lastPositionReceivedTime, now) >
       STALE_EQ_WARNING_THRESHOLD_SECONDS) {
     log("No EQ platform, or packet loss: last packet recieved  "
         "at %s",
-        timePointToString(lastPositionReceivedTime));
+        timePointToString(lastPositionReceivedTime).c_str());
     platformConnected = false;
   } else {
     platformConnected = true;
@@ -411,7 +413,7 @@ TimePoint calculateAdjustedTime() {
   TimePoint adjustedTime = addSecondsToTime(now, runtimeFromCenterSeconds +
                                                      interpolationTimeSeconds);
 
-  log("Returned adjusted time: %s", timePointToString(adjustedTime));
+  log("Returned adjusted time: %s", timePointToString(adjustedTime).c_str());
   return adjustedTime;
 }
 

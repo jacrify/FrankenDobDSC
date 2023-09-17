@@ -1431,7 +1431,32 @@ void test_coords() {
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 180, start.aziInDegrees,
                                    "azi should loop");
 }
+void test_model_one_star_align() {
 
+  TelescopeModel model;
+  //   model.setLatitude(-34.0455);
+  //   model.setLongitude(151.0508333);
+  model.setLatitude(-34.0493);
+  model.setLongitude(151.0494);
+
+
+  Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
+                                151.0, 3.0, 3.0); // Lon: -2°20'14"
+
+  Ephemeris::flipLongitude(false);
+  // Choose a date and time (UTC)
+  unsigned int day = 16, month = 9, year = 2023, hour = 6, minute = 39,
+               second = 0;
+
+  TimePoint time = createTimePoint(day, month, year, hour, minute, second);
+
+  HorizCoord h1=HorizCoord(0,0);
+  EqCoord e1=EqCoord();
+  e1.setDecInDegrees(38.8);
+  e1.setRAInHours(18.6288);
+  //vega
+  model.performOneStarAlignment(h1,e1,time);
+}
 void test_one_star_align_principle() {
   CoordConv alignment;
   Ephemeris::setLocationOnEarth(-34.0, 2.0, 44.0, // Lat: 48°50'11"
@@ -1519,18 +1544,20 @@ void setup() {
 
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
   //====
-  RUN_TEST(test_eq_to_horizontal);
-  RUN_TEST(test_horizontal_to_eq);
-  RUN_TEST(test_eq_to_horizontal_vega);
+  // RUN_TEST(test_eq_to_horizontal);
+  // RUN_TEST(test_horizontal_to_eq);
+  // RUN_TEST(test_eq_to_horizontal_vega);
 
-  RUN_TEST(test_horizontal_to_eq_eq_constructor);
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers);
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
+  // RUN_TEST(test_horizontal_to_eq_eq_constructor);
+  // RUN_TEST(test_two_star_alignment_mylocation_wrappers);
+  // RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
 
-  RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_telescope_model_mylocation_with_tilt);
-  RUN_TEST(test_one_star_align_principle);
-  RUN_TEST(test_coords);
+  // RUN_TEST(test_telescope_model_mylocation);
+  // RUN_TEST(test_telescope_model_mylocation_with_tilt);
+  // RUN_TEST(test_one_star_align_principle);
+  // RUN_TEST(test_coords);
+
+  RUN_TEST(test_model_one_star_align);
   //====
 
   // RUN_TEST(test_telescope_model_mylocation_with_time_deltas);

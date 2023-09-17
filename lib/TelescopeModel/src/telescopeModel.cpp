@@ -103,6 +103,7 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf",
       encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees);
 
+  log("Calculating current position at time %s",timePointToString(timePoint).c_str());
   HorizCoord adjustedAltAz = encoderAltAz.addOffset(
       errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);
 
@@ -157,8 +158,11 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
                                              TimePoint now) {
 
   alignment.addReferenceCoord(horiz1, eq1);
+  log("Time (local) for one star alignment: %ld",timePointToString(now).c_str());
 
-  HorizCoord horiz2 = horiz1.addOffset(90, 0);
+  HorizCoord horiz2 = horiz1.addOffset(91, 0);
+  // this is calculated based on current lat long time
+  
   EqCoord eq2 = EqCoord(horiz2, now);
   alignment.addReferenceCoord(horiz2, eq2);
 
@@ -243,11 +247,10 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
-  // log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and epoch
-  // "
-  //     "time %s",
-  //     lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
-  //     timePointToString(now).c_str());
+  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and  time "
+      "%s",
+      lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
+      timePointToString(now).c_str());
 
   // //this uses lat/long/time to work out where scope should be pointing.
   // lastSyncedHoriz = HorizCoord(lastSyncedEq, now);
@@ -265,14 +268,14 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
       calculatedAltAzFromEncoders.altInDegrees,
       calculatedAltAzFromEncoders.aziInDegrees);
 
-   HorizCoord altAzFromModel= alignment.toInstrumentCoord(lastSyncedEq);
+  HorizCoord altAzFromModel = alignment.toInstrumentCoord(lastSyncedEq);
 
   log("Expected model altaz  \t\t\talt: %lf \t\taz:%lf",
       altAzFromModel.altInDegrees, altAzFromModel.aziInDegrees);
-  errorToAddToEncoderResultAlt =
-      altAzFromModel.altInDegrees - calculatedAltAzFromEncoders.altInDegrees;
-  errorToAddToEncoderResultAzi =
-      altAzFromModel.aziInDegrees - calculatedAltAzFromEncoders.aziInDegrees;
+  // errorToAddToEncoderResultAlt =
+  //     altAzFromModel.altInDegrees - calculatedAltAzFromEncoders.altInDegrees;
+  // errorToAddToEncoderResultAzi =
+  //     altAzFromModel.aziInDegrees - calculatedAltAzFromEncoders.aziInDegrees;
 
   log("Stored alt/az delta\t\t\talt: %lf\t\taz:%lf",
       errorToAddToEncoderResultAlt, errorToAddToEncoderResultAzi);

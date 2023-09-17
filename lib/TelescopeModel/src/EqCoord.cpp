@@ -4,6 +4,9 @@
 EqCoord::EqCoord() {}
 EqCoord::EqCoord(EquatorialCoordinates e) { eq = e; }
 
+/** 
+ * Bug here! This give odd result when h.alt = exactly 90
+ * */
 EqCoord::EqCoord(HorizCoord h,TimePoint tp) {
   eq = Ephemeris::horizontalToEquatorialCoordinatesAtDateAndTime(
       h.toHorizontalCoordinates(), convertTimePointToEpochSeconds(tp));

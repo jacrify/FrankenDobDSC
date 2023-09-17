@@ -18,7 +18,7 @@ void setupWifi(Preferences &prefs) {
   //If boot button pressed, reboot and connect to home wifi
   bool homeWifi = prefs.getBool("homeWifi",false);
   log("Home wifi flag value: %d", homeWifi);
-  // if (homeWifi) {
+  if (homeWifi) {
     log("Connecting to home wifi");
     prefs.putBool("homeWifi", false);
 
@@ -26,10 +26,10 @@ void setupWifi(Preferences &prefs) {
     wifiManager.setConnectTimeout(10);
     wifiManager.autoConnect();
 
-  // }  else {
-  //   log("Creating access point");
-  //   WiFi.softAP("dontlookup", "dontlookdown");
-  // }
+  }  else {
+    log("Creating access point");
+    WiFi.softAP("dontlookup", "dontlookdown");
+  }
   
 
 }
