@@ -101,9 +101,8 @@ void loadPreferences(Preferences &prefs, TelescopeModel &model) {
       prefs.getLong(PREF_AZ_STEPS_KEY, 108229));
 }
 
-void clearAlignment(AsyncWebServerRequest *request, 
-                TelescopeModel &model) {
-
+void clearAlignment(AsyncWebServerRequest *request, TelescopeModel &model) {
+  log("Clearing alignment");
   model.clearAlignment();
   request->send(200);
 }
@@ -357,7 +356,7 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
       "Second: %d",
       year, month, day, hour, minute, second);
   TimePoint tp = createTimePoint(day, month, year, hour, minute, second);
-  log("Setting system data to %s",timePointToString(tp).c_str());
+  log("Setting system data to %s", timePointToString(tp).c_str());
   setSystemTime(tp);
   // epochMillisBase = createTimePoint(day, month, year, hour, minute, second);
 
@@ -416,8 +415,7 @@ TimePoint calculateAdjustedTime() {
 // Triggered from ra or dec request. Should only run for one of them and
 // then cache for a few millis
 void updatePosition(TelescopeModel &model) {
-  TimePoint timeAtMiddleOfRun =
-      calculateAdjustedTime();
+  TimePoint timeAtMiddleOfRun = calculateAdjustedTime();
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.calculateCurrentPosition(timeAtMiddleOfRun);
 }
@@ -445,8 +443,7 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
     log("Could not parse dec arg!");
   }
 
-  TimePoint timeAtMiddleOfRun =
-      calculateAdjustedTime();
+  TimePoint timeAtMiddleOfRun = calculateAdjustedTime();
   log("Encoder values: %ld,%ld", getEncoderAl(), getEncoderAz());
   // log("Timestamp for middle of run: %llu", timeAtMiddleOfRunSeconds);
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
@@ -480,7 +477,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
   loadPreferences(prefs, model);
 
   lastPositionCalculatedTime = 0;
-  lastPositionReceivedTime =getNow();
+  lastPositionReceivedTime = getNow();
   currentlyRunning = false;
   platformConnected = false;
 
@@ -536,8 +533,8 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           timeToEnd = doc["timeToEnd"];
           currentlyRunning = doc["isTracking"];
           lastPositionReceivedTime = getNow();
-           log("Distance from center %lf, running %d",
-              runtimeFromCenterSeconds, currentlyRunning);
+          log("Distance from center %lf, running %d", runtimeFromCenterSeconds,
+              currentlyRunning);
         } else {
           log("Payload missing required fields.");
           return;
@@ -739,7 +736,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
                        clearAlignment(request, model);
                      });
 
-  alpacaWebServer.on("/clearPrefs", HTTP_GET,
+  alpacaWebServer.on("/clearPrefs", HTTP_POST,
                      [&model, &prefs](AsyncWebServerRequest *request) {
                        clearPrefs(request, prefs, model);
                      });

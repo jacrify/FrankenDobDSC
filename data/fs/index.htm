@@ -10,7 +10,7 @@
 <body>
 
     <table border=1>
-         <tr>
+        <tr>
             <td>Calculated Alt Step per Revolution</td>
             <td><span id="calculateAltEncoderStepsPerRevolution">0</span></td>
             <td>Calculated Az Step per Revolution</td>
@@ -80,7 +80,10 @@
 
 
     </table>
-    <a href="/clearPrefs"> Clear saved preferences</a>
+
+    <button id="clearPreferences">Clear Preferences</button>
+    <br>
+    <button id="clearAlignment">Clear saved alignment</button>
 
     <script>
 
@@ -88,7 +91,7 @@
             console.log("Update ");
 
             $.getJSON("/getScopeStatus").done(function (data) {
-               
+
                 $("#calculateAltEncoderStepsPerRevolution").text(data.calculateAltEncoderStepsPerRevolution);
                 $("#calculateAzEncoderStepsPerRevolution").text(data.calculateAzEncoderStepsPerRevolution);
                 $("#actualAltEncoderStepsPerRevolution").text(data.actualAltEncoderStepsPerRevolution);
@@ -107,13 +110,16 @@
 
         };
 
+        $("#clearPreferences").click(function () {
+            $.post("/clearPreferences");
+        });
+
+        $("#clearAlignment").click(function () {
+            $.post("/clearAlignment");
+        });
         $("#saveAltEncoderSteps").click(function () {
             $.post("/saveAltEncoderSteps");
         });
-
-
-    
-        
 
         $("#saveAzEncoderSteps").click(function () {
             $.post("/saveAzEncoderSteps");
