@@ -13,6 +13,8 @@ struct SynchPoint {
   TimePoint timePoint;
   double errorInDegreesAtCreation;
   bool isValid;
+  long altEncoder;
+  long azEncoder;
 
   SynchPoint()
       : errorInDegreesAtCreation(0), isValid(false) {
@@ -91,10 +93,10 @@ public:
    * is less than trimRadius.
    * 2: Adds sp to synchPoints
    * 3: Returns the synchPoint where distance is greatests, found in step 1
-   * Cannot return sp. Cannot return removed item. If no item return syncpoint with 
-   * "isvalid" set to false. New one is still added.
+   * Cannot return sp. Cannot return removed item. If no item return syncpoint
+   * with "isvalid" set to false. New one is still added.
    */
-  SynchPoint addSynchPoint(SynchPoint sp, double trimRadius);
+  SynchPoint addSynchPointAndFindFarthest(SynchPoint sp, double trimRadius);
 
   void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
@@ -102,14 +104,8 @@ public:
   long getAzEncoderStepsPerRevolution();
   long getAltEncoderStepsPerRevolution();
 
-  void calculateEncoderOffsetFromAltAz(float alt, float az, long altEncVal,
-                                       long azEncVal, long &altEncOffset,
-                                       long &azEncOffset);
-
-  HorizCoord adjustAltAzBasedOnOffsets(float alt, float az);
-
-  void addReferencePoint();
-
+  void clearAlignment();
+  void addReferencePoints(SynchPoint oldest, SynchPoint newest);
   void performOneStarAlignment(HorizCoord altaz, EqCoord eq, TimePoint tp);
 
   void setLatitude(float lat);
@@ -125,24 +121,11 @@ public:
   float getRACoord();
 
   void syncPositionRaDec(float ra, float dec, TimePoint tp);
-
   void calculateCurrentPosition(TimePoint tp);
-  // void saveEncoderCalibrationPoint();
-
-  long getAltEncoderAlignValue1() const;
-  long getAltEncoderAlignValue2() const;
-   long getAzEncoderAlignValue1() const;
-  long getAzEncoderAlignValue2() const;
-
-  float getAltAlignValue1() const;
-  float getAltAlignValue2() const;
-  float getAzAlignValue1() const;
-  float getAzAlignValue2() const;
-
   long calculateAzEncoderStepsPerRevolution();
   long calculateAltEncoderStepsPerRevolution();
 
-  HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
+  
 
   // Calculate in the future (if positive) or into past (if negative)
   void setRaOffset(double raOffset);
@@ -155,63 +138,31 @@ public:
   long azEncoderStepsPerRevolution;
   long altEncoderStepsPerRevolution;
 
-  // known eq position at sync
-  float raBasePos;
-  float decBasePos;
-  // known encoder values at same
-  long altEncBaseValue;
-  long azEncBaseValue;
-
-  double baseRaOffset;
-
-  double altBaseValue;
-  double azBaseValue;
-
   EqCoord currentEqPosition;
-  // float currentRAHours;
-  // float currentDec;
 
-  float currentAlt;
-  float currentAz;
+  // // known eq position at sync
+  // float raBasePos;
+  // float decBasePos;
+  // // known encoder values at same
+  // long altEncBaseValue;
+  // long azEncBaseValue;
 
-  // when align is hit, store the values so we can use them to calibrate
-  // encoders.
-  // Values always get stored in AlignValue1, with existing values copied
-  // to alignvalue2 beforehand
+  // EqCoord currentEqPosition;
+  SynchPoint lastSyncPoint;
 
-  long altEncoderAlignValue1;
-  long altEncoderAlignValue2;
-  long azEncoderAlignValue1;
-  long azEncoderAlignValue2;
-
-  float altAlignValue1;
-  float altAlignValue2;
-  float azAlignValue1;
-  float azAlignValue2;
-
-  HorizCoord lastSyncedHoriz;
-  EqCoord lastSyncedEq;
-
-  // double lastSyncedRa;
-  // double lastSyncedDec;
-  // double lastSyncedAlt;
-  // double lastSyncedAz;
-
-  TimePoint secondSyncTime; // epoch timestamp in milliseconds  of second sync
-  TimePoint firstSyncTime;  // epoch timestamp in milliseconds  of first sync
-  TimePoint alignmentModelSyncTime; // t=0 for post alignment. Based
-                                    // on time of first sync
+private:
+  CoordConv alignment;
+  SynchPoint baseSyncPoint;
 
   bool defaultAlignment;
-  // float altOffsetToAddToEncoderResult;
-  // float azOffsetToAddToEncoderResult;
-  // ;
-
-  float errorToAddToEncoderResultAlt;
-  float errorToAddToEncoderResultAzi;
-
-  CoordConv alignment;
+  float currentAlt;
+  float currentAz;
   double secondsToRADeltaInDegrees(double secondsDelta);
+  void performBaselineAlignment();
+  void calculateEncoderOffsetFromAltAz(float alt, float az, long altEncVal,
+                                       long azEncVal, long &altEncOffset,
+                                       long &azEncOffset);
+  HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
 };
 
 #endif

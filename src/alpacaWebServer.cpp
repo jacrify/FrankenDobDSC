@@ -101,7 +101,13 @@ void loadPreferences(Preferences &prefs, TelescopeModel &model) {
       prefs.getLong(PREF_AZ_STEPS_KEY, 108229));
 }
 
-// safety
+void clearAlignment(AsyncWebServerRequest *request, 
+                TelescopeModel &model) {
+
+  model.clearAlignment();
+  request->send(200);
+}
+// safety: clears encoder steps
 void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
                 TelescopeModel &model) {
 
@@ -120,23 +126,13 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     platformConnected = true;
   }
   char buffer[1500];
-  sprintf(
-      buffer,
-      R"({
-    "altEncoderAlignValue1" : %ld,
-    "altEncoderAlignValue2": %ld,
-    "azEncoderAlignValue1" : %ld,
-    "azEncoderAlignValue2": %ld,
-    "altAlignValue1": %.2lf,
-    "altAlignValue2": %.2lf,
-    "azAlignValue1": %.2lf,
-    "azAlignValue2": %.2lf,
+  sprintf(buffer,
+          R"({
+    
     "calculateAltEncoderStepsPerRevolution" : %ld,
     "calculateAzEncoderStepsPerRevolution" : %ld,
     "actualAltEncoderStepsPerRevolution" : %ld,
     "actualAzEncoderStepsPerRevolution" : %ld,
-    "altOffsetToAddToEncoderResult" : %lf,
-    "azOffsetToAddToEncoderResult":%lf,
     "lastSyncedRa" : %lf,
     "lastSyncedDec" : %lf,
     "lastSyncedAlt" : %lf,
@@ -146,20 +142,19 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "timeToEnd" : %.1lf,
     "platformConnected" : %s
 })",
-      model.getAltEncoderAlignValue1(), model.getAltEncoderAlignValue2(),
-      model.getAzEncoderAlignValue1(), model.getAzEncoderAlignValue2(),
-      model.getAltAlignValue1(), model.getAltAlignValue2(),
-      model.getAzAlignValue1(), model.getAzAlignValue2(),
-      model.calculateAltEncoderStepsPerRevolution(),
-      model.calculateAzEncoderStepsPerRevolution(),
-      model.getAltEncoderStepsPerRevolution(),
-      model.getAzEncoderStepsPerRevolution(),
-      model.errorToAddToEncoderResultAlt, model.errorToAddToEncoderResultAzi,
-      model.lastSyncedEq.getRAInDegrees(), model.lastSyncedEq.getDecInDegrees(),
-      model.lastSyncedHoriz.altInDegrees, model.lastSyncedHoriz.aziInDegrees,
 
-      currentlyRunning ? "true" : "false", runtimeFromCenterSeconds / 60,
-      timeToEnd / 60, platformConnected ? "true" : "false");
+          model.calculateAltEncoderStepsPerRevolution(),
+          model.calculateAzEncoderStepsPerRevolution(),
+          model.getAltEncoderStepsPerRevolution(),
+          model.getAzEncoderStepsPerRevolution(),
+
+          model.lastSyncPoint.eqCoord.getRAInDegrees(),
+          model.lastSyncPoint.eqCoord.getDecInDegrees(),
+          model.lastSyncPoint.horizCoord.altInDegrees,
+          model.lastSyncPoint.horizCoord.aziInDegrees,
+
+          currentlyRunning ? "true" : "false", runtimeFromCenterSeconds / 60,
+          timeToEnd / 60, platformConnected ? "true" : "false");
 
   String json = buffer;
 
@@ -739,9 +734,9 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
                        saveAzEncoderSteps(request, model, prefs);
                      });
 
-  alpacaWebServer.on("/addRefPoint", HTTP_POST,
+  alpacaWebServer.on("/clearAlignment", HTTP_POST,
                      [&model, &prefs](AsyncWebServerRequest *request) {
-                       model.addReferencePoint();
+                       clearAlignment(request, model);
                      });
 
   alpacaWebServer.on("/clearPrefs", HTTP_GET,

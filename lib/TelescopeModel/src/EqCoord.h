@@ -28,6 +28,6 @@ public:
   EqCoord addRAInDegrees(float raToAdd);
 
 private:
-  static constexpr double DEG_TO_RAD = M_PI / 180.0;
+  static constexpr double DEGREES_TO_RADIANS = M_PI / 180.0;
 };
 #endif

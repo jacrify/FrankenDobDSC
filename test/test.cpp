@@ -115,14 +115,15 @@ void test_addSynchPoint_trimLogic(void) {
 
   // Add SynchPoints using addSynchPoint method with a large trim radius to
   // ensure they aren't trimmed
-  model.addSynchPoint(SynchPoint(eq1, hz, tp, eq1), 100);
-  model.addSynchPoint(SynchPoint(eq2, hz, tp, eq2), 100);
-  model.addSynchPoint(SynchPoint(eq3, hz, tp, eq3), 100);
+  model.addSynchPointAndFindFarthest(SynchPoint(eq1, hz, tp, eq1), 100);
+  model.addSynchPointAndFindFarthest(SynchPoint(eq2, hz, tp, eq2), 100);
+  model.addSynchPointAndFindFarthest(SynchPoint(eq3, hz, tp, eq3), 100);
 
   // Add a new SynchPoint close to eq1 and eq2
   EqCoord eqNew(10, 90.5);
   SynchPoint spNew(eqNew, hz, tp, eqNew);
-  model.addSynchPoint(spNew, 1); // Using a trim radius of 1 degree
+  model.addSynchPointAndFindFarthest(spNew,
+                                     1); // Using a trim radius of 1 degree
 
   // Check that eq1 and eq2 are removed, but eq3 remains
   TEST_ASSERT_EQUAL_MESSAGE(2, model.synchPoints.size(),
@@ -136,7 +137,6 @@ void test_addSynchPoint_trimLogic(void) {
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
       0.5, eqNew.calculateDistanceInDegrees(model.synchPoints[1].eqCoord), 0,
       "Expected the second SynchPoint to be eqNew");
-
 }
 
 void test_addSingleSyncPoint(void) {
@@ -147,7 +147,8 @@ void test_addSingleSyncPoint(void) {
   TimePoint tp = getNow();
 
   // Add a single SynchPoint
-  SynchPoint result = model.addSynchPoint(SynchPoint(eq1, hz, tp, eq1), 100);
+  SynchPoint result =
+      model.addSynchPointAndFindFarthest(SynchPoint(eq1, hz, tp, eq1), 100);
 
   // Check that the returned SynchPoint is invalid
   TEST_ASSERT_FALSE_MESSAGE(
@@ -164,13 +165,15 @@ void test_addTwoSyncPointsWithFirstTrimmed(void) {
   TimePoint tp = getNow();
 
   // Add the first SynchPoint
-  SynchPoint result1 = model.addSynchPoint(SynchPoint(eq1, hz, tp, eq1), 1);
+  SynchPoint result1 =
+      model.addSynchPointAndFindFarthest(SynchPoint(eq1, hz, tp, eq1), 1);
   TEST_ASSERT_FALSE_MESSAGE(
       result1.isValid,
       "Expected an invalid SynchPoint when adding the first point");
 
   // Add the second SynchPoint, which should trim the first one
-  SynchPoint result2 = model.addSynchPoint(SynchPoint(eq2, hz, tp, eq2), 1);
+  SynchPoint result2 =
+      model.addSynchPointAndFindFarthest(SynchPoint(eq2, hz, tp, eq2), 1);
   TEST_ASSERT_FALSE_MESSAGE(
       result2.isValid,
       "Expected an invalid SynchPoint when adding the second point");
@@ -190,12 +193,12 @@ void test_eq_coord_distance(void) {
   // Expected distance
   double expected_distance = 78.85;
   float epsilon = .5; // or whatever small value you're comfortable with
-  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon,expected_distance,
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, expected_distance,
                                    eq1.calculateDistanceInDegrees(eq2),
                                    "distance is wrong");
 
   eq1.setRAInDegrees(40);
-  eq2.setRAInDegrees(360-40);
+  eq2.setRAInDegrees(360 - 40);
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(epsilon, expected_distance,
                                    eq1.calculateDistanceInDegrees(eq2),
                                    "distance is wrong");
@@ -946,7 +949,7 @@ void test_telescope_model_mylocation_with_offset() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-  model.addReferencePoint();
+//   model.addReferencePoint();
   model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
@@ -983,7 +986,7 @@ void test_telescope_model_mylocation_with_offset() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
-  model.addReferencePoint();
+//   model.addReferencePoint();
 
   // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
   // This calculated telescope coordinates is very close to the measured
@@ -1104,7 +1107,7 @@ void test_telescope_model_mylocation() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-  model.addReferencePoint();
+//   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1142,7 +1145,7 @@ void test_telescope_model_mylocation() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
-  model.addReferencePoint();
+//   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1233,7 +1236,7 @@ void test_telescope_model_mylocation_with_tilt() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-  model.addReferencePoint();
+//   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1271,7 +1274,7 @@ void test_telescope_model_mylocation_with_tilt() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
-  model.addReferencePoint();
+//   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1375,7 +1378,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-  model.addReferencePoint();
+//   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1419,7 +1422,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star2Time);
   //  timeMillis + 546000); // time passed in millis
-  model.addReferencePoint();
+//   model.addReferencePoint();
   model.calculateCurrentPosition(star2Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RAHours, model.getRACoord(),
@@ -1610,21 +1613,21 @@ void setup() {
 
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
   //====
-  // RUN_TEST(test_eq_to_horizontal);
-  // RUN_TEST(test_horizontal_to_eq);
-  // RUN_TEST(test_eq_to_horizontal_vega);
+  RUN_TEST(test_eq_to_horizontal);
+//   RUN_TEST(test_horizontal_to_eq);
+  RUN_TEST(test_eq_to_horizontal_vega);
 
-  // RUN_TEST(test_horizontal_to_eq_eq_constructor);
-  // RUN_TEST(test_two_star_alignment_mylocation_wrappers);
-  // RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
+  RUN_TEST(test_horizontal_to_eq_eq_constructor);
+  RUN_TEST(test_two_star_alignment_mylocation_wrappers);
+  RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
 
-  // RUN_TEST(test_telescope_model_mylocation);
-  // RUN_TEST(test_telescope_model_mylocation_with_tilt);
-  // RUN_TEST(test_one_star_align_principle);
-  // RUN_TEST(test_coords);
+  RUN_TEST(test_telescope_model_mylocation);
+  RUN_TEST(test_telescope_model_mylocation_with_tilt);
+  RUN_TEST(test_one_star_align_principle);
+  RUN_TEST(test_coords);
 
-  //   RUN_TEST(test_model_one_star_align);
-//   RUN_TEST(test_eq_coord_distance);
+    RUN_TEST(test_model_one_star_align);
+    RUN_TEST(test_eq_coord_distance);
   RUN_TEST(test_addSynchPoint_trimLogic);
   RUN_TEST(test_addSingleSyncPoint);
   RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);

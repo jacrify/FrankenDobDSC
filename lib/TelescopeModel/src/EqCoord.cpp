@@ -7,16 +7,16 @@ EqCoord::EqCoord(EquatorialCoordinates e) { eq = e; }
 
 double EqCoord::calculateDistanceInDegrees(EqCoord delta) const {
 
-  double ra1 = getRAInDegrees() * DEG_TO_RAD;
-  double dec1 = getDecInDegrees() * DEG_TO_RAD;
-  double ra2 = delta.getRAInDegrees() * DEG_TO_RAD;
-  double dec2 = delta.getDecInDegrees() * DEG_TO_RAD;
+  double ra1 = getRAInDegrees() * DEGREES_TO_RADIANS;
+  double dec1 = getDecInDegrees() * DEGREES_TO_RADIANS;
+  double ra2 = delta.getRAInDegrees() * DEGREES_TO_RADIANS;
+  double dec2 = delta.getDecInDegrees() * DEGREES_TO_RADIANS;
 
   // Spherical law of cosines
   double distance_in_degrees =
       acos(sin(dec1) * sin(dec2) + cos(dec1) * cos(dec2) * cos(ra2 - ra1));
 
-  return distance_in_degrees / DEG_TO_RAD; // Conversion back to degrees
+  return distance_in_degrees / DEGREES_TO_RADIANS; // Conversion back to degrees
 }
 
 /** 

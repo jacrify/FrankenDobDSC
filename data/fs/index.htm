@@ -10,31 +10,7 @@
 <body>
 
     <table border=1>
-        <tr>
-            <td>Alt Encoder Align Point 1:</td>
-            <td><span id="altEncoderAlignValue1">0</span></td>
-            <td>Alt Encoder Align Point 2:></td>
-            <td><span id="altEncoderAlignValue2">0</span></td>
-        </tr>
-        <tr>
-            <td>Az Encoder Align Point 1:</td>
-            <td><span id="azEncoderAlignValue1">0</span></td>
-            <td>Az Encoder Align Point 2:</td>
-            <td><span id="azEncoderAlignValue2">0</span></td>
-        </tr>
-        <tr>
-            <td>Actual Alt at Point 1:</td>
-            <td><span id="altAlignValue1">0</span></td>
-            <td>Actual Alt at Point 2:</td>
-            <td><span id="altAlignValue2">0</span></td>
-        </tr>
-        <tr>
-            <td>Actual Az at Point 1:</td>
-            <td><span id="azAlignValue1">0</span></td>
-            <td>>Actual Az at Point 2:</td>
-            <td><span id="azAlignValue2">0</span></td>
-        </tr>
-        <tr>
+         <tr>
             <td>Calculated Alt Step per Revolution</td>
             <td><span id="calculateAltEncoderStepsPerRevolution">0</span></td>
             <td>Calculated Az Step per Revolution</td>
@@ -62,16 +38,6 @@
         </tr>
     </table>
 
-    <table border="1">
-        <tr>
-            <td>Alt Position Error</td>
-            <td><span id="altOffsetToAddToEncoderResult">0</span></td>
-        </tr>
-    <tr>
-        <td>Az Position Error</td>
-        <td><span id="azOffsetToAddToEncoderResult">0</span></td>
-    </tr>
-    </table>
     <table border="1">
         <tr>
 
@@ -112,10 +78,6 @@
         </td>
         </tr>
 
-        <tr>
-            <td><button id="addRefPoint" >Add reference point</button></td>
-            <td></td>
-        </tr>
 
     </table>
     <a href="/clearPrefs"> Clear saved preferences</a>
@@ -126,14 +88,7 @@
             console.log("Update ");
 
             $.getJSON("/getScopeStatus").done(function (data) {
-                $("#altEncoderAlignValue1").text(data.altEncoderAlignValue1);
-                $("#altEncoderAlignValue2").text(data.altEncoderAlignValue2);
-                $("#azEncoderAlignValue1").text(data.azEncoderAlignValue1);
-                $("#azEncoderAlignValue2").text(data.azEncoderAlignValue2);
-                $("#altAlignValue1").text(data.altAlignValue1);
-                $("#altAlignValue2").text(data.altAlignValue2);
-                $("#azAlignValue1").text(data.azAlignValue1);
-                $("#azAlignValue2").text(data.azAlignValue2);
+               
                 $("#calculateAltEncoderStepsPerRevolution").text(data.calculateAltEncoderStepsPerRevolution);
                 $("#calculateAzEncoderStepsPerRevolution").text(data.calculateAzEncoderStepsPerRevolution);
                 $("#actualAltEncoderStepsPerRevolution").text(data.actualAltEncoderStepsPerRevolution);
@@ -143,8 +98,6 @@
                 $("#lastSyncedDec").text(data.lastSyncedDec);
                 $("#lastSyncedAlt").text(data.lastSyncedAlt);
                 $("#lastSyncedAz").text(data.lastSyncedAz);
-                $("#altOffsetToAddToEncoderResult").text(data.altOffsetToAddToEncoderResult);
-                $("#azOffsetToAddToEncoderResult").text(data.azOffsetToAddToEncoderResult);
                 $("#platformConnected").css("background-color", data.platformConnected ? "green" : "red");
                 $("#platformTracking").css("background-color", data.platformTracking ? "green" : "red");
             }).fail(function () {
@@ -159,9 +112,7 @@
         });
 
 
-        $("#addRefPoint").click(function () {
-                $.post("/addRefPoint");
-            });
+    
         
 
         $("#saveAzEncoderSteps").click(function () {
