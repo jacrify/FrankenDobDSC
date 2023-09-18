@@ -949,7 +949,7 @@ void test_telescope_model_mylocation_with_offset() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
   model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star1RAHours, model.getRACoord(),
@@ -986,7 +986,7 @@ void test_telescope_model_mylocation_with_offset() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
 
   // If you want to aim the telescope at b Cet (ra = 0h43m07s, dec = -18.038)
   // This calculated telescope coordinates is very close to the measured
@@ -1067,6 +1067,80 @@ void test_eq_to_horizontal_vega(void) {
   //       altAzCoord.azi, "Az");
 }
 
+void test_continuity() {
+  log("======test_continuity=====");
+  // Simulate spinning the scope around in a spiral.
+  // No asserts yet (TODO)
+  // Just checks for discontinuities due to wierd floating point issues.
+
+  TelescopeModel model;
+
+  model.setLatitude(-34.0493);
+  model.setLongitude(151.0494);
+  // Choose a date and time (UTC)
+  unsigned int day = 2, month = 9, year = 2023, hour = 10, minute = 0,
+               second = 0;
+  TimePoint star1Time = createTimePoint(day, month, year, hour, minute, second);
+
+  model.setAltEncoderStepsPerRevolution(36000); // 100 ticks per degree
+  model.setAzEncoderStepsPerRevolution(36000);
+
+  // star 1: Vega
+  HorizCoord vega;
+  vega.setAlt(17, 9, 19.5);
+  vega.setAzi(357, 13, 18.8);
+
+  model.setEncoderValues(vega.altInDegrees * 100, vega.aziInDegrees * 100);
+  double star1RAHours =
+      Ephemeris::hoursMinutesSecondsToFloatingHours(18, 37, 43.68);
+  double star1RADegrees = 360 * star1RAHours / 24.0;
+  double star1Dec =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(38, 48, 9.2);
+
+  model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
+  model.calculateCurrentPosition(star1Time);
+
+  double star2AltAxis =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(37, 36, 24.3);
+
+  double star2AzmAxis =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(103, 17, 9.4);
+  model.setEncoderValues(star2AltAxis * 100, star2AzmAxis * 100);
+
+  double star2RAHours =
+      Ephemeris::hoursMinutesSecondsToFloatingHours(22, 58, 56.46);
+  // star2RAHours = star2RAHours - (star2Time - star1Time);//adjust for time
+  // shift
+  double star2RADegress = 360 * star2RAHours / 24.0;
+
+  double star2Dec =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(-29, 29, 47.7);
+
+  TimePoint star2time = addSecondsToTime(star1Time, 180);
+  model.syncPositionRaDec(star2RAHours, star2Dec, star2time);
+  model.calculateCurrentPosition(star2time);
+
+  int timeShiftSeconds = 90;
+  TimePoint positionTime = addSecondsToTime(star2time, timeShiftSeconds);
+  EqCoord previousEqPosition;
+  for (size_t alt = 0; alt < 90; alt += 1) {
+    for (size_t azi = 0; azi < 360; azi += 1) {
+      model.setEncoderValues(alt * 100, azi * 100);
+      model.calculateCurrentPosition(positionTime);
+      double currentRa = model.getRACoord() * 15.0;
+      double currentDec = model.getDecCoord();
+      double distance = model.currentEqPosition.calculateDistanceInDegrees(
+          previousEqPosition);
+
+      if (distance > 2)
+        log("Alt: %d\tazi : %d\t\t\t\tRA: %lf\tDec: %lf\tDistance: %lf ", alt,
+            azi, currentRa, currentDec, distance);
+      previousEqPosition = model.currentEqPosition;
+      positionTime = addSecondsToTime(positionTime, timeShiftSeconds);
+    }
+  }
+}
+
 void test_telescope_model_mylocation() {
   log("======test_telescope_model_mylocation=====");
 
@@ -1107,7 +1181,7 @@ void test_telescope_model_mylocation() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1145,7 +1219,7 @@ void test_telescope_model_mylocation() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1236,7 +1310,7 @@ void test_telescope_model_mylocation_with_tilt() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1274,7 +1348,7 @@ void test_telescope_model_mylocation_with_tilt() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star1Time);
   //  timeMillis + 546000); // time passed in millis
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1378,7 +1452,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   //   log("Star time: %ld ", timeMillis);
 
   model.syncPositionRaDec(star1RAHours, star1Dec, star1Time);
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
 
   model.calculateCurrentPosition(star1Time);
 
@@ -1422,7 +1496,7 @@ void test_telescope_model_mylocation_with_time_deltas() {
   // 546000 milliseconds since first sync
   model.syncPositionRaDec(star2RAHours, star2Dec, star2Time);
   //  timeMillis + 546000); // time passed in millis
-//   model.addReferencePoint();
+  //   model.addReferencePoint();
   model.calculateCurrentPosition(star2Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, star2RAHours, model.getRACoord(),
@@ -1594,6 +1668,18 @@ void test_one_star_align_principle() {
                                    outEq.getRAInDegrees(), "outra");
 }
 
+void test_time_difference(void) {
+  TimePoint point1 = getNow();
+  //   std::this_thread::sleep_for(std::chrono::seconds(1)); // Delay for one
+  //   second
+
+  TimePoint point2 = addMillisToTime(point1, 1500);
+  double diff = differenceInSeconds(point1, point2);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, 1.5, diff, "time");
+  diff = differenceInSeconds(point2, point1);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, -1.5, diff, "time");
+}
+
 void setup() {
 
   // test_telescope_model();
@@ -1614,7 +1700,7 @@ void setup() {
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
   //====
   RUN_TEST(test_eq_to_horizontal);
-//   RUN_TEST(test_horizontal_to_eq);
+  //   RUN_TEST(test_horizontal_to_eq);
   RUN_TEST(test_eq_to_horizontal_vega);
 
   RUN_TEST(test_horizontal_to_eq_eq_constructor);
@@ -1626,13 +1712,14 @@ void setup() {
   RUN_TEST(test_one_star_align_principle);
   RUN_TEST(test_coords);
 
-    RUN_TEST(test_model_one_star_align);
-    RUN_TEST(test_eq_coord_distance);
+  RUN_TEST(test_model_one_star_align);
+  RUN_TEST(test_eq_coord_distance);
   RUN_TEST(test_addSynchPoint_trimLogic);
   RUN_TEST(test_addSingleSyncPoint);
   RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);
-
+  RUN_TEST(test_time_difference);
   //====
+  //   RUN_TEST(test_continuity);
 
   // RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
 
