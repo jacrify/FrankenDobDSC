@@ -24,6 +24,18 @@ WiFiClient client;
 
 volatile int lastEncodedAl = 0, lastEncodedAz = 0;
 volatile long encoderValueAl = 0, encoderValueAz = 0;
+
+volatile int lastDirectionAz = 0;
+volatile unsigned long lastChangeTimeAz = 0;
+
+volatile int lastDirectionAl = 0;
+volatile unsigned long lastChangeTimeAl = 0;
+
+volatile long alSkipCount=0;
+volatile long azSkipCount = 0;
+
+const unsigned long directionChangeThreshold = 50;
+
 void printFirmware() {
   client.print("Magig DSC ");
   client.print(firmwareVersion);
@@ -33,11 +45,9 @@ void printFirmware() {
   client.print(resolution_alt);
   client.print("\r");
 }
+
 void printResolution() {
 
-  // char response[20];
-  // snprintf(response, 20, "%u-%u", STEPS_AZ, STEPS_ALT);
-  // remoteClient.println(response);
 
   client.print(resolution_az);
   client.print("-");
@@ -47,26 +57,58 @@ void printResolution() {
 volatile long getEncoderAz() { return encoderValueAz;}
 volatile long getEncoderAl() { return encoderValueAl; }
 
+volatile long getEncoderSkipsAz() { return azSkipCount; }
+volatile long getEncoderSkipsAl() { return alSkipCount; }
+
 void EncoderAl() {
+  unsigned long currentTime = millis();
 
   int encodedAl = (digitalRead(enc_al_A) << 1) | digitalRead(enc_al_B);
   int sum = (lastEncodedAl << 2) | encodedAl;
 
-  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011)
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
+    if (lastDirectionAl == -1 &&
+        (currentTime - lastChangeTimeAl) > directionChangeThreshold) {
+      alSkipCount++;
+      lastChangeTimeAl = currentTime;
+    }
     encoderValueAl++;
-  if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000)
+    lastDirectionAl = 1;
+  } else if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
+    if (lastDirectionAl == 1 &&
+        (currentTime - lastChangeTimeAl) > directionChangeThreshold) {
+      Serial.println("Missed tick detected in EncoderAl (CCW)!");
+      lastChangeTimeAl = currentTime;
+    }
     encoderValueAl--;
+    lastDirectionAl = -1;
+  }
   lastEncodedAl = encodedAl;
 }
 
 void EncoderAz() {
+  unsigned long currentTime = millis();
+
   int encodedAz = (digitalRead(enc_az_A) << 1) | digitalRead(enc_az_B);
   int sum = (lastEncodedAz << 2) | encodedAz;
 
-  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011)
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
+    if (lastDirectionAz == -1 &&
+        (currentTime - lastChangeTimeAz) > directionChangeThreshold) {
+      azSkipCount++;
+      lastChangeTimeAz = currentTime;
+    }
     encoderValueAz++;
-  if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000)
+    lastDirectionAz = 1;
+  } else if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
+    if (lastDirectionAz == 1 &&
+        (currentTime - lastChangeTimeAz) > directionChangeThreshold) {
+      Serial.println("Missed tick detected in EncoderAz (CCW)!");
+      lastChangeTimeAz = currentTime;
+    }
     encoderValueAz--;
+    lastDirectionAz = -1;
+  }
   lastEncodedAz = encodedAz;
 }
 
