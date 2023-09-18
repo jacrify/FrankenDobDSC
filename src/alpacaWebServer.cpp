@@ -27,6 +27,7 @@ AsyncUDP eqUdp;
 #define IPBROADCASTPORT 50375
 
 double runtimeFromCenterSeconds;
+String eqPlatformIP;
 double timeToEnd;
 bool currentlyRunning;
 bool platformConnected;
@@ -139,6 +140,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
     "timeToEnd" : %.1lf,
+    "eqPlatformIP",: %s,
     "platformConnected" : %s
 })",
 
@@ -153,7 +155,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.lastSyncPoint.horizCoord.aziInDegrees,
 
           currentlyRunning ? "true" : "false", runtimeFromCenterSeconds / 60,
-          timeToEnd / 60, platformConnected ? "true" : "false");
+          eqPlatformIP, timeToEnd / 60, platformConnected ? "true" : "false");
 
   String json = buffer;
 
@@ -404,7 +406,7 @@ TimePoint calculateAdjustedTime() {
     interpolationTimeSeconds =
         differenceInSeconds(lastPositionReceivedTime, now);
   }
-  TimePoint adjustedTime = addSecondsToTime(now, runtimeFromCenterSeconds +
+  TimePoint adjustedTime = addSecondsToTime(now, runtimeFromCenterSeconds -
                                                      interpolationTimeSeconds);
 
   log("Returned adjusted time: %s", timePointToString(adjustedTime).c_str());
@@ -415,6 +417,7 @@ TimePoint calculateAdjustedTime() {
 // Triggered from ra or dec request. Should only run for one of them and
 // then cache for a few millis
 void updatePosition(TelescopeModel &model) {
+
   TimePoint timeAtMiddleOfRun = calculateAdjustedTime();
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.calculateCurrentPosition(timeAtMiddleOfRun);
@@ -533,6 +536,12 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           timeToEnd = doc["timeToEnd"];
           currentlyRunning = doc["isTracking"];
           lastPositionReceivedTime = getNow();
+
+          IPAddress remoteIp = packet.remoteIP();
+
+          // Convert the IP address to a string
+          eqPlatformIP = remoteIp.toString();
+
           log("Distance from center %lf, running %d", runtimeFromCenterSeconds,
               currentlyRunning);
         } else {
