@@ -99,7 +99,7 @@ void loadPreferences(Preferences &prefs, TelescopeModel &model) {
       prefs.getLong(PREF_ALT_STEPS_KEY, -30000));
 
   model.setAzEncoderStepsPerRevolution(
-      prefs.getLong(PREF_AZ_STEPS_KEY, 108229));
+      prefs.getLong(PREF_AZ_STEPS_KEY, 108531));
 }
 
 void clearAlignment(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -137,6 +137,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "lastSyncedDec" : %lf,
     "lastSyncedAlt" : %lf,
     "lastSyncedAz" : %lf,
+    "eqPlatformIP" : "%s",
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
     "timeToEnd" : %.1lf,
@@ -153,8 +154,10 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.lastSyncPoint.horizCoord.altInDegrees,
           model.lastSyncPoint.horizCoord.aziInDegrees,
 
-          currentlyRunning ? "true" : "false", runtimeFromCenterSeconds / 60,
-          timeToEnd / 60, platformConnected ? "true" : "false");
+          eqPlatformIP.c_str(),
+           currentlyRunning ? "true" : "false",
+          runtimeFromCenterSeconds / 60, timeToEnd / 60,
+          platformConnected ? "true" : "false");
 
   String json = buffer;
 
@@ -541,7 +544,6 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
           // Convert the IP address to a string
           eqPlatformIP = remoteIp.toString();
-
           log("Distance from center %lf, running %d", runtimeFromCenterSeconds,
               currentlyRunning);
         } else {

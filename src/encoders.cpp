@@ -44,8 +44,8 @@ void printResolution() {
   client.print(resolution_alt);
 }
 
-volatile long getEncoderAz() { return aziEncoder.getCount(); }
-volatile long getEncoderAl() { return altEncoder.getCount(); }
+volatile long getEncoderAz() { return -aziEncoder.getCount(); }
+volatile long getEncoderAl() { return -altEncoder.getCount(); }
 
 void setupEncoders() {
   delay(1000);
