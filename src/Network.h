@@ -4,5 +4,5 @@
 #include <Preferences.h>
 
 void setupWifi(Preferences &prefs);
-void loopNetwork(Preferences &prefs);
+
 #endif

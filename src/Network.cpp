@@ -4,30 +4,33 @@ WiFiManager wifiManager;
 #include <Preferences.h>
 // #include <WiFi.h>
 
-void loopNetwork(Preferences &prefs) {
-  if (digitalRead(0) == LOW) {
-    prefs.putBool("homeWifi", true);
+#define HOMEWIFISSID "HOMEWIFISSID"
+#define HOMEWIFIPASS "HOMEWIFIPASS"
 
-    delay(300);
-    esp_restart();
-  }
-}
 void setupWifi(Preferences &prefs) {
-  pinMode(0, INPUT); // boot button
-  // set up as hotspot by default.
-  // If boot button pressed, reboot and connect to home wifi
+  log("Scanning for networks...");
+  int n = WiFi.scanNetworks();
 
-  bool homeWifi = prefs.getBool("homeWifi", false);
-  log("Home wifi flag value: %d", homeWifi);
-  if (homeWifi) {
-    log("Connecting to home wifi");
-    prefs.putBool("homeWifi", false);
+  for (int i = 0; i < n; i++) {
+    if (WiFi.SSID(i) == "dontlookup") {
+      log("Connecting to 'dontlookup'...");
+      WiFi.begin("dontlookup", "dontlookdown");
+      return;
+    }
+  }
+  if (prefs.isKey(HOMEWIFISSID) && prefs.isKey(HOMEWIFIPASS)) {
+    log("Connnecting to home wifi...");
+    WiFi.begin(prefs.getString(HOMEWIFISSID), prefs.getString(HOMEWIFIPASS));
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(1000);
+      log("Waiting for connection...");
+    }
 
-    wifiManager.setConnectTimeout(10);
-    wifiManager.autoConnect();
+    // Once connected, log the IP address
+    IPAddress ip = WiFi.localIP();
+    log("Connected! IP address: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
   } else {
-    log("Connecting to access point");
-    WiFi.begin("dontlookup", "dontlookdown");
+    log("No wifi details in prefs");
   }
 }

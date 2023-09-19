@@ -111,7 +111,9 @@ void clearAlignment(AsyncWebServerRequest *request, TelescopeModel &model) {
 void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
                 TelescopeModel &model) {
 
-  prefs.clear();
+  prefs.remove(PREF_ALT_STEPS_KEY);
+  prefs.remove(PREF_AZ_STEPS_KEY);
+  
   loadPreferences(prefs, model);
   request->send(200);
 }

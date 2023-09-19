@@ -29,6 +29,6 @@ void setup() {
 }
 
 void loop() {
-  loopNetwork(prefs);
+
   loopEncoders();
 }
