@@ -125,7 +125,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
   } else {
     platformConnected = true;
   }
-  char buffer[1500];
+  char buffer[2000];
   sprintf(buffer,
           R"({
     
@@ -133,8 +133,6 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "calculateAzEncoderStepsPerRevolution" : %ld,
     "actualAltEncoderStepsPerRevolution" : %ld,
     "actualAzEncoderStepsPerRevolution" : %ld,
-    "encoderSkipsAl": %ld,
-    "encoderSkipsAz": %ld,
     "lastSyncedRa" : %lf,
     "lastSyncedDec" : %lf,
     "lastSyncedAlt" : %lf,
@@ -142,22 +140,21 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
     "timeToEnd" : %.1lf,
-    "eqPlatformIP",: %s,
+    
     "platformConnected" : %s
 })",
 
           model.calculateAltEncoderStepsPerRevolution(),
           model.calculateAzEncoderStepsPerRevolution(),
           model.getAltEncoderStepsPerRevolution(),
-          model.getAzEncoderStepsPerRevolution(), 
-          getEncoderSkipsAl(),
-          getEncoderSkipsAz(), model.lastSyncPoint.eqCoord.getRAInDegrees(),
+          model.getAzEncoderStepsPerRevolution(),
+          model.lastSyncPoint.eqCoord.getRAInDegrees(),
           model.lastSyncPoint.eqCoord.getDecInDegrees(),
           model.lastSyncPoint.horizCoord.altInDegrees,
           model.lastSyncPoint.horizCoord.aziInDegrees,
 
           currentlyRunning ? "true" : "false", runtimeFromCenterSeconds / 60,
-          eqPlatformIP, timeToEnd / 60, platformConnected ? "true" : "false");
+          timeToEnd / 60, platformConnected ? "true" : "false");
 
   String json = buffer;
 
@@ -481,6 +478,7 @@ void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
 void setupWebServer(TelescopeModel &model, Preferences &prefs) {
   loadPreferences(prefs, model);
 
+  eqPlatformIP = "";
   lastPositionCalculatedTime = 0;
   lastPositionReceivedTime = getNow();
   currentlyRunning = false;

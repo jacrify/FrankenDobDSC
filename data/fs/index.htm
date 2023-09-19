@@ -22,6 +22,7 @@
             <td>Actual Az Step per Revolution</td>
             <td><span id="actualAzEncoderStepsPerRevolution">0</span></td>
         </tr>
+
         <tr>
             <td>
 
@@ -40,8 +41,10 @@
 
     <table border="1">
         <tr>
+            <td id="platformConnected">
+                <a id="eqPlatformLink" href="#" style="text-decoration: none; color: inherit;">EQ Platform Connected</a>
+            </td>
 
-            <td id="platformConnected">EQ Platform Connected</td>
             <td id="platformTracking">EQ Platform Tracking</td>
         </tr>
         <tr>
@@ -102,6 +105,11 @@
                 $("#lastSyncedAlt").text(data.lastSyncedAlt);
                 $("#lastSyncedAz").text(data.lastSyncedAz);
                 $("#platformConnected").css("background-color", data.platformConnected ? "green" : "red");
+                if (data.platformConnected && data.eqPlatformIP) {
+                    $("#eqPlatformLink").attr("href", "http://" + data.eqPlatformIP).text("EQ Platform Connected");
+                } else {
+                    $("#eqPlatformLink").removeAttr("href").text("EQ Platform Not Connected");
+                }
                 $("#platformTracking").css("background-color", data.platformTracking ? "green" : "red");
             }).fail(function () {
                 console.error("Failed to get data.");
