@@ -23,7 +23,8 @@ unsigned long long lastPositionCalculatedTime;
 #define STALE_POSITION_TIME 200
 
 AsyncUDP alpacaUdp;
-AsyncUDP eqUdp;
+AsyncUDP eqUdpIn;
+AsyncUDP eqUDPOut;
 #define IPBROADCASTPORT 50375
 
 double runtimeFromCenterSeconds;
@@ -36,6 +37,27 @@ bool platformConnected;
 TimePoint lastPositionReceivedTime;
 
 AsyncWebServer alpacaWebServer(80);
+
+void sendEQCommand(String command, long parm) {
+  // Check if the device is connected to the WiFi
+  if (WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+  if (eqUDPOut.connect(
+          IPAddress(255, 255, 255, 255),
+          IPBROADCASTPORT)) { // Choose any available port, e.g., 12345
+    char response[400];
+
+    snprintf(response, sizeof(response),
+             "DSC:{ "
+             "\"command\": %s, "
+             "\"parameter\": %ld"
+             " }",
+             command, parm);
+    eqUDPOut.print(response);
+    log("Status Packet sent");
+  }
+}
 
 void handleNotFound(AsyncWebServerRequest *request) {
   log("Not found URL is %s", request->url().c_str());
@@ -113,7 +135,7 @@ void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
 
   prefs.remove(PREF_ALT_STEPS_KEY);
   prefs.remove(PREF_AZ_STEPS_KEY);
-  
+
   loadPreferences(prefs, model);
   request->send(200);
 }
@@ -156,8 +178,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.lastSyncPoint.horizCoord.altInDegrees,
           model.lastSyncPoint.horizCoord.aziInDegrees,
 
-          eqPlatformIP.c_str(),
-           currentlyRunning ? "true" : "false",
+          eqPlatformIP.c_str(), currentlyRunning ? "true" : "false",
           runtimeFromCenterSeconds / 60, timeToEnd / 60,
           platformConnected ? "true" : "false");
 
@@ -248,7 +269,8 @@ void returnSingleString(AsyncWebServerRequest *request, String s) {
              "ErrorNumber": 0,
              "ErrorMessage": "",
              "Value": "%s"
-      })", s);
+      })",
+           s);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -262,7 +284,8 @@ void returnSingleInteger(AsyncWebServerRequest *request, int value) {
              "ErrorNumber": 0,
              "ErrorMessage": "",
              "Value": %ld
-      })", value);
+      })",
+           value);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -277,7 +300,8 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
              "ErrorNumber": 0,
              "ErrorMessage": "",
              "Value": %lf
-      })", d);
+      })",
+           d);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -291,7 +315,8 @@ void returnSingleBool(AsyncWebServerRequest *request, bool b) {
              "ErrorNumber": 0,
              "ErrorMessage": "",
              "Value": %s
-      })", b ? "true" : "false");
+      })",
+           b ? "true" : "false");
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -331,6 +356,20 @@ void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
     log("Parsed lng value: %lf", parsedValue);
     model.setLongitude(parsedValue);
     log("Long set");
+  }
+  return returnNoError(request);
+}
+
+void setTracking(AsyncWebServerRequest *request) {
+  String trackingStr = request->arg("Tracking");
+  if (trackingStr != NULL) {
+    log("Received parameterName: %s", trackingStr.c_str());
+
+    int tracking = trackingStr == "True" ? 1 : 0;
+    log("Parsed tracking value: %d", tracking);
+    sendEQCommand("track", tracking);
+  } else {
+    log("No Tracking parm found");
   }
   return returnNoError(request);
 }
@@ -504,9 +543,9 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
   // Initialize UDP to listen for broadcasts.
 
-  if (eqUdp.listen(IPBROADCASTPORT)) {
+  if (eqUdpIn.listen(IPBROADCASTPORT)) {
     log("Listening for eq platform broadcasts");
-    eqUdp.onPacket([](AsyncUDPPacket packet) {
+    eqUdpIn.onPacket([](AsyncUDPPacket packet) {
       unsigned long now = millis();
       String msg = packet.readString();
       log("UDP Broadcast received: %s", msg.c_str());
@@ -571,16 +610,26 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           return returnSingleDouble(request, 0);
 
         if (subPath == "athome" || subPath == "atpark" ||
-            subPath == "canfindhome" || subPath == "canpark" ||
             subPath == "cansetdeclinationrate" || subPath == "cansetpark" ||
             subPath == "cansetpierside" || subPath == "canmoveaxis" ||
-            subPath == "cansetrightascensionrate" ||
-            subPath == "cansettracking" || subPath == "canslew" ||
+            subPath == "cansetrightascensionrate" || subPath == "canslew" ||
             subPath == "canslewaltaz" || subPath == "canslewasync" ||
             subPath == "canslewaltazasync" || subPath == "cansyncaltaz" ||
             subPath == "canunpark" || subPath == "doesrefraction" ||
             subPath == "sideofpier" || subPath == "slewing") {
           return returnSingleBool(request, false);
+        }
+
+        if (subPath == "cansettracking") {
+          return returnSingleBool(request, true);
+        }
+
+        if (subPath == "canpark") {
+          return returnSingleBool(request, true);
+        }
+
+        if (subPath == "canfindhome") {
+          return returnSingleBool(request, true);
         }
 
         // TODO implement
@@ -701,19 +750,24 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
                        if (subPath.startsWith("synctocoordinates"))
                          return syncToCoords(request, model);
-                       //  return returnNoError(request);
 
                        if (subPath.startsWith("sitelatitude"))
-                         //  return returnNoError(request);
                          return setSiteLatitude(request, model);
 
                        if (subPath.startsWith("sitelongitude"))
-                         //  return returnNoError(request);
                          return setSiteLongitude(request, model);
 
                        if (subPath.startsWith("utcdate"))
-                         // return returnNoError(request);
                          return setUTCDate(request, model);
+
+                       if (subPath.startsWith("tracking"))
+                         return setTracking(request);
+
+                       if (subPath.startsWith("park"))
+                         return sendEQCommand("park",0);
+
+                       if (subPath.startsWith("findhome"))
+                         return sendEQCommand("home",0);
 
                        // Add more routes here as needed
 
