@@ -278,7 +278,7 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
   snprintf(buffer, sizeof(buffer),
            R"({
              "ErrorNumber": %d,
-             "nrrorMessage": "%s",
+             "ErrorMessage": "%s",
              "Value": %lf
       })",
            0, "", d);
