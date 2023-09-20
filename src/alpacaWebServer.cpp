@@ -230,11 +230,10 @@ void returnEmptyArray(AsyncWebServerRequest *request) {
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
-             "ErrorNumber": %d,
-             "ErrorMessage": "%s",
+             "ErrorNumber": 0,
+             "ErrorMessage": "",
              "Value": []
-      })",
-           0, "");
+      })");
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -246,11 +245,10 @@ void returnSingleString(AsyncWebServerRequest *request, String s) {
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
-             "ErrorNumber": %d,
-             "ErrorMessage": "%s",
+             "ErrorNumber": 0,
+             "ErrorMessage": "",
              "Value": "%s"
-      })",
-           0, "", s);
+      })", s);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -261,11 +259,10 @@ void returnSingleInteger(AsyncWebServerRequest *request, int value) {
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
-             "ErrorNumber": %d,
-             "ErrorMessage": "%s",
+             "ErrorNumber": 0,
+             "ErrorMessage": "",
              "Value": %ld
-      })",
-           0, "", value);
+      })", value);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -277,11 +274,10 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
-             "ErrorNumber": %d,
-             "ErrorMessage": "%s",
+             "ErrorNumber": 0,
+             "ErrorMessage": "",
              "Value": %lf
-      })",
-           0, "", d);
+      })", d);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -292,11 +288,10 @@ void returnSingleBool(AsyncWebServerRequest *request, bool b) {
   char buffer[300];
   snprintf(buffer, sizeof(buffer),
            R"({
-             "ErrorNumber": %d,
-             "ErrorMessage": "%s",
+             "ErrorNumber": 0,
+             "ErrorMessage": "",
              "Value": %s
-      })",
-           0, "", b ? "true" : "false");
+      })", b ? "true" : "false");
 
   String json = buffer;
   request->send(200, "application/json", json);
