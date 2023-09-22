@@ -38,7 +38,7 @@ TimePoint lastPositionReceivedTime;
 
 AsyncWebServer alpacaWebServer(80);
 
-void sendEQCommand(String command, long parm) {
+void sendEQCommand(String command, double parm) {
   // Check if the device is connected to the WiFi
   if (WiFi.status() != WL_CONNECTED) {
     return;
@@ -51,7 +51,7 @@ void sendEQCommand(String command, long parm) {
     snprintf(response, sizeof(response),
              "DSC:{ "
              "\"command\": %s, "
-             "\"parameter\": %ld"
+             "\"parameter\": %.5lf"
              " }",
              command, parm);
     eqUDPOut.print(response);
@@ -230,6 +230,29 @@ void returnConfiguredDevices(AsyncWebServerRequest *request) {
   request->send(200, "application/json", json);
 }
 
+void returnAxisRates(AsyncWebServerRequest *request) {
+  log("Return Axis rates url is  %s", request->url().c_str());
+  // Client passed an "Axis" here.
+  // TODO check for bad axis
+  char buffer[300];
+  snprintf(buffer, sizeof(buffer),
+           R"({
+             "ClientTransactionID": 0,
+            "ServerTransactionID": 0,
+           "ErrorNumber": 0,
+             "ErrorMessage": "",
+             "Value": [
+               {
+               "Maximum": 1,
+                "Minimum": 0
+              }
+             ]
+      })");
+
+  String json = buffer;
+  request->send(200, "application/json", json);
+}
+
 void returnApiVersions(AsyncWebServerRequest *request) {
   log("returnApiVersions url is  %s", request->url().c_str());
 
@@ -359,7 +382,44 @@ void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   }
   return returnNoError(request);
 }
+void canMoveAxis(AsyncWebServerRequest *request) {
+  String axis = request->arg("Axis");
+  if (axis != NULL) {
+    if (axis == "0") {
+      log("CanMoveAxis0=true");
+      return returnSingleBool(request, true);
+    }
+  }
+  log("CanMoveAxis (other)=false");
+  return returnSingleBool(request, false);
+}
 
+void moveAxis(AsyncWebServerRequest *request) {
+  String rate = request->arg("Rate");
+  double parsedRate;
+  double parsedAxis;
+  if (rate != NULL) {
+    log("Received parameterName: %s", rate.c_str());
+    parsedRate = strtod(rate.c_str(), NULL);
+    log("Parsed rate value: %lf", parsedRate);
+  }
+  String axis = request->arg("Axis");
+  if (axis != NULL) {
+    log("Received parameterName: %s", axis.c_str());
+    parsedAxis = strtod(axis.c_str(), NULL);
+    log("Parsed rate value: %lf", parsedAxis);
+  }
+
+  if (axis != 0) {
+    log("Error: can only move on one axis");
+    // TODO make this return an error
+    return returnNoError(request);
+  }
+
+  sendEQCommand("moveaxis", parsedRate);
+
+  return returnNoError(request);
+}
 void setTracking(AsyncWebServerRequest *request) {
   String trackingStr = request->arg("Tracking");
   if (trackingStr != NULL) {
@@ -398,7 +458,8 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   TimePoint tp = createTimePoint(day, month, year, hour, minute, second);
   log("Setting system data to %s", timePointToString(tp).c_str());
   setSystemTime(tp);
-  // epochMillisBase = createTimePoint(day, month, year, hour, minute, second);
+  // epochMillisBase = createTimePoint(day, month, year, hour, minute,
+  // second);
 
   // log("Stored base epoch time in millis: %llu", epochMillisBase);
   // epochMillisBase = addMillisToTime(epochMillisBase,millis());// we'll add
@@ -611,7 +672,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
 
         if (subPath == "athome" || subPath == "atpark" ||
             subPath == "cansetdeclinationrate" || subPath == "cansetpark" ||
-            subPath == "cansetpierside" || subPath == "canmoveaxis" ||
+            subPath == "cansetpierside" ||
             subPath == "cansetrightascensionrate" || subPath == "canslew" ||
             subPath == "canslewaltaz" || subPath == "canslewasync" ||
             subPath == "canslewaltazasync" || subPath == "cansyncaltaz" ||
@@ -619,7 +680,12 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
             subPath == "sideofpier" || subPath == "slewing") {
           return returnSingleBool(request, false);
         }
-
+        if (subPath == "canmoveaxis") {
+          return canMoveAxis(request);
+        }
+        if (subPath == "axisrates") {
+          return returnAxisRates(request);
+        }
         if (subPath == "cansettracking") {
           return returnSingleBool(request, true);
         }
@@ -764,11 +830,13 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
                          return setTracking(request);
 
                        if (subPath.startsWith("park"))
-                         return sendEQCommand("park",0);
+                         return sendEQCommand("park", 0);
 
                        if (subPath.startsWith("findhome"))
-                         return sendEQCommand("home",0);
+                         return sendEQCommand("home", 0);
 
+                       if (subPath.startsWith("moveaxis"))
+                         return moveAxis(request);
                        // Add more routes here as needed
 
                        // If no match found, return a 404 or appropriate
