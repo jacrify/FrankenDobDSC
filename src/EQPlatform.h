@@ -10,10 +10,12 @@ public:
   void setupEQListener();
   void checkConnectionStatus();
   TimePoint calculateAdjustedTime();
-  bool checkStalePositionAndUpdate();
+  
 
   double runtimeFromCenterSeconds;
-  String eqPlatformIP;
+  double platformResetOffsetSeconds;
+
+      String eqPlatformIP;
   double timeToEnd;
   bool currentlyRunning;
   bool platformConnected;

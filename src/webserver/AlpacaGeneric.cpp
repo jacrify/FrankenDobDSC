@@ -1,11 +1,31 @@
 
 #include "AlpacaGeneric.h"
 #include "Logging.h"
+const int BUFFER_SIZE = 300;
+/**
+ * Hold generic alpaca return functions
+*/
+
+void returnSingleString(AsyncWebServerRequest *request, String s) {
+  log("Single string value url is %s, string is %s", request->url().c_str(), s);
+
+  char buffer[BUFFER_SIZE];
+  snprintf(buffer, sizeof(buffer),
+           R"({
+             "ErrorNumber": 0,
+             "ErrorMessage": "",
+             "Value": "%s"
+      })",
+           s);
+
+  String json = buffer;
+  request->send(200, "application/json", json);
+}
 
 void returnEmptyArray(AsyncWebServerRequest *request) {
   log("Empty array value url is %s", request->url().c_str());
 
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
              "ErrorNumber": 0,
@@ -33,7 +53,7 @@ void returnNoError(AsyncWebServerRequest *request) {
 void returnSingleDouble(AsyncWebServerRequest *request, double d) {
   // log("Single double value url is %s, double is %lf", request->url().c_str(),
   //     d);
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
              "ErrorNumber": 0,
@@ -48,7 +68,7 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
 
 void returnSingleBool(AsyncWebServerRequest *request, bool b) {
   // log("Single bool value url is %s, bool is %d", request->url().c_str(), b);
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
              "ErrorNumber": 0,
@@ -63,7 +83,7 @@ void returnSingleBool(AsyncWebServerRequest *request, bool b) {
 
 void returnSingleInteger(AsyncWebServerRequest *request, int value) {
   log("Single int value url is %s, int is %ld", request->url().c_str(), value);
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
              "ErrorNumber": 0,

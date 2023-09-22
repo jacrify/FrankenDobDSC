@@ -6,13 +6,11 @@
 #include <ArduinoJson.h>
 
 
-#define STALE_POSITION_TIME 200
+
 #define IPBROADCASTPERIOD 10000
 #define IPBROADCASTPORT 50375
 #define STALE_EQ_WARNING_THRESHOLD_SECONDS 10 // used to detect packet loss
 
-// used to track ra/dec requests, so we do for one but not both
-unsigned long long lastPositionCalculatedTime;
 TimePoint lastPositionReceivedTime;
 
 void EQPlatform::sendEQCommand(String command, double parm) {
@@ -60,10 +58,14 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
     }
 
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
+        doc.containsKey("platformResetOffset") &&
         doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
-        doc["timeToEnd"].is<double>()) {
+        doc["timeToEnd"].is<double>() &&
+        doc["platformResetOffset"].is<double>()) {
       runtimeFromCenterSeconds = doc["timeToCenter"];
-      timeToEnd = doc["timeToEnd"];
+      platformResetOffsetSeconds = doc["platformResetOffset"];
+       timeToEnd =
+          doc["timeToEnd"];
       currentlyRunning = doc["isTracking"];
       lastPositionReceivedTime = getNow();
 
@@ -71,8 +73,8 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
 
       // Convert the IP address to a string
       eqPlatformIP = remoteIp.toString();
-      log("Distance from center %lf, running %d", runtimeFromCenterSeconds,
-          currentlyRunning);
+      log("Distance from center %lf, platformResetOffsetSeconds %lf,running %d",
+          runtimeFromCenterSeconds, platformResetOffsetSeconds,currentlyRunning);
     } else {
       log("Payload missing required fields.");
       return;
@@ -108,9 +110,28 @@ void EQPlatform::checkConnectionStatus() {
  * Returns an time (epoch in millis) to be used for model calculations.
  * This is obstensibly the time that the platform is
  * as the middle of the run, it can be in the past or in the future.
- * Checks to see if a packet arrived from eq platform recently
- *  If not mark platform as not connected.
  *
+ * The platform emits runtimeFromCenterSeconds, which is how many
+ * seconds the platform will take to reach the center (refernece)
+ * point. When the platform is running, this number is reducing
+ * at the same rate time is moving forward, so the reference time
+ * point stays the same, so the scope keeps pointing at the same ra
+ * if alt/a do not change.
+ *
+ * When the platform stops, this number stays static but time moves
+ * on, so ra changes over time.
+ *
+ * As the platform emits position periodically, we interpolate values for
+ * runtimeFromCenterSeconds here to try to get sub second accuracy. 
+ * (If we don't do this, we see drift that resets pericodically as
+ * platform pulses an update.)
+ * If we ever add other tracking rates, this may be wrong, but the 
+ * error should be marginal.
+ * 
+ * When the platform is rewound (or fast forwarded), this introduces
+ * yet another time (ra) offset emitted by the platform:
+ * platformResetOffsetSeconds. This is also added to the current
+ * time to calculate the reference time point.
  */
 TimePoint EQPlatform::calculateAdjustedTime() {
   TimePoint now = getNow();
@@ -132,25 +153,23 @@ TimePoint EQPlatform::calculateAdjustedTime() {
     interpolationTimeSeconds =
         differenceInSeconds(lastPositionReceivedTime, now);
   }
-  TimePoint adjustedTime = addSecondsToTime(now, runtimeFromCenterSeconds -
-                                                     interpolationTimeSeconds);
+  TimePoint adjustedTime = addSecondsToTime(
+      now, runtimeFromCenterSeconds - interpolationTimeSeconds +
+               platformResetOffsetSeconds);
 
   log("Returned adjusted time: %s", timePointToString(adjustedTime).c_str());
   return adjustedTime;
 }
+/**
+ * Checked before calc
+*/
 
-bool EQPlatform::checkStalePositionAndUpdate() {
-  unsigned long now = millis();
-  if ((now - lastPositionCalculatedTime) > STALE_POSITION_TIME) {
-    lastPositionCalculatedTime = now;
-    return true;
-  }
-  return false;
-}
 EQPlatform::EQPlatform() {
   eqPlatformIP = "";
-  lastPositionCalculatedTime = 0;
+  
   lastPositionReceivedTime = getNow();
   currentlyRunning = false;
   platformConnected = false;
+  platformResetOffsetSeconds=0;
+  runtimeFromCenterSeconds=0;
 }

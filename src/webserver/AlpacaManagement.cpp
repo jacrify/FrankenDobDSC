@@ -2,10 +2,12 @@
 #include "Logging.h"
 #include "AlpacaGeneric.h"
 
+const int BUFFER_SIZE = 300;
+
 void returnDeviceDescription(AsyncWebServerRequest *request) {
   log("returnDeviceDescription url is  %s", request->url().c_str());
 
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
          "Value": {
@@ -25,7 +27,7 @@ void returnDeviceDescription(AsyncWebServerRequest *request) {
 void returnConfiguredDevices(AsyncWebServerRequest *request) {
   log("returnConfiguredDevices url is  %s", request->url().c_str());
 
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
             "Value": [ {
@@ -45,7 +47,7 @@ void returnConfiguredDevices(AsyncWebServerRequest *request) {
 void returnApiVersions(AsyncWebServerRequest *request) {
   log("returnApiVersions url is  %s", request->url().c_str());
 
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
          "Value": [1],

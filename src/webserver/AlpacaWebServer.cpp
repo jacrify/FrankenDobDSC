@@ -15,16 +15,35 @@
 #include "WebUI.h"
 
 #define WEBSERVER_PORT 80
+const int BUFFER_SIZE = 300;
+#define STALE_POSITION_TIME 200
+// used to track ra/dec requests, so we do for one but not both
+unsigned long long lastPositionCalculatedTime;
 
 // used to store last time position was received from EQ
 
 AsyncWebServer alpacaWebServer(WEBSERVER_PORT);
+/**
+ * Checks when last position was calculated. Assume position will be calced after this is called.
+*/
+bool checkStalePositionAndUpdate() {
+  unsigned long now = millis();
+  if ((now - lastPositionCalculatedTime) > STALE_POSITION_TIME) {
+    lastPositionCalculatedTime = now;
+    return true;
+  }
+  return false;
+}
 
+/**
+ * Returns the rates of the various axis.
+ * We only have one axis.
+*/
 void returnAxisRates(AsyncWebServerRequest *request) {
   log("Return Axis rates url is  %s", request->url().c_str());
   // Client passed an "Axis" here.
   // TODO check for bad axis
-  char buffer[300];
+  char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
              "ClientTransactionID": 0,
@@ -43,22 +62,7 @@ void returnAxisRates(AsyncWebServerRequest *request) {
   request->send(200, "application/json", json);
 }
 
-void returnSingleString(AsyncWebServerRequest *request, String s) {
-  log("Single string value url is %s, string is %s", request->url().c_str(), s);
-
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-             "ErrorNumber": 0,
-             "ErrorMessage": "",
-             "Value": "%s"
-      })",
-           s);
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
-
+/** Parse and set longitude passed as a double*/
 void setSiteLatitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   String lat = request->arg("SiteLatitude");
   if (lat != NULL) {
@@ -70,7 +74,7 @@ void setSiteLatitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   }
   return returnNoError(request);
 }
-
+/** Parse and set latitude passed as a double*/
 void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   String lng = request->arg("SiteLongitude");
   if (lng != NULL) {
@@ -83,6 +87,9 @@ void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   }
   return returnNoError(request);
 }
+/** Alpaca queries axis by axis to see if the can move
+ * Ugly implemention to say just one axis moves.
+*/
 void canMoveAxis(AsyncWebServerRequest *request) {
   String axis = request->arg("Axis");
   if (axis != NULL) {
@@ -94,8 +101,8 @@ void canMoveAxis(AsyncWebServerRequest *request) {
   log("CanMoveAxis (other)=false");
   return returnSingleBool(request, false);
 }
-
-void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
+/** Parse movement rate (degrees sec) and ask plaform to move*/
+void omoveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
   String rate = request->arg("Rate");
   double parsedRate;
   double parsedAxis;
@@ -121,6 +128,10 @@ void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
 
   return returnNoError(request);
 }
+/**
+ *  Turn tracking on and off
+ * 
+*/
 void setTracking(AsyncWebServerRequest *request, EQPlatform &platform) {
   String trackingStr = request->arg("Tracking");
   if (trackingStr != NULL) {
@@ -181,7 +192,10 @@ void updatePosition(TelescopeModel &model, EQPlatform &platform) {
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.calculateCurrentPosition(timeAtMiddleOfRun);
 }
-
+/**
+ * Take ra dec passed by client, and set current ra/dec to this.
+ * Lots of fancy logic inside model for this one.
+*/
 void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
                   EQPlatform &platform) {
   String ra = request->arg("RightAscension");
@@ -216,27 +230,34 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
 
   returnNoError(request);
 }
+/**
+ * The whole point. Return ra/dec back to client
+ */
 void getRA(AsyncWebServerRequest *request, TelescopeModel &model,
            EQPlatform &platform) {
-  if (platform.checkStalePositionAndUpdate()) {
+  if (checkStalePositionAndUpdate()) {
     updatePosition(model, platform);
   }
 
   returnSingleDouble(request, model.getRACoord());
 }
 
+/**
+ * The whole point. Return ra/dec back to client
+*/
 void getDec(AsyncWebServerRequest *request, TelescopeModel &model,
             EQPlatform &platform) {
-  if (platform.checkStalePositionAndUpdate()) {
+  if (checkStalePositionAndUpdate()) {
     updatePosition(model, platform);
   }
 
   returnSingleDouble(request, model.getDecCoord());
 }
-
+/**
+ * Map all the paths.
+ */
 void setupWebServer(TelescopeModel &model, Preferences &prefs,
                     EQPlatform &platform) {
-  
 
   // GETS. Mostly default flags.
   alpacaWebServer.on(
@@ -414,12 +435,11 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
   setupAlpacaManagment(alpacaWebServer);
   setupWebUI(alpacaWebServer, model, platform, prefs);
 
-  
-
   alpacaWebServer.onNotFound(
       [](AsyncWebServerRequest *request) { handleNotFound(request); });
 
   alpacaWebServer.begin();
+  lastPositionCalculatedTime = 0;
   setupAlpacaDiscovery(WEBSERVER_PORT);
   log("Server started");
   return;
