@@ -1,6 +1,6 @@
 #include "CoordConv.hpp"
 #include "Logging.h"
-#include "telescopeModel.h"
+#include "TelescopeModel.h"
 #include <Ephemeris.h>
 
 #include "TimePoint.h"

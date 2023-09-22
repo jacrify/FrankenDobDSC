@@ -1,6 +1,6 @@
 #ifndef MYWEBSERVER_H
 #define MYWEBSERVER_H
-#include "telescopeModel.h"
+#include "TelescopeModel.h"
 #include <ESPAsyncWebServer.h>
 #include <Preferences.h>
 #include "EQPlatform.h"

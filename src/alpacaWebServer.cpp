@@ -3,7 +3,7 @@
 #include "AsyncUDP.h"
 #include "Logging.h"
 #include "TimePoint.h"
-#include "encoders.h"
+#include "Encoders.h"
 #include <ArduinoJson.h> // Include the library
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>

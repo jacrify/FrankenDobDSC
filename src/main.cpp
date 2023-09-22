@@ -1,9 +1,9 @@
 #include "EQPlatform.h"
 #include "Logging.h"
 #include "Network.h"
-#include "alpacaWebServer.h"
-#include "encoders.h"
-#include "telescopeModel.h"
+#include "AlpacaWebServer.h"
+#include "Encoders.h"
+#include "TelescopeModel.h"
 #include <Arduino.h>
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -26,7 +26,7 @@ void setup() {
 
   setupEncoders();
   platform.setupEQListener();
-  setupWebServer(model, prefs,platform);
+  setupWebServer(model, prefs, platform);
   delay(500);
 }
 
