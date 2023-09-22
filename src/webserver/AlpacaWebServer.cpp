@@ -1,191 +1,24 @@
-#include "alpacaWebServer.h"
+#include "AlpacaWebServer.h"
 #include "AlpacaDiscovery.h"
 #include "AsyncUDP.h"
+#include "Encoders.h"
 #include "Logging.h"
 #include "TimePoint.h"
-#include "Encoders.h"
 #include <ArduinoJson.h> // Include the library
 #include <ESPAsyncWebServer.h>
-#include <LittleFS.h>
+
 #include <WebSocketsClient.h>
 #include <time.h>
 
-#define PREF_ALT_STEPS_KEY "AltStepsKey"
-#define PREF_AZ_STEPS_KEY "AzStepsKey"
+#include "AlpacaGeneric.h"
+#include "AlpacaManagement.h"
+#include "WebUI.h"
 
 #define WEBSERVER_PORT 80
 
 // used to store last time position was received from EQ
 
 AsyncWebServer alpacaWebServer(WEBSERVER_PORT);
-
-void handleNotFound(AsyncWebServerRequest *request) {
-  log("Not found URL is %s", request->url().c_str());
-  String method;
-
-  switch (request->method()) {
-  case HTTP_GET:
-    method = "GET";
-    break;
-  case HTTP_POST:
-    method = "POST";
-    break;
-  case HTTP_DELETE:
-    method = "DELETE";
-    break;
-  case HTTP_PUT:
-    method = "PUT";
-    break;
-  case HTTP_PATCH:
-    method = "PATCH";
-    break;
-  case HTTP_HEAD:
-    method = "HEAD";
-    break;
-  case HTTP_OPTIONS:
-    method = "OPTIONS";
-    break;
-  default:
-    method = "UNKNOWN";
-    break;
-  }
-
-  log("Not found Method is %s", method.c_str());
-
-  request->send(404, "application/json");
-}
-void saveAltEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
-                         Preferences &prefs) {
-
-  long alt = model.calculateAltEncoderStepsPerRevolution();
-  log("Setting new value for encoder alt steps  to %ld", alt);
-  model.setAltEncoderStepsPerRevolution(alt);
-
-  prefs.putLong(PREF_ALT_STEPS_KEY, alt);
-  request->send(200);
-}
-
-void saveAzEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
-                        Preferences &prefs) {
-
-  long az = model.calculateAzEncoderStepsPerRevolution();
-  log("Setting new value for encoder az steps to %ld", az);
-  model.setAzEncoderStepsPerRevolution(az);
-
-  prefs.putLong(PREF_AZ_STEPS_KEY, az);
-  request->send(200);
-}
-
-void loadPreferences(Preferences &prefs, TelescopeModel &model) {
-  model.setAltEncoderStepsPerRevolution(
-      prefs.getLong(PREF_ALT_STEPS_KEY, -30000));
-
-  model.setAzEncoderStepsPerRevolution(
-      prefs.getLong(PREF_AZ_STEPS_KEY, 108531));
-}
-
-void clearAlignment(AsyncWebServerRequest *request, TelescopeModel &model) {
-  log("Clearing alignment");
-  model.clearAlignment();
-  request->send(200);
-}
-// safety: clears encoder steps
-void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
-                TelescopeModel &model) {
-
-  prefs.remove(PREF_ALT_STEPS_KEY);
-  prefs.remove(PREF_AZ_STEPS_KEY);
-
-  loadPreferences(prefs, model);
-  request->send(200);
-}
-void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
-                    EQPlatform &platform) {
-  // log("/getStatus");
-
-  platform.checkConnectionStatus();
-
-  char buffer[2000];
-  sprintf(buffer,
-          R"({
-    
-    "calculateAltEncoderStepsPerRevolution" : %ld,
-    "calculateAzEncoderStepsPerRevolution" : %ld,
-    "actualAltEncoderStepsPerRevolution" : %ld,
-    "actualAzEncoderStepsPerRevolution" : %ld,
-    "lastSyncedRa" : %lf,
-    "lastSyncedDec" : %lf,
-    "lastSyncedAlt" : %lf,
-    "lastSyncedAz" : %lf,
-    "eqPlatformIP" : "%s",
-    "platformTracking" : %s,
-    "timeToMiddle" : %.1lf,
-    "timeToEnd" : %.1lf,
-    
-    "platformConnected" : %s
-})",
-
-          model.calculateAltEncoderStepsPerRevolution(),
-          model.calculateAzEncoderStepsPerRevolution(),
-          model.getAltEncoderStepsPerRevolution(),
-          model.getAzEncoderStepsPerRevolution(),
-          model.lastSyncPoint.eqCoord.getRAInDegrees(),
-          model.lastSyncPoint.eqCoord.getDecInDegrees(),
-          model.lastSyncPoint.horizCoord.altInDegrees,
-          model.lastSyncPoint.horizCoord.aziInDegrees,
-
-          platform.eqPlatformIP.c_str(),
-          platform.currentlyRunning ? "true" : "false",
-          platform.runtimeFromCenterSeconds / 60, platform.timeToEnd / 60,
-          platform.platformConnected ? "true" : "false");
-
-  String json = buffer;
-
-  // String json = "{\"timestamp\":" + String(times.get()) + ",\"position\":"
-  // + String(positions.get()) + ",\"velocity\":" + String(velocities.get()) +
-  // "}";
-  request->send(200, "application/json", json);
-}
-
-void returnDeviceDescription(AsyncWebServerRequest *request) {
-  log("returnDeviceDescription url is  %s", request->url().c_str());
-
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-         "Value": {
-          "ServerName": "myserver",
-          "Manufacturer": "me",
-          "ManufacturerVersion": "1",
-          "Location": "here"
-          },
-        "ClientTransactionID": 0,
-         "ServerTransactionID": 0
-        })");
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
-
-void returnConfiguredDevices(AsyncWebServerRequest *request) {
-  log("returnConfiguredDevices url is  %s", request->url().c_str());
-
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-            "Value": [ {
-          "DeviceName": "Frankendob",
-          "DeviceType": "Telescope",
-         "DeviceNumber": 0,
-          "UniqueID": "booboo"
-          }],
-        "ClientTransactionID": 0,
-         "ServerTransactionID": 0
-        })");
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
 
 void returnAxisRates(AsyncWebServerRequest *request) {
   log("Return Axis rates url is  %s", request->url().c_str());
@@ -210,36 +43,6 @@ void returnAxisRates(AsyncWebServerRequest *request) {
   request->send(200, "application/json", json);
 }
 
-void returnApiVersions(AsyncWebServerRequest *request) {
-  log("returnApiVersions url is  %s", request->url().c_str());
-
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-         "Value": [1],
-        "ClientTransactionID": 0,
-         "ServerTransactionID": 0
-        })");
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
-
-void returnEmptyArray(AsyncWebServerRequest *request) {
-  log("Empty array value url is %s", request->url().c_str());
-
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-             "ErrorNumber": 0,
-             "ErrorMessage": "",
-             "Value": []
-      })");
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
-
 void returnSingleString(AsyncWebServerRequest *request, String s) {
   log("Single string value url is %s, string is %s", request->url().c_str(), s);
 
@@ -253,65 +56,6 @@ void returnSingleString(AsyncWebServerRequest *request, String s) {
            s);
 
   String json = buffer;
-  request->send(200, "application/json", json);
-}
-
-void returnSingleInteger(AsyncWebServerRequest *request, int value) {
-  log("Single int value url is %s, int is %ld", request->url().c_str(), value);
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-             "ErrorNumber": 0,
-             "ErrorMessage": "",
-             "Value": %ld
-      })",
-           value);
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
-
-void returnSingleDouble(AsyncWebServerRequest *request, double d) {
-  // log("Single double value url is %s, double is %lf", request->url().c_str(),
-  //     d);
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-             "ErrorNumber": 0,
-             "ErrorMessage": "",
-             "Value": %lf
-      })",
-           d);
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
-
-void returnSingleBool(AsyncWebServerRequest *request, bool b) {
-  // log("Single bool value url is %s, bool is %d", request->url().c_str(), b);
-  char buffer[300];
-  snprintf(buffer, sizeof(buffer),
-           R"({
-             "ErrorNumber": 0,
-             "ErrorMessage": "",
-             "Value": %s
-      })",
-           b ? "true" : "false");
-
-  String json = buffer;
-  request->send(200, "application/json", json);
-}
-
-void returnNoError(AsyncWebServerRequest *request) {
-
-  // log("Returning no error for url %s ", request->url().c_str());
-
-  static const char *json = R"({
-           "ClientTransactionID": 0,
-           "ServerTransactionID": 0,
-           "ErrorNumber": 0,
-           "ErrorMessage": ""
-          })";
   request->send(200, "application/json", json);
 }
 
@@ -492,12 +236,12 @@ void getDec(AsyncWebServerRequest *request, TelescopeModel &model,
 
 void setupWebServer(TelescopeModel &model, Preferences &prefs,
                     EQPlatform &platform) {
-  loadPreferences(prefs, model);
+  
 
   // GETS. Mostly default flags.
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_GET,
-      [&model,&platform](AsyncWebServerRequest *request) {
+      [&model, &platform](AsyncWebServerRequest *request) {
         String url = request->url();
         // log("Processing GET on url %s", url.c_str());
 
@@ -613,30 +357,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
           return returnSingleDouble(request, 0);
 
         if (subPath == "declination")
-          return getDec(request, model,platform);
+          return getDec(request, model, platform);
 
         if (subPath == "rightascension")
-          return getRA(request, model,platform);
-
-        return handleNotFound(request);
-      });
-
-  // Mangement API ================
-  alpacaWebServer.on(
-      "^\\/management\\/.*$", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String url = request->url().c_str();
-        log("Processing GET on management url %s", url.c_str());
-        // Strip off the initial portion of the URL
-        String subPath = url.substring(String("/management/").length());
-
-        if (subPath == "apiversions")
-          return returnApiVersions(request);
-
-        if (subPath == "v1/configureddevices")
-          return returnConfiguredDevices(request);
-
-        if (subPath == "v1/description")
-          return returnDeviceDescription(request);
+          return getRA(request, model, platform);
 
         return handleNotFound(request);
       });
@@ -645,7 +369,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
   //  PUTS implementation
 
   alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_PUT,
-                     [&model,&platform](AsyncWebServerRequest *request) {
+                     [&model, &platform](AsyncWebServerRequest *request) {
                        String url = request->url();
                        log("Processing PUT on url %s", url.c_str());
                        // Strip off the initial portion of the URL
@@ -656,7 +380,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
                          return returnNoError(request);
 
                        if (subPath.startsWith("synctocoordinates"))
-                         return syncToCoords(request, model,platform);
+                         return syncToCoords(request, model, platform);
 
                        if (subPath.startsWith("sitelatitude"))
                          return setSiteLatitude(request, model);
@@ -677,7 +401,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
                          return platform.sendEQCommand("home", 0);
 
                        if (subPath.startsWith("moveaxis"))
-                         return moveAxis(request,platform);
+                         return moveAxis(request, platform);
                        // Add more routes here as needed
 
                        // If no match found, return a 404 or appropriate
@@ -687,31 +411,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
 
   // ===============================
 
-  alpacaWebServer.on("/getScopeStatus", HTTP_GET,
-                     [&model,&platform](AsyncWebServerRequest *request) {
-                       getScopeStatus(request, model,platform);
-                     });
+  setupAlpacaManagment(alpacaWebServer);
+  setupWebUI(alpacaWebServer, model, platform, prefs);
 
-  alpacaWebServer.on("/saveAltEncoderSteps", HTTP_POST,
-                     [&model, &prefs](AsyncWebServerRequest *request) {
-                       saveAltEncoderSteps(request, model, prefs);
-                     });
-
-  alpacaWebServer.on("/saveAzEncoderSteps", HTTP_POST,
-                     [&model, &prefs](AsyncWebServerRequest *request) {
-                       saveAzEncoderSteps(request, model, prefs);
-                     });
-
-  alpacaWebServer.on("/clearAlignment", HTTP_POST,
-                     [&model, &prefs](AsyncWebServerRequest *request) {
-                       clearAlignment(request, model);
-                     });
-
-  alpacaWebServer.on("/clearPrefs", HTTP_POST,
-                     [&model, &prefs](AsyncWebServerRequest *request) {
-                       clearPrefs(request, prefs, model);
-                     });
-  alpacaWebServer.serveStatic("/", LittleFS, "/fs/");
+  
 
   alpacaWebServer.onNotFound(
       [](AsyncWebServerRequest *request) { handleNotFound(request); });

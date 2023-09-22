@@ -1,5 +1,5 @@
-#ifndef UDPLISTENER
-#define UDPLISTENER
+#ifndef ALPACADISCOVERY
+#define ALPACADISCOVERY
 
 void setupAlpacaDiscovery(int alpacaHTTPPort);
 #endif

@@ -1,7 +1,7 @@
 #include "EQPlatform.h"
 #include "Logging.h"
 #include "Network.h"
-#include "AlpacaWebServer.h"
+#include "webserver/AlpacaWebServer.h"
 #include "Encoders.h"
 #include "TelescopeModel.h"
 #include <Arduino.h>
