@@ -1,4 +1,5 @@
 #include "alpacaWebServer.h"
+#include "AlpacaDiscovery.h"
 #include "AsyncUDP.h"
 #include "Logging.h"
 #include "TimePoint.h"
@@ -12,52 +13,11 @@
 #define PREF_ALT_STEPS_KEY "AltStepsKey"
 #define PREF_AZ_STEPS_KEY "AzStepsKey"
 
-// TimePoint epochMillisBase;
+#define WEBSERVER_PORT 80
 
-unsigned const int localPort = 32227; // The Alpaca Discovery test port
-unsigned const int alpacaPort =
-    80; // The  port that the Alpaca API would be available on
-
-// used to track ra/dec requests, so we do for one but not both
-unsigned long long lastPositionCalculatedTime;
-#define STALE_POSITION_TIME 200
-
-AsyncUDP alpacaUdp;
-AsyncUDP eqUdpIn;
-AsyncUDP eqUDPOut;
-#define IPBROADCASTPORT 50375
-
-double runtimeFromCenterSeconds;
-String eqPlatformIP;
-double timeToEnd;
-bool currentlyRunning;
-bool platformConnected;
 // used to store last time position was received from EQ
-#define STALE_EQ_WARNING_THRESHOLD_SECONDS 10 // used to detect packet loss
-TimePoint lastPositionReceivedTime;
 
-AsyncWebServer alpacaWebServer(80);
-
-void sendEQCommand(String command, double parm) {
-  // Check if the device is connected to the WiFi
-  if (WiFi.status() != WL_CONNECTED) {
-    return;
-  }
-  if (eqUDPOut.connect(
-          IPAddress(255, 255, 255, 255),
-          IPBROADCASTPORT)) { // Choose any available port, e.g., 12345
-    char response[400];
-
-    snprintf(response, sizeof(response),
-             "DSC:{ "
-             "\"command\": %s, "
-             "\"parameter\": %.5lf"
-             " }",
-             command, parm);
-    eqUDPOut.print(response);
-    log("Status Packet sent");
-  }
-}
+AsyncWebServer alpacaWebServer(WEBSERVER_PORT);
 
 void handleNotFound(AsyncWebServerRequest *request) {
   log("Not found URL is %s", request->url().c_str());
@@ -139,16 +99,12 @@ void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
   loadPreferences(prefs, model);
   request->send(200);
 }
-void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
+void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
+                    EQPlatform &platform) {
   // log("/getStatus");
 
-  TimePoint now = getNow();
-  if (differenceInSeconds(lastPositionReceivedTime, now) >
-      STALE_EQ_WARNING_THRESHOLD_SECONDS) {
-    platformConnected = false;
-  } else {
-    platformConnected = true;
-  }
+  platform.checkConnectionStatus();
+
   char buffer[2000];
   sprintf(buffer,
           R"({
@@ -178,9 +134,10 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model) {
           model.lastSyncPoint.horizCoord.altInDegrees,
           model.lastSyncPoint.horizCoord.aziInDegrees,
 
-          eqPlatformIP.c_str(), currentlyRunning ? "true" : "false",
-          runtimeFromCenterSeconds / 60, timeToEnd / 60,
-          platformConnected ? "true" : "false");
+          platform.eqPlatformIP.c_str(),
+          platform.currentlyRunning ? "true" : "false",
+          platform.runtimeFromCenterSeconds / 60, platform.timeToEnd / 60,
+          platform.platformConnected ? "true" : "false");
 
   String json = buffer;
 
@@ -394,7 +351,7 @@ void canMoveAxis(AsyncWebServerRequest *request) {
   return returnSingleBool(request, false);
 }
 
-void moveAxis(AsyncWebServerRequest *request) {
+void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
   String rate = request->arg("Rate");
   double parsedRate;
   double parsedAxis;
@@ -416,18 +373,18 @@ void moveAxis(AsyncWebServerRequest *request) {
     return returnNoError(request);
   }
 
-  sendEQCommand("moveaxis", parsedRate);
+  platform.sendEQCommand("moveaxis", parsedRate);
 
   return returnNoError(request);
 }
-void setTracking(AsyncWebServerRequest *request) {
+void setTracking(AsyncWebServerRequest *request, EQPlatform &platform) {
   String trackingStr = request->arg("Tracking");
   if (trackingStr != NULL) {
     log("Received parameterName: %s", trackingStr.c_str());
 
     int tracking = trackingStr == "True" ? 1 : 0;
     log("Parsed tracking value: %d", tracking);
-    sendEQCommand("track", tracking);
+    platform.sendEQCommand("track", tracking);
   } else {
     log("No Tracking parm found");
   }
@@ -471,58 +428,18 @@ void setUTCDate(AsyncWebServerRequest *request, TelescopeModel &model) {
   log("finished utc");
 }
 
-/**
- * Returns an time (epoch in millis) to be used for model calculations.
- * This is obstensibly the time that the platform is
- * as the middle of the run, it can be in the past or in the future.
- * Checks to see if a packet arrived from eq platform recently
- *  If not mark platform as not connected.
- *
- */
-TimePoint calculateAdjustedTime() {
-  TimePoint now = getNow();
-  log("Calculating  adjusted time from (now): %s",
-      timePointToString(now).c_str());
-  // unsigned long now = millis();
-  // log("Now millis since start: %ld", now);
-  if (differenceInSeconds(lastPositionReceivedTime, now) >
-      STALE_EQ_WARNING_THRESHOLD_SECONDS) {
-    log("No EQ platform, or packet loss: last packet recieved  "
-        "at %s",
-        timePointToString(lastPositionReceivedTime).c_str());
-    platformConnected = false;
-  } else {
-    platformConnected = true;
-  }
-  // if platform is running, then it has moved on since packet
-  // recieved. The time since the packet received needs to be added to
-  // the timeToCenter.
-  // eg if time to center is 100s, and packet was received a second ago,
-  // time to center should be considered as 99s.
-  double interpolationTimeSeconds = 0;
-  if (currentlyRunning) {
-    // log("setting interpolation time");
-    interpolationTimeSeconds =
-        differenceInSeconds(lastPositionReceivedTime, now);
-  }
-  TimePoint adjustedTime = addSecondsToTime(now, runtimeFromCenterSeconds -
-                                                     interpolationTimeSeconds);
-
-  log("Returned adjusted time: %s", timePointToString(adjustedTime).c_str());
-  return adjustedTime;
-}
-
 // Calculate position.
 // Triggered from ra or dec request. Should only run for one of them and
 // then cache for a few millis
-void updatePosition(TelescopeModel &model) {
+void updatePosition(TelescopeModel &model, EQPlatform &platform) {
 
-  TimePoint timeAtMiddleOfRun = calculateAdjustedTime();
+  TimePoint timeAtMiddleOfRun = platform.calculateAdjustedTime();
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.calculateCurrentPosition(timeAtMiddleOfRun);
 }
 
-void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
+void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
+                  EQPlatform &platform) {
   String ra = request->arg("RightAscension");
   double parsedRAHours;
   double parsedDecDegrees;
@@ -545,118 +462,42 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model) {
     log("Could not parse dec arg!");
   }
 
-  TimePoint timeAtMiddleOfRun = calculateAdjustedTime();
+  TimePoint timeAtMiddleOfRun = platform.calculateAdjustedTime();
   log("Encoder values: %ld,%ld", getEncoderAl(), getEncoderAz());
   // log("Timestamp for middle of run: %llu", timeAtMiddleOfRunSeconds);
   model.setEncoderValues(getEncoderAl(), getEncoderAz());
   model.syncPositionRaDec(parsedRAHours, parsedDecDegrees, timeAtMiddleOfRun);
-  updatePosition(model);
+  updatePosition(model, platform);
   // model.saveEncoderCalibrationPoint();
 
   returnNoError(request);
 }
-void getRA(AsyncWebServerRequest *request, TelescopeModel &model) {
-  unsigned long now = millis();
-  if ((now - lastPositionCalculatedTime) > STALE_POSITION_TIME) {
-    lastPositionCalculatedTime = now;
-    updatePosition(model);
+void getRA(AsyncWebServerRequest *request, TelescopeModel &model,
+           EQPlatform &platform) {
+  if (platform.checkStalePositionAndUpdate()) {
+    updatePosition(model, platform);
   }
 
   returnSingleDouble(request, model.getRACoord());
 }
 
-void getDec(AsyncWebServerRequest *request, TelescopeModel &model) {
-  unsigned long now = millis();
-  if ((now - lastPositionCalculatedTime) > STALE_POSITION_TIME) {
-    lastPositionCalculatedTime = now;
-    updatePosition(model);
+void getDec(AsyncWebServerRequest *request, TelescopeModel &model,
+            EQPlatform &platform) {
+  if (platform.checkStalePositionAndUpdate()) {
+    updatePosition(model, platform);
   }
 
   returnSingleDouble(request, model.getDecCoord());
 }
 
-void setupWebServer(TelescopeModel &model, Preferences &prefs) {
+void setupWebServer(TelescopeModel &model, Preferences &prefs,
+                    EQPlatform &platform) {
   loadPreferences(prefs, model);
-
-  eqPlatformIP = "";
-  lastPositionCalculatedTime = 0;
-  lastPositionReceivedTime = getNow();
-  currentlyRunning = false;
-  platformConnected = false;
-
-  // set up alpaca discovery udp
-  if (alpacaUdp.listen(32227)) {
-    log("Listening for alpaca discovery requests...");
-    alpacaUdp.onPacket([](AsyncUDPPacket packet) {
-      log("Received alpaca UDP Discovery packet ");
-      if ((packet.length() >= 16) &&
-          (strncmp("alpacadiscovery1", (char *)packet.data(), 16) == 0)) {
-        log("Responding to alpaca UDP Discovery packet with my port number "
-            "%d",
-            alpacaPort);
-
-        packet.printf("{\"AlpacaPort\": %d}", alpacaPort);
-      }
-    });
-  }
-
-  // set up listening for ip address from eq platform
-
-  // Initialize UDP to listen for broadcasts.
-
-  if (eqUdpIn.listen(IPBROADCASTPORT)) {
-    log("Listening for eq platform broadcasts");
-    eqUdpIn.onPacket([](AsyncUDPPacket packet) {
-      unsigned long now = millis();
-      String msg = packet.readString();
-      log("UDP Broadcast received: %s", msg.c_str());
-
-      // Check if the broadcast is from EQ Platform
-      if (msg.startsWith("EQ:")) {
-        msg = msg.substring(3);
-        log("Got payload from eq plaform");
-
-        // Create a JSON document to hold the payload
-        const size_t capacity = JSON_OBJECT_SIZE(5) +
-                                40; // Reserve some memory for the JSON document
-        StaticJsonDocument<capacity> doc;
-
-        // Deserialize the JSON payload
-        DeserializationError error = deserializeJson(doc, msg);
-        if (error) {
-          log("Failed to parse payload %s with error %s", msg.c_str(),
-              error.c_str());
-          return;
-        }
-
-        if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
-            doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
-            doc["timeToEnd"].is<double>()) {
-          runtimeFromCenterSeconds = doc["timeToCenter"];
-          timeToEnd = doc["timeToEnd"];
-          currentlyRunning = doc["isTracking"];
-          lastPositionReceivedTime = getNow();
-
-          IPAddress remoteIp = packet.remoteIP();
-
-          // Convert the IP address to a string
-          eqPlatformIP = remoteIp.toString();
-          log("Distance from center %lf, running %d", runtimeFromCenterSeconds,
-              currentlyRunning);
-        } else {
-          log("Payload missing required fields.");
-          return;
-        }
-      } else {
-        log("Message has bad starting chars");
-      }
-    });
-  }
 
   // GETS. Mostly default flags.
   alpacaWebServer.on(
       "^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_GET,
-      [&model](AsyncWebServerRequest *request) {
+      [&model,&platform](AsyncWebServerRequest *request) {
         String url = request->url();
         // log("Processing GET on url %s", url.c_str());
 
@@ -710,7 +551,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
         }
 
         if (subPath == "tracking") {
-          return returnSingleBool(request, currentlyRunning);
+          return returnSingleBool(request, platform.currentlyRunning);
         }
 
         if (subPath == "cansync") {
@@ -772,10 +613,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
           return returnSingleDouble(request, 0);
 
         if (subPath == "declination")
-          return getDec(request, model);
+          return getDec(request, model,platform);
 
         if (subPath == "rightascension")
-          return getRA(request, model);
+          return getRA(request, model,platform);
 
         return handleNotFound(request);
       });
@@ -804,7 +645,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
   //  PUTS implementation
 
   alpacaWebServer.on("^\\/api\\/v1\\/telescope\\/0\\/.*$", HTTP_PUT,
-                     [&model](AsyncWebServerRequest *request) {
+                     [&model,&platform](AsyncWebServerRequest *request) {
                        String url = request->url();
                        log("Processing PUT on url %s", url.c_str());
                        // Strip off the initial portion of the URL
@@ -815,7 +656,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
                          return returnNoError(request);
 
                        if (subPath.startsWith("synctocoordinates"))
-                         return syncToCoords(request, model);
+                         return syncToCoords(request, model,platform);
 
                        if (subPath.startsWith("sitelatitude"))
                          return setSiteLatitude(request, model);
@@ -827,16 +668,16 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
                          return setUTCDate(request, model);
 
                        if (subPath.startsWith("tracking"))
-                         return setTracking(request);
+                         return setTracking(request, platform);
 
                        if (subPath.startsWith("park"))
-                         return sendEQCommand("park", 0);
+                         return platform.sendEQCommand("park", 0);
 
                        if (subPath.startsWith("findhome"))
-                         return sendEQCommand("home", 0);
+                         return platform.sendEQCommand("home", 0);
 
                        if (subPath.startsWith("moveaxis"))
-                         return moveAxis(request);
+                         return moveAxis(request,platform);
                        // Add more routes here as needed
 
                        // If no match found, return a 404 or appropriate
@@ -847,8 +688,8 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
   // ===============================
 
   alpacaWebServer.on("/getScopeStatus", HTTP_GET,
-                     [&model](AsyncWebServerRequest *request) {
-                       getScopeStatus(request, model);
+                     [&model,&platform](AsyncWebServerRequest *request) {
+                       getScopeStatus(request, model,platform);
                      });
 
   alpacaWebServer.on("/saveAltEncoderSteps", HTTP_POST,
@@ -876,6 +717,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs) {
       [](AsyncWebServerRequest *request) { handleNotFound(request); });
 
   alpacaWebServer.begin();
+  setupAlpacaDiscovery(WEBSERVER_PORT);
   log("Server started");
   return;
 }
