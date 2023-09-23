@@ -147,16 +147,18 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   //     timePointToString(timePoint).c_str());
 
   currentEqPosition = alignment.toReferenceCoord(encoderAltAz);
+  // log("Base position\t\t\tra(h): %lf\tdec: %lf",
+  //     currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
 
   // Work out how many seconds since the model was created. Add this
   // to the RA to compensate for time passing.
-  unsigned long timeDeltaSeconds = 0;
+  double timeDeltaSeconds = 0;
   if (baseSyncPoint.isValid) {
     timeDeltaSeconds = differenceInSeconds(baseSyncPoint.timePoint, timePoint);
   }
 
   double raDeltaDegrees = secondsToRADeltaInDegrees(timeDeltaSeconds);
-  // log("Time delta seconds: %ld degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
+  // log("Time delta seconds: %lf degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
 
   currentEqPosition = currentEqPosition.addRAInDegrees(raDeltaDegrees);
 
