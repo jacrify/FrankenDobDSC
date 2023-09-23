@@ -24,8 +24,9 @@ unsigned long long lastPositionCalculatedTime;
 
 AsyncWebServer alpacaWebServer(WEBSERVER_PORT);
 /**
- * Checks when last position was calculated. Assume position will be calced after this is called.
-*/
+ * Checks when last position was calculated. Assume position will be calced
+ * after this is called.
+ */
 bool checkStalePositionAndUpdate() {
   unsigned long now = millis();
   if ((now - lastPositionCalculatedTime) > STALE_POSITION_TIME) {
@@ -38,7 +39,7 @@ bool checkStalePositionAndUpdate() {
 /**
  * Returns the rates of the various axis.
  * We only have one axis.
-*/
+ */
 void returnAxisRates(AsyncWebServerRequest *request) {
   log("Return Axis rates url is  %s", request->url().c_str());
   // Client passed an "Axis" here.
@@ -89,7 +90,7 @@ void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
 }
 /** Alpaca queries axis by axis to see if the can move
  * Ugly implemention to say just one axis moves.
-*/
+ */
 void canMoveAxis(AsyncWebServerRequest *request) {
   String axis = request->arg("Axis");
   if (axis != NULL) {
@@ -124,14 +125,37 @@ void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
     return returnNoError(request);
   }
 
-  platform.sendEQCommand("moveaxis", parsedRate);
+  platform.moveAxis(parsedRate);
 
   return returnNoError(request);
 }
+
+
+void pulseGuide(AsyncWebServerRequest *request, EQPlatform &platform) {
+  String direction = request->arg("Direction");
+  int parsedDirection;
+  long parsedDuration;
+  if (direction != NULL) {
+    log("Received parameterName: %s", direction.c_str());
+    parsedDirection = strtod(direction.c_str(), NULL);
+    log("Parsed directino value: %lf", parsedDirection);
+  }
+  String duration = request->arg("Duration");
+  if (duration != NULL) {
+    log("Received parameterName: %s", duration.c_str());
+    parsedDuration = strtod(duration.c_str(), NULL);
+    log("Parsed rate value: %lf", parsedDuration);
+  }
+
+  platform.pulseGuide(parsedDirection, parsedDirection);
+
+  return returnNoError(request);
+}
+
 /**
  *  Turn tracking on and off
- * 
-*/
+ *
+ */
 void setTracking(AsyncWebServerRequest *request, EQPlatform &platform) {
   String trackingStr = request->arg("Tracking");
   if (trackingStr != NULL) {
@@ -139,7 +163,7 @@ void setTracking(AsyncWebServerRequest *request, EQPlatform &platform) {
 
     int tracking = trackingStr == "True" ? 1 : 0;
     log("Parsed tracking value: %d", tracking);
-    platform.sendEQCommand("track", tracking);
+    platform.setTracking(tracking);
   } else {
     log("No Tracking parm found");
   }
@@ -195,7 +219,7 @@ void updatePosition(TelescopeModel &model, EQPlatform &platform) {
 /**
  * Take ra dec passed by client, and set current ra/dec to this.
  * Lots of fancy logic inside model for this one.
-*/
+ */
 void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
                   EQPlatform &platform) {
   String ra = request->arg("RightAscension");
@@ -244,7 +268,7 @@ void getRA(AsyncWebServerRequest *request, TelescopeModel &model,
 
 /**
  * The whole point. Return ra/dec back to client
-*/
+ */
 void getDec(AsyncWebServerRequest *request, TelescopeModel &model,
             EQPlatform &platform) {
   if (checkStalePositionAndUpdate()) {
@@ -304,10 +328,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
           return returnSingleBool(request, true);
         }
 
-        // TODO implement
         if (subPath == "canpulseguide") {
-          return returnSingleBool(request, false);
+          return returnSingleBool(request, true);
         }
+        // TODO implement
         if (subPath == "cansetguiderates") {
           return returnSingleBool(request, false);
         }
@@ -416,13 +440,16 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
                          return setTracking(request, platform);
 
                        if (subPath.startsWith("park"))
-                         return platform.sendEQCommand("park", 0);
+                         return platform.park();
 
                        if (subPath.startsWith("findhome"))
-                         return platform.sendEQCommand("home", 0);
+                         return platform.findHome();
 
                        if (subPath.startsWith("moveaxis"))
                          return moveAxis(request, platform);
+
+                       if (subPath.startsWith("pulseguide"))
+                         return pulseGuide(request, platform);
                        // Add more routes here as needed
 
                        // If no match found, return a 404 or appropriate

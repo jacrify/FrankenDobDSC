@@ -51,7 +51,7 @@ TelescopeModel::TelescopeModel() {
 }
 
 void TelescopeModel::clearAlignment() {
-
+//TODO #3 Make clearAlignement reset EQ platform time?
   synchPoints.clear();
   baseSyncPoint = SynchPoint();
   baseSyncPoint.isValid = false;

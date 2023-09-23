@@ -10,8 +10,9 @@
 #define STALE_EQ_WARNING_THRESHOLD_SECONDS 10 // used to detect packet loss
 
 TimePoint lastPositionReceivedTime;
-
-void EQPlatform::sendEQCommand(String command, double parm) {
+// TODO #2 make sendEQCommand private, and expose the command directly. Better
+// encapsulation
+void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
   // Check if the device is connected to the WiFi
   if (WiFi.status() != WL_CONNECTED) {
     return;
@@ -24,23 +25,35 @@ void EQPlatform::sendEQCommand(String command, double parm) {
     snprintf(response, sizeof(response),
              "DSC:{ "
              "\"command\": %s, "
-             "\"parameter\": %.5lf"
+             "\"parameter1\": %.5lf,"
+             "\"parameter2\": %.5lf"
              " }\n",
-             command, parm);
+             command, parm1, parm2);
     eqUDPOut.print(response);
     log("Status Packet sent");
   }
 }
 
+void EQPlatform::park() { sendEQCommand("park", 0, 0); }
+void EQPlatform::findHome() { sendEQCommand("home", 0, 0); }
+void EQPlatform::moveAxis(double rate) { sendEQCommand("moveaxis", rate, 0); }
+void EQPlatform::setTracking(int tracking) {
+  sendEQCommand("track", tracking, 0);
+}
+
+void EQPlatform::pulseGuide(int direction,long duration) {
+  sendEQCommand("pulseguide", direction, duration);
+}
+
 void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   unsigned long now = millis();
   String msg = packet.readStringUntil('\n');
-  
+
   // log("UDP Broadcast received: %s", msg.c_str());
 
   // Check if the broadcast is from EQ Platform
   if (msg.startsWith("EQ:")) {
-    
+
     msg = msg.substring(3);
     // log("Got payload from eq plaform %s",msg.c_str());
 

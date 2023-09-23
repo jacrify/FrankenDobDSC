@@ -6,13 +6,18 @@
 class EQPlatform {
 public:
   EQPlatform();
-  void sendEQCommand(String command, double parm);
+  
   void setupEQListener();
   void checkConnectionStatus();
   TimePoint calculateAdjustedTime();
-  
 
-  double runtimeFromCenterSeconds;
+  void park() ;
+  void findHome();
+  void moveAxis(double rate) ;
+  void setTracking(int tracking);
+  void pulseGuide(int direction, long duration);
+
+      double runtimeFromCenterSeconds;
   double platformResetOffsetSeconds;
 
       String eqPlatformIP;
@@ -24,6 +29,7 @@ private:
   AsyncUDP eqUDPOut;
   AsyncUDP eqUdpIn;
   void processPacket(AsyncUDPPacket &packet);
+  void sendEQCommand(String command, double parm1, double parm2);
 };
 
 #endif
