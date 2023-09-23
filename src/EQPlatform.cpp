@@ -5,8 +5,6 @@
 #include "WiFi.h"
 #include <ArduinoJson.h>
 
-
-
 #define IPBROADCASTPERIOD 10000
 #define IPBROADCASTPORT 50375
 #define STALE_EQ_WARNING_THRESHOLD_SECONDS 10 // used to detect packet loss
@@ -27,7 +25,7 @@ void EQPlatform::sendEQCommand(String command, double parm) {
              "DSC:{ "
              "\"command\": %s, "
              "\"parameter\": %.5lf"
-             " }",
+             " }\n",
              command, parm);
     eqUDPOut.print(response);
     log("Status Packet sent");
@@ -36,11 +34,13 @@ void EQPlatform::sendEQCommand(String command, double parm) {
 
 void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   unsigned long now = millis();
-  String msg = packet.readString();
-  log("UDP Broadcast received: %s", msg.c_str());
+  String msg = packet.readStringUntil('\n');
+  
+  // log("UDP Broadcast received: %s", msg.c_str());
 
   // Check if the broadcast is from EQ Platform
   if (msg.startsWith("EQ:")) {
+    
     msg = msg.substring(3);
     // log("Got payload from eq plaform %s",msg.c_str());
 
@@ -56,7 +56,6 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
           error.c_str());
       return;
     }
-
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
         doc.containsKey("platformResetOffset") &&
         doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
@@ -64,17 +63,21 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
         doc["platformResetOffset"].is<double>()) {
       runtimeFromCenterSeconds = doc["timeToCenter"];
       platformResetOffsetSeconds = doc["platformResetOffset"];
-       timeToEnd =
-          doc["timeToEnd"];
+      timeToEnd = doc["timeToEnd"];
       currentlyRunning = doc["isTracking"];
       lastPositionReceivedTime = getNow();
 
-      IPAddress remoteIp = packet.remoteIP();
+      if (eqPlatformIP == "") {
 
-      // Convert the IP address to a string
-      eqPlatformIP = remoteIp.toString();
-      log("Distance from center %lf, platformResetOffsetSeconds %lf,running %d",
-          runtimeFromCenterSeconds, platformResetOffsetSeconds,currentlyRunning);
+        IPAddress remoteIp = packet.remoteIP();
+
+        // Convert the IP address to a string
+        eqPlatformIP = remoteIp.toString();
+      }
+      // log("Distance from center %lf, platformResetOffsetSeconds %lf,running
+      // %d",
+      //     runtimeFromCenterSeconds,
+      //     platformResetOffsetSeconds,currentlyRunning);
     } else {
       log("Payload missing required fields.");
       return;
@@ -85,6 +88,8 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
 }
 
 void EQPlatform::setupEQListener() {
+  eqPlatformIP = "";
+
   // set up listening for ip address from eq platform
 
   // Initialize UDP to listen for broadcasts.
@@ -122,12 +127,12 @@ void EQPlatform::checkConnectionStatus() {
  * on, so ra changes over time.
  *
  * As the platform emits position periodically, we interpolate values for
- * runtimeFromCenterSeconds here to try to get sub second accuracy. 
+ * runtimeFromCenterSeconds here to try to get sub second accuracy.
  * (If we don't do this, we see drift that resets pericodically as
  * platform pulses an update.)
- * If we ever add other tracking rates, this may be wrong, but the 
+ * If we ever add other tracking rates, this may be wrong, but the
  * error should be marginal.
- * 
+ *
  * When the platform is rewound (or fast forwarded), this introduces
  * yet another time (ra) offset emitted by the platform:
  * platformResetOffsetSeconds. This is also added to the current
@@ -137,8 +142,8 @@ TimePoint EQPlatform::calculateAdjustedTime() {
   TimePoint now = getNow();
 
   checkConnectionStatus();
-  log("Calculating  adjusted time from (now): %s",
-      timePointToString(now).c_str());
+  // log("Calculating  adjusted time from (now): %s",
+  //     timePointToString(now).c_str());
   // unsigned long now = millis();
   // log("Now millis since start: %ld", now);
 
@@ -157,19 +162,20 @@ TimePoint EQPlatform::calculateAdjustedTime() {
       now, runtimeFromCenterSeconds - interpolationTimeSeconds +
                platformResetOffsetSeconds);
 
-  log("Returned adjusted time: %s", timePointToString(adjustedTime).c_str());
+  log("Returned adjusted time: %s from now : %s",
+      timePointToString(adjustedTime).c_str(), timePointToString(now).c_str());
   return adjustedTime;
 }
 /**
  * Checked before calc
-*/
+ */
 
 EQPlatform::EQPlatform() {
   eqPlatformIP = "";
-  
+
   lastPositionReceivedTime = getNow();
   currentlyRunning = false;
   platformConnected = false;
-  platformResetOffsetSeconds=0;
-  runtimeFromCenterSeconds=0;
+  platformResetOffsetSeconds = 0;
+  runtimeFromCenterSeconds = 0;
 }
