@@ -1,4 +1,4 @@
-#include "telescopeModel.h"
+#include "TelescopeModel.h"
 #include "Logging.h"
 #include <algorithm>
 #include <cmath>
