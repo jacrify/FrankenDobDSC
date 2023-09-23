@@ -59,7 +59,7 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
 
     // Create a JSON document to hold the payload
     const size_t capacity =
-        JSON_OBJECT_SIZE(7) + 40; // Reserve some memory for the JSON document
+        JSON_OBJECT_SIZE(10) + 40; // Reserve some memory for the JSON document
     StaticJsonDocument<capacity> doc;
 
     // Deserialize the JSON payload
@@ -71,13 +71,19 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
     }
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
         doc.containsKey("platformResetOffset") &&
-        doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
+        doc.containsKey("axisMoveRate") && doc.containsKey("guideMoveRate") &&
+        doc.containsKey("trackingRate") && doc.containsKey("isTracking") &&
+        doc["timeToCenter"].is<double>() && doc["guideMoveRate"].is<double>() &&
+        doc["axisMoveRate"].is<double>() && doc["trackingRate"].is<double>() &&
         doc["timeToEnd"].is<double>() &&
         doc["platformResetOffset"].is<double>()) {
       runtimeFromCenterSeconds = doc["timeToCenter"];
       platformResetOffsetSeconds = doc["platformResetOffset"];
       timeToEnd = doc["timeToEnd"];
       currentlyRunning = doc["isTracking"];
+      pulseGuideRate = doc["guideMoveRate"];
+      axisMoveRate = doc["axisMoveRate"];
+      trackingRate = doc["trackingRate"];
       lastPositionReceivedTime = getNow();
 
       if (eqPlatformIP == "") {

@@ -62,6 +62,29 @@ void returnAxisRates(AsyncWebServerRequest *request) {
   String json = buffer;
   request->send(200, "application/json", json);
 }
+void returnTrackingRates(AsyncWebServerRequest *request) {
+  log("Return tracking rates url is  %s", request->url().c_str());
+  // TODO #4 implement lunar tracking
+  /**
+   * DriveRate object corresponding to one of the standard drive rates
+   * driveSidereal = 0 - Sidereal tracking rate (15.041 arcseconds per second).
+   * driveLunar = 1 - Lunar tracking rate (14.685 arcseconds per second).
+   * driveSolar = 2 - Solar tracking rate (15.0 arcseconds per second).
+   * driveKing = 3 - King tracking rate (15.0369 arcseconds per second).
+   */
+  char buffer[BUFFER_SIZE];
+  snprintf(buffer, sizeof(buffer),
+           R"({
+             "ClientTransactionID": 0,
+            "ServerTransactionID": 0,
+           "ErrorNumber": 0,
+             "ErrorMessage": "",
+             "Value": [ 0 ]
+      })");
+
+  String json = buffer;
+  request->send(200, "application/json", json);
+}
 
 /** Parse and set longitude passed as a double*/
 void setSiteLatitude(AsyncWebServerRequest *request, TelescopeModel &model) {
@@ -129,7 +152,6 @@ void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
 
   return returnNoError(request);
 }
-
 
 void pulseGuide(AsyncWebServerRequest *request, EQPlatform &platform) {
   String direction = request->arg("Direction");
@@ -347,14 +369,21 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
           return returnSingleBool(request, true);
         }
 
-        if (subPath == "declinationrate" || subPath == "focallength" ||
+        if (subPath == "declinationrate" ||
+            subPath == "guidedratedeclination" subPath == "focallength" ||
             subPath == "siderealtime") {
           return returnSingleDouble(request, 0);
         }
 
-        // TODO add sidereal rate when tracking
+        if (subPath == "trackingrates") {
+          return returnTrackingRates(request);
+        }
+
         if (subPath == "rightascensionrate") {
-          return returnSingleDouble(request, 0);
+          return returnSingleDouble(request, platform.trackingRate);
+        }
+        if (subPath == "guideraterightascension") {
+          return returnSingleDouble(request, platform.pulseGuideRate);
         }
 
         if (subPath == "equatorialsystem") {
