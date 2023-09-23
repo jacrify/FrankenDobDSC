@@ -102,7 +102,7 @@ void canMoveAxis(AsyncWebServerRequest *request) {
   return returnSingleBool(request, false);
 }
 /** Parse movement rate (degrees sec) and ask plaform to move*/
-void omoveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
+void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
   String rate = request->arg("Rate");
   double parsedRate;
   double parsedAxis;

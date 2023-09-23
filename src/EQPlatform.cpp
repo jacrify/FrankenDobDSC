@@ -42,11 +42,11 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   // Check if the broadcast is from EQ Platform
   if (msg.startsWith("EQ:")) {
     msg = msg.substring(3);
-    log("Got payload from eq plaform");
+    log("Got payload from eq plaform %s",msg);
 
     // Create a JSON document to hold the payload
     const size_t capacity =
-        JSON_OBJECT_SIZE(5) + 40; // Reserve some memory for the JSON document
+        JSON_OBJECT_SIZE(7) + 40; // Reserve some memory for the JSON document
     StaticJsonDocument<capacity> doc;
 
     // Deserialize the JSON payload
