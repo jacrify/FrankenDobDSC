@@ -6,7 +6,7 @@
 #include "TimePoint.h"
 #include <ArduinoJson.h> // Include the library
 #include <ESPAsyncWebServer.h>
-#include <WebSerial.h>
+// #include <WebSerial.h>
 #include <WebSocketsClient.h>
 #include <time.h>
 
@@ -440,9 +440,9 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
 
   alpacaWebServer.begin();
 
-  // WebSerial is accessible at "<IP Address>/webserial" in browser
-  WebSerial.begin(&alpacaWebServer);
-  setWebSerialReady();
+  // // WebSerial is accessible at "<IP Address>/webserial" in browser
+  // WebSerial.begin(&alpacaWebServer);
+  // setWebSerialReady();
 
   lastPositionCalculatedTime = 0;
   setupAlpacaDiscovery(WEBSERVER_PORT);
