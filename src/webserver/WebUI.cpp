@@ -101,7 +101,14 @@ void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
   request->send(200);
 }
 
-void setupWebUI(AsyncWebServer &alpacaWebServer,TelescopeModel &model,EQPlatform &platform,Preferences &prefs){
+void performZeroedAlignment(AsyncWebServerRequest *request,
+                            TelescopeModel &model) {
+
+  model.performZeroedAlignment(getNow());
+  request->send(200);
+}
+void setupWebUI(AsyncWebServer &alpacaWebServer, TelescopeModel &model,
+                EQPlatform &platform, Preferences &prefs) {
   loadPreferences(prefs, model);
   alpacaWebServer.on("/getScopeStatus", HTTP_GET,
                      [&model, &platform](AsyncWebServerRequest *request) {
@@ -126,6 +133,11 @@ void setupWebUI(AsyncWebServer &alpacaWebServer,TelescopeModel &model,EQPlatform
   alpacaWebServer.on("/clearPrefs", HTTP_POST,
                      [&model, &prefs](AsyncWebServerRequest *request) {
                        clearPrefs(request, prefs, model);
+                     });
+
+  alpacaWebServer.on("/performZeroedAlignment", HTTP_POST,
+                     [&model](AsyncWebServerRequest *request) {
+                       performZeroedAlignment(request, model);
                      });
   alpacaWebServer.serveStatic("/", LittleFS, "/fs/");
 }

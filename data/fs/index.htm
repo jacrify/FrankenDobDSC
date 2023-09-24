@@ -87,6 +87,13 @@
     <button id="clearPreferences">Clear Preferences</button>
     <br>
     <button id="clearAlignment">Clear saved alignment</button>
+    <br>
+    Run this after : <br>
+    - Power on <br>
+    - Centering platform <br>
+    - Setting lat long time thorugh planetarium <br>
+
+    <button id="performZeroedAlignment">Perform Zeroed Alignment</button>
 
 
     <script>
@@ -126,6 +133,11 @@
         $("#clearAlignment").click(function () {
             $.post("/clearAlignment");
         });
+
+        $("#performZeroedAlignment").click(function () {
+            $.post("/performZeroedAlignment");
+        });
+
         $("#saveAltEncoderSteps").click(function () {
             $.post("/saveAltEncoderSteps");
         });

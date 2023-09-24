@@ -103,7 +103,9 @@ public:
  long getAzEncoderStepsPerRevolution();
  long getAltEncoderStepsPerRevolution();
 
- void setLatitude(float lat);
+ void performZeroedAlignment(TimePoint now);
+
+     void setLatitude(float lat);
  void setLongitude(float lng);
 
  float getLatitude();

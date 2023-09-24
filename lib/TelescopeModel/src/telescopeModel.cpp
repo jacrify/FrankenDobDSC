@@ -8,7 +8,9 @@
 #include <stdio.h>
 #include <string>
 #include <unity.h>
-
+/**
+ * Used at boot to provide a starting hardcoded alignment. Will be wrong.
+*/
 void TelescopeModel::performBaselineAlignment() {
   HorizCoord h = HorizCoord(0, 0);
   EqCoord eq = EqCoord(180, 0);
@@ -19,7 +21,9 @@ void TelescopeModel::performBaselineAlignment() {
   alignment.addReferenceCoord(h, eq); // degreess
   alignment.calculateThirdReference();
   defaultAlignment = true;
+
 }
+
 TelescopeModel::TelescopeModel() {
   // Default alignment for alt az in south
   // alignment.addReference(0, 0, M_PI, 0);//radians
@@ -218,6 +222,19 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
       SynchPoint(eq1, horiz1, now, eq1); // creates syncpoint with no error
 }
 
+/**
+ * Designed to help do basic polar alignment after startup.
+ * Assumes scope has been started level, and pointing along platform south axis.
+ * Assumes lat long time has been set.
+ * Calculates expected ra/dec for this lat long, and creates basic model.
+ * You can the point at a star using scope, 
+ * and rotate platform until star in planetarium matches.
+*/
+void TelescopeModel::performZeroedAlignment(TimePoint now) {
+  HorizCoord h = HorizCoord(0, 180);
+  EqCoord eq = EqCoord(h, now); // uses Epheremis to calculate.
+  performOneStarAlignment(h, eq, now);
+}
 /**
  * Add a reference point to the two star alignment model.
  * Takes the last synced point as the point to put into the model.
