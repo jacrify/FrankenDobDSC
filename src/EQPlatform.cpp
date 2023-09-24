@@ -73,6 +73,7 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
       //     error.c_str());
       return;
     }
+    
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
         doc.containsKey("platformResetOffset") &&
         doc.containsKey("axisMoveRate") && doc.containsKey("guideMoveRate") &&
