@@ -42,7 +42,7 @@
     <table border="1">
         <tr>
             <td id="platformConnected">
-                <a id="eqPlatformLink" href="#" style="text-decoration: none; color: inherit;">EQ Platform Connected</a>
+               
             </td>
 
             <td id="platformTracking">EQ Platform Tracking</td>
@@ -95,6 +95,8 @@
 
     <button id="performZeroedAlignment">Perform Zeroed Alignment</button>
 
+   <br>
+    <iframe id="eqIframe" style="display:none;"></iframe>
 
     <script>
 
@@ -114,9 +116,11 @@
                 $("#lastSyncedAz").text(data.lastSyncedAz);
                 $("#platformConnected").css("background-color", data.platformConnected ? "green" : "red");
                 if (data.platformConnected && data.eqPlatformIP) {
-                    $("#eqPlatformLink").attr("href", "http://" + data.eqPlatformIP).text("EQ Platform Connected");
+                    $("#eqIframe").attr("src", "http://" + data.eqPlatformIP).show();
+                    $("#platformConnected").text("EQ Platform Connected");
                 } else {
-                    $("#eqPlatformLink").removeAttr("href").text("EQ Platform Not Connected");
+                    $("#eqIframe").removeAttr("src").hide();
+                    $("#platformConnected").text("EQ Platform Not Connected");
                 }
                 $("#platformTracking").css("background-color", data.platformTracking ? "green" : "red");
             }).fail(function () {
