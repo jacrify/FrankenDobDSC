@@ -41,32 +41,36 @@ void EQPlatform::setTracking(int tracking) {
   sendEQCommand("track", tracking, 0);
 }
 
-void EQPlatform::pulseGuide(int direction,long duration) {
+void EQPlatform::pulseGuide(int direction, long duration) {
   sendEQCommand("pulseguide", direction, duration);
 }
 
 void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   unsigned long now = millis();
-  String msg = packet.readStringUntil('\n');
+  String start = packet.readStringUntil(':');
+
+  // String msg = packet.readStringUntil('\n');
 
   // log("UDP Broadcast received: %s", msg.c_str());
+  if (start == "EQ") {
+    // Check if the broadcast is from EQ Platform
+    // if (msg.startsWith("EQ:")) {
 
-  // Check if the broadcast is from EQ Platform
-  if (msg.startsWith("EQ:")) {
-
-    msg = msg.substring(3);
+    // msg = msg.substring(3);
     // log("Got payload from eq plaform %s",msg.c_str());
 
     // Create a JSON document to hold the payload
     const size_t capacity =
-        JSON_OBJECT_SIZE(10) + 40; // Reserve some memory for the JSON document
+        JSON_OBJECT_SIZE(7) + 100; // Reserve some memory for the JSON document
     StaticJsonDocument<capacity> doc;
-
+    
+    DeserializationError error = deserializeJson(doc, packet);
     // Deserialize the JSON payload
-    DeserializationError error = deserializeJson(doc, msg);
+    // DeserializationError error = deserializeJson(doc, msg);
     if (error) {
-      log("Failed to parse payload %s with error %s", msg.c_str(),
-          error.c_str());
+      log("Failed to parse payload with error %s", error.c_str());
+      // log("Failed to parse payload %s with error %s", msg.c_str(),
+      //     error.c_str());
       return;
     }
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
