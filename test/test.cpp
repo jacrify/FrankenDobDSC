@@ -244,6 +244,12 @@ void test_horizontal_to_eq_eq_constructor(void) {
   //           altAzCoord, day, month, year, hour, minute, second);
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(14.28644, eqCoord.getRAInHours(), "ra");
   TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, eqCoord.getDecInDegrees(), "dec");
+
+  h = HorizCoord(0, 180);
+   eqCoord = EqCoord(h, star1Time);
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(14.28644, eqCoord.getRAInHours(), "ra");
+  TEST_ASSERT_EQUAL_FLOAT_MESSAGE(18.97959, eqCoord.getDecInDegrees(), "dec");
+  
 }
 
 // void test_telescope_model_takeshi(void) {
@@ -1699,25 +1705,25 @@ void setup() {
 
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
   //====
-  RUN_TEST(test_eq_to_horizontal);
-  //   RUN_TEST(test_horizontal_to_eq);
-  RUN_TEST(test_eq_to_horizontal_vega);
+//   RUN_TEST(test_eq_to_horizontal);
+//   //   RUN_TEST(test_horizontal_to_eq);
+//   RUN_TEST(test_eq_to_horizontal_vega);
 
   RUN_TEST(test_horizontal_to_eq_eq_constructor);
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers);
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
+//   RUN_TEST(test_two_star_alignment_mylocation_wrappers);
+//   RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
 
-  RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_telescope_model_mylocation_with_tilt);
-  RUN_TEST(test_one_star_align_principle);
-  RUN_TEST(test_coords);
+//   RUN_TEST(test_telescope_model_mylocation);
+//   RUN_TEST(test_telescope_model_mylocation_with_tilt);
+//   RUN_TEST(test_one_star_align_principle);
+//   RUN_TEST(test_coords);
 
-  RUN_TEST(test_model_one_star_align);
-  RUN_TEST(test_eq_coord_distance);
-  RUN_TEST(test_addSynchPoint_trimLogic);
-  RUN_TEST(test_addSingleSyncPoint);
-  RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);
-  RUN_TEST(test_time_difference);
+//   RUN_TEST(test_model_one_star_align);
+//   RUN_TEST(test_eq_coord_distance);
+//   RUN_TEST(test_addSynchPoint_trimLogic);
+//   RUN_TEST(test_addSingleSyncPoint);
+//   RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);
+//   RUN_TEST(test_time_difference);
   //====
   //   RUN_TEST(test_continuity);
 

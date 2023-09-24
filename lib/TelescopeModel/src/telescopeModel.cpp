@@ -1,4 +1,5 @@
 #include "TelescopeModel.h"
+#include "Ephemeris.h"
 #include "Logging.h"
 #include <algorithm>
 #include <cmath>
@@ -10,7 +11,7 @@
 #include <unity.h>
 /**
  * Used at boot to provide a starting hardcoded alignment. Will be wrong.
-*/
+ */
 void TelescopeModel::performBaselineAlignment() {
   HorizCoord h = HorizCoord(0, 0);
   EqCoord eq = EqCoord(180, 0);
@@ -21,13 +22,13 @@ void TelescopeModel::performBaselineAlignment() {
   alignment.addReferenceCoord(h, eq); // degreess
   alignment.calculateThirdReference();
   defaultAlignment = true;
-
 }
 
 TelescopeModel::TelescopeModel() {
   // Default alignment for alt az in south
   // alignment.addReference(0, 0, M_PI, 0);//radians
   performBaselineAlignment();
+
   latitude = -34.049120;
   longitude = 151.042100;
 
@@ -55,7 +56,7 @@ TelescopeModel::TelescopeModel() {
 }
 
 void TelescopeModel::clearAlignment() {
-//TODO #3 Make clearAlignement reset EQ platform time?
+  // TODO #3 Make clearAlignement reset EQ platform time?
   synchPoints.clear();
   baseSyncPoint = SynchPoint();
   baseSyncPoint.isValid = false;
@@ -105,8 +106,14 @@ void TelescopeModel::setAltEncoderStepsPerRevolution(long altResolution) {
   altEncoderStepsPerRevolution = altResolution;
 }
 
-void TelescopeModel::setLatitude(float lat) { latitude = lat; }
-void TelescopeModel::setLongitude(float lng) { longitude = lng; }
+void TelescopeModel::setLatitude(float lat) {
+  latitude = lat;
+  Ephemeris::setLocationOnEarth(latitude, longitude);
+}
+void TelescopeModel::setLongitude(float lng) {
+  longitude = lng;
+  Ephemeris::setLocationOnEarth(latitude, longitude);
+}
 
 float TelescopeModel::getLatitude() { return latitude; }
 float TelescopeModel::getLongitude() { return longitude; }
@@ -162,7 +169,8 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   }
 
   double raDeltaDegrees = secondsToRADeltaInDegrees(timeDeltaSeconds);
-  // log("Time delta seconds: %lf degrees: %lf", timeDeltaSeconds, raDeltaDegrees);
+  // log("Time delta seconds: %lf degrees: %lf", timeDeltaSeconds,
+  // raDeltaDegrees);
 
   currentEqPosition = currentEqPosition.addRAInDegrees(raDeltaDegrees);
 
@@ -200,14 +208,12 @@ double TelescopeModel::secondsToRADeltaInDegrees(double secondsDelta) {
  */
 void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
                                              TimePoint now) {
-
-  alignment.addReferenceCoord(horiz1, eq1);
-  log("Time (local) for one star alignment: %ld",
+  log("Time (local) for one star alignment: %s",
       timePointToString(now).c_str());
+  alignment.addReferenceCoord(horiz1, eq1);
 
-  HorizCoord horiz2 = horiz1.addOffset(91, 0);
+  HorizCoord horiz2 = horiz1.addOffset(80, 0);
   // this is calculated based on current lat long time
-
   EqCoord eq2 = EqCoord(horiz2, now);
   alignment.addReferenceCoord(horiz2, eq2);
 
@@ -227,13 +233,19 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
  * Assumes scope has been started level, and pointing along platform south axis.
  * Assumes lat long time has been set.
  * Calculates expected ra/dec for this lat long, and creates basic model.
- * You can the point at a star using scope, 
+ * You can the point at a star using scope,
  * and rotate platform until star in planetarium matches.
-*/
+ */
 void TelescopeModel::performZeroedAlignment(TimePoint now) {
-  HorizCoord h = HorizCoord(0, 180);
+  log("Performing zero alignment");
+  
+  HorizCoord h = HorizCoord(0, 180); //this is if we were pointing south
   EqCoord eq = EqCoord(h, now); // uses Epheremis to calculate.
-  performOneStarAlignment(h, eq, now);
+
+  log("Zero Point: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", h.altInDegrees,
+      h.aziInDegrees, eq.getRAInHours(), eq.getDecInDegrees());
+  HorizCoord h2= HorizCoord(0, 0); //this is what encoders will actually read
+  performOneStarAlignment(h2, eq, now);
 }
 /**
  * Add a reference point to the two star alignment model.
@@ -352,7 +364,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
       calculatedAltAzFromEncoders.altInDegrees,
       calculatedAltAzFromEncoders.aziInDegrees);
 
-  // check where model would say we are. Stored in currentEqPosition to use as error calc
+  // check where model would say we are. Stored in currentEqPosition to use as
+  // error calc
   calculateCurrentPosition(now);
 
   lastSyncPoint = SynchPoint(lastSyncedEq, calculatedAltAzFromEncoders, now,
