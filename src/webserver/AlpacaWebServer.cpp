@@ -370,7 +370,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
         }
 
         if (subPath == "declinationrate" ||
-            subPath == "guidedratedeclination" subPath == "focallength" ||
+            subPath == "guidedratedeclination" || subPath == "focallength" ||
             subPath == "siderealtime") {
           return returnSingleDouble(request, 0);
         }
