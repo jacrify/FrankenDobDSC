@@ -24,13 +24,13 @@ void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
 
     snprintf(response, sizeof(response),
              "DSC:{ "
-             "\"command\": %s, "
+             "\"command\": \"%s\", "
              "\"parameter1\": %.5lf,"
              "\"parameter2\": %.5lf"
              " }\n",
              command, parm1, parm2);
     eqUDPOut.print(response);
-    log("Status Packet sent");
+    log("Status Packet sent %s",response);
   }
 }
 
@@ -186,8 +186,8 @@ TimePoint EQPlatform::calculateAdjustedTime() {
       now, runtimeFromCenterSeconds - interpolationTimeSeconds +
                platformResetOffsetSeconds);
 
-  log("Returned adjusted time: %s from now : %s",
-      timePointToString(adjustedTime).c_str(), timePointToString(now).c_str());
+  // log("Returned adjusted time: %s from now : %s",
+  //     timePointToString(adjustedTime).c_str(), timePointToString(now).c_str());
   return adjustedTime;
 }
 /**

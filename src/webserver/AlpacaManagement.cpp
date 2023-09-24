@@ -1,6 +1,6 @@
 #include "AlpacaManagement.h"
-#include "Logging.h"
 #include "AlpacaGeneric.h"
+#include "Logging.h"
 
 const int BUFFER_SIZE = 300;
 
@@ -16,9 +16,10 @@ void returnDeviceDescription(AsyncWebServerRequest *request) {
           "ManufacturerVersion": "1",
           "Location": "here"
           },
-        "ClientTransactionID": 0,
-         "ServerTransactionID": 0
-        })");
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           getTransactionID(request), generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -34,11 +35,12 @@ void returnConfiguredDevices(AsyncWebServerRequest *request) {
           "DeviceName": "Frankendob",
           "DeviceType": "Telescope",
          "DeviceNumber": 0,
-          "UniqueID": "FrankenDobFocuserDSC"
+          "UniqueID": "FrankenDobDSC"
           }],
-        "ClientTransactionID": 0,
-         "ServerTransactionID": 0
-        })");
+          "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           getTransactionID(request), generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -51,9 +53,10 @@ void returnApiVersions(AsyncWebServerRequest *request) {
   snprintf(buffer, sizeof(buffer),
            R"({
          "Value": [1],
-        "ClientTransactionID": 0,
-         "ServerTransactionID": 0
-        })");
+          "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           getTransactionID(request), generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);

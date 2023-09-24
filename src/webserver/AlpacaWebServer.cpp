@@ -47,17 +47,18 @@ void returnAxisRates(AsyncWebServerRequest *request) {
   char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
-             "ClientTransactionID": 0,
-            "ServerTransactionID": 0,
-           "ErrorNumber": 0,
+             "ErrorNumber": 0,
              "ErrorMessage": "",
              "Value": [
                {
                "Maximum": 1,
                 "Minimum": 0
               }
-             ]
-      })");
+             ],
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           getTransactionID(request), generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -75,12 +76,13 @@ void returnTrackingRates(AsyncWebServerRequest *request) {
   char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
-             "ClientTransactionID": 0,
-            "ServerTransactionID": 0,
            "ErrorNumber": 0,
              "ErrorMessage": "",
-             "Value": [ 0 ]
-      })");
+             "Value": [ 0,1 ],
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           getTransactionID(request), generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -131,18 +133,18 @@ void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
   double parsedRate;
   double parsedAxis;
   if (rate != NULL) {
-    log("Received parameterName: %s", rate.c_str());
+    log("Received rate: %s", rate.c_str());
     parsedRate = strtod(rate.c_str(), NULL);
     log("Parsed rate value: %lf", parsedRate);
   }
   String axis = request->arg("Axis");
   if (axis != NULL) {
-    log("Received parameterName: %s", axis.c_str());
+    log("Received axis: %s", axis.c_str());
     parsedAxis = strtod(axis.c_str(), NULL);
     log("Parsed rate value: %lf", parsedAxis);
   }
 
-  if (axis != 0) {
+  if (axis != "0") {
     log("Error: can only move on one axis");
     // TODO make this return an error
     return returnNoError(request);
@@ -159,17 +161,18 @@ void pulseGuide(AsyncWebServerRequest *request, EQPlatform &platform) {
   long parsedDuration;
   if (direction != NULL) {
     log("Received parameterName: %s", direction.c_str());
-    parsedDirection = strtod(direction.c_str(), NULL);
+    parsedDirection = strtol(direction.c_str(), NULL, 10);
     log("Parsed directino value: %lf", parsedDirection);
   }
   String duration = request->arg("Duration");
   if (duration != NULL) {
     log("Received parameterName: %s", duration.c_str());
-    parsedDuration = strtod(duration.c_str(), NULL);
+    parsedDuration = strtol(duration.c_str(), NULL, 10);
     log("Parsed rate value: %lf", parsedDuration);
   }
-
-  platform.pulseGuide(parsedDirection, parsedDirection);
+  log("Pulse guiding in direction %d for %d millis", parsedDirection,
+      parsedDuration);
+  platform.pulseGuide(parsedDirection, parsedDuration);
 
   return returnNoError(request);
 }
@@ -183,7 +186,7 @@ void setTracking(AsyncWebServerRequest *request, EQPlatform &platform) {
   if (trackingStr != NULL) {
     log("Received parameterName: %s", trackingStr.c_str());
 
-    int tracking = trackingStr == "True" ? 1 : 0;
+    int tracking = (trackingStr == "True") ? 1 : 0;
     log("Parsed tracking value: %d", tracking);
     platform.setTracking(tracking);
   } else {
@@ -325,11 +328,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
         if (subPath == "athome" || subPath == "atpark" ||
             subPath == "cansetdeclinationrate" || subPath == "cansetpark" ||
             subPath == "cansetpierside" ||
-            subPath == "cansetrightascensionrate" || subPath == "canslew" ||
-            subPath == "canslewaltaz" || subPath == "canslewasync" ||
-            subPath == "canslewaltazasync" || subPath == "cansyncaltaz" ||
-            subPath == "canunpark" || subPath == "doesrefraction" ||
-            subPath == "sideofpier" || subPath == "slewing") {
+            subPath == "cansetrightascensionrate" ||
+            subPath == "cansyncaltaz" || subPath == "canunpark" ||
+            subPath == "doesrefraction" || subPath == "sideofpier" ||
+            subPath == "slewing") {
           return returnSingleBool(request, false);
         }
         if (subPath == "canmoveaxis") {
@@ -342,6 +344,18 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
           return returnSingleBool(request, true);
         }
 
+        if (subPath == "canslew") {
+          return returnSingleBool(request, false);
+        }
+        if (subPath == "canslewaltaz") {
+          return returnSingleBool(request, false);
+        }
+        if (subPath == "canslewasync") {
+          return returnSingleBool(request, false);
+        }
+        if (subPath == "canslewaltazasync") {
+          return returnSingleBool(request, false);
+        }
         if (subPath == "canpark") {
           return returnSingleBool(request, true);
         }
@@ -369,13 +383,12 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
           return returnSingleBool(request, true);
         }
 
-        if (subPath == "declinationrate" ||
-            subPath == "guidedratedeclination" || subPath == "focallength" ||
-            subPath == "siderealtime") {
+        if (subPath == "declinationrate" || subPath == "guideratedeclination" ||
+            subPath == "focallength" || subPath == "siderealtime") {
           return returnSingleDouble(request, 0);
         }
 
-        if (subPath == "trackingrates") {
+        if (subPath == "trackingrate") {
           return returnTrackingRates(request);
         }
 

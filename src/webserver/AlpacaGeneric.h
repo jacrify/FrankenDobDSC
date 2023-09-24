@@ -10,4 +10,6 @@ void returnNoError(AsyncWebServerRequest *request);
 void returnSingleInteger(AsyncWebServerRequest *request, int value);
 void handleNotFound(AsyncWebServerRequest *request);
 void returnSingleString(AsyncWebServerRequest *request, String s);
+long getTransactionID(AsyncWebServerRequest *request);
+long generateServerID();
 #endif

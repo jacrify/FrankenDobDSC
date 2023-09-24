@@ -1,10 +1,26 @@
 
 #include "AlpacaGeneric.h"
 #include "Logging.h"
+#include <cstdlib>
 const int BUFFER_SIZE = 300;
 /**
  * Hold generic alpaca return functions
-*/
+ */
+
+long getTransactionID(AsyncWebServerRequest *request) {
+
+  String id = request->arg("ClientTransactionID");
+  if (id != NULL) {
+    // log("Received id: %s", id.c_str());
+
+    long parsedValue = strtol(id.c_str(), NULL, 10);
+    // log("Parsed client id value: %ld", parsedValue);
+    return parsedValue;
+  }
+  return 0;
+}
+long serverTransactionID = 0;
+long generateServerID() { return serverTransactionID++; }
 
 void returnSingleString(AsyncWebServerRequest *request, String s) {
   log("Single string value url is %s, string is %s", request->url().c_str(), s);
@@ -14,9 +30,11 @@ void returnSingleString(AsyncWebServerRequest *request, String s) {
            R"({
              "ErrorNumber": 0,
              "ErrorMessage": "",
-             "Value": "%s"
-      })",
-           s);
+             "Value": "%s",
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           s, getTransactionID(request), generateServerID());
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -30,8 +48,11 @@ void returnEmptyArray(AsyncWebServerRequest *request) {
            R"({
              "ErrorNumber": 0,
              "ErrorMessage": "",
-             "Value": []
-      })");
+             "Value": [],
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           getTransactionID(request), generateServerID());
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -40,13 +61,16 @@ void returnEmptyArray(AsyncWebServerRequest *request) {
 void returnNoError(AsyncWebServerRequest *request) {
 
   // log("Returning no error for url %s ", request->url().c_str());
-
-  static const char *json = R"({
-           "ClientTransactionID": 0,
-           "ServerTransactionID": 0,
+  char buffer[BUFFER_SIZE];
+  snprintf(buffer, sizeof(buffer),
+           R"({
            "ErrorNumber": 0,
-           "ErrorMessage": ""
-          })";
+           "ErrorMessage": "",
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           getTransactionID(request), generateServerID());
+  String json = buffer;
   request->send(200, "application/json", json);
 }
 
@@ -58,9 +82,11 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
            R"({
              "ErrorNumber": 0,
              "ErrorMessage": "",
-             "Value": %lf
-      })",
-           d);
+             "Value": %lf,
+          "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           d, getTransactionID(request), generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -73,9 +99,12 @@ void returnSingleBool(AsyncWebServerRequest *request, bool b) {
            R"({
              "ErrorNumber": 0,
              "ErrorMessage": "",
-             "Value": %s
-      })",
-           b ? "true" : "false");
+             "Value": %s,
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           b ? "true" : "false", getTransactionID(request), generateServerID);
+
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -88,9 +117,12 @@ void returnSingleInteger(AsyncWebServerRequest *request, int value) {
            R"({
              "ErrorNumber": 0,
              "ErrorMessage": "",
-             "Value": %ld
-      })",
-           value);
+             "Value": %ld,
+        "ClientTransactionID": %ld,
+         "ServerTransactionID": %ld
+        })",
+           value,getTransactionID(request), generateServerID);
+
 
   String json = buffer;
   request->send(200, "application/json", json);
