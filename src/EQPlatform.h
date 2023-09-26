@@ -25,10 +25,12 @@ public:
   bool currentlyRunning;
   bool platformConnected;
   double pulseGuideRate;//degrees/sec
-  double axisMoveRate;
-  double trackingRate;
+  double axisMoveRateMax;
+  double axisMoveRateMin;
+   double trackingRate;
 
-      private : AsyncUDP eqUDPOut;
+private:
+  AsyncUDP eqUDPOut;
   AsyncUDP eqUdpIn;
   void processPacket(AsyncUDPPacket &packet);
   void sendEQCommand(String command, double parm1, double parm2);

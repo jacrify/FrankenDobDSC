@@ -73,21 +73,24 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
       //     error.c_str());
       return;
     }
-    
+
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
         doc.containsKey("platformResetOffset") &&
-        doc.containsKey("axisMoveRate") && doc.containsKey("guideMoveRate") &&
-        doc.containsKey("trackingRate") && doc.containsKey("isTracking") &&
-        doc["timeToCenter"].is<double>() && doc["guideMoveRate"].is<double>() &&
-        doc["axisMoveRate"].is<double>() && doc["trackingRate"].is<double>() &&
-        doc["timeToEnd"].is<double>() &&
+        doc.containsKey("axisMoveRateMax") && doc.containsKey("axisMoveRateMin") &&
+        doc.containsKey("guideMoveRate") && doc.containsKey("trackingRate") &&
+        doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
+        doc["guideMoveRate"].is<double>() &&
+        doc["axisMoveRateMax"].is<double>() &&
+        doc["axisMoveRateMin"].is<double>() &&
+        doc["trackingRate"].is<double>() && doc["timeToEnd"].is<double>() &&
         doc["platformResetOffset"].is<double>()) {
       runtimeFromCenterSeconds = doc["timeToCenter"];
       platformResetOffsetSeconds = doc["platformResetOffset"];
       timeToEnd = doc["timeToEnd"];
       currentlyRunning = doc["isTracking"];
       pulseGuideRate = doc["guideMoveRate"];
-      axisMoveRate = doc["axisMoveRate"];
+      axisMoveRateMax = doc["axisMoveRateMax"];
+      axisMoveRateMin = doc["axisMoveRateMin"];
       trackingRate = doc["trackingRate"];
       lastPositionReceivedTime = getNow();
 

@@ -40,25 +40,38 @@ bool checkStalePositionAndUpdate() {
  * Returns the rates of the various axis.
  * We only have one axis.
  */
-void returnAxisRates(AsyncWebServerRequest *request) {
+void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
   log("Return Axis rates url is  %s", request->url().c_str());
   // Client passed an "Axis" here.
-  // TODO check for bad axis
+  // They presumably never call with axis!=0,
+  // but just in case we return 0 speed in that case
+  double parsedAxis = 0;
+  String axis = request->arg("Axis");
+  if (axis != NULL) {
+    log("Received axis: %s", axis.c_str());
+    parsedAxis = strtod(axis.c_str(), NULL);
+    log("Parsed rate value: %lf", parsedAxis);
+  }
   char buffer[BUFFER_SIZE];
+
+  double axisRateMin = (axis == 0) ? platform.axisMoveRateMin : 0;
+  double axisRateMax = (axis == 0) ? platform.axisMoveRateMax : 0;
+
   snprintf(buffer, sizeof(buffer),
            R"({
              "ErrorNumber": 0,
              "ErrorMessage": "",
              "Value": [
                {
-               "Maximum": 1,
-                "Minimum": 0
+               "Maximum": %d,
+                "Minimum": %d
               }
              ],
         "ClientTransactionID": %ld,
          "ServerTransactionID": %ld
         })",
-           getTransactionID(request), generateServerID);
+           axisRateMax, axisRateMin, getTransactionID(request),
+           generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -338,7 +351,7 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
           return canMoveAxis(request);
         }
         if (subPath == "axisrates") {
-          return returnAxisRates(request);
+          return returnAxisRates(request, platform);
         }
         if (subPath == "cansettracking") {
           return returnSingleBool(request, true);
@@ -424,7 +437,6 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
         if (subPath == "connected") {
           return returnSingleBool(request, true);
         }
-
         if (subPath == "utcdate")
           return returnSingleString(request, "");
 
