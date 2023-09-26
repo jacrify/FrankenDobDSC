@@ -43,19 +43,17 @@ bool checkStalePositionAndUpdate() {
 void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
   log("Return Axis rates url is  %s", request->url().c_str());
   // Client passed an "Axis" here.
-  // They presumably never call with axis!=0,
-  // but just in case we return 0 speed in that case
-  double parsedAxis = 0;
+  // Sharpcap doesn't handle multiple axis speeds well
+  // so we say that both axis move the same
+  int parsedAxis = 0;
   String axis = request->arg("Axis");
   if (axis != NULL) {
     log("Received axis: %s", axis.c_str());
-    parsedAxis = strtod(axis.c_str(), NULL);
-    log("Parsed rate value: %lf", parsedAxis);
+    parsedAxis = strtol(axis.c_str(),NULL, 10);
+    log("Parsed rate value: %ld", parsedAxis);
   }
   char buffer[BUFFER_SIZE];
-
-  double axisRateMin = (axis == 0) ? platform.axisMoveRateMin : 0;
-  double axisRateMax = (axis == 0) ? platform.axisMoveRateMax : 0;
+  double axisRateMax =   platform.axisMoveRateMax ;
 
   snprintf(buffer, sizeof(buffer),
            R"({
@@ -63,14 +61,14 @@ void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
              "ErrorMessage": "",
              "Value": [
                {
-               "Maximum": %d,
-                "Minimum": %d
+               "Maximum": %lf,
+                "Minimum": 0.0
               }
              ],
         "ClientTransactionID": %ld,
          "ServerTransactionID": %ld
         })",
-           axisRateMax, axisRateMin, getTransactionID(request),
+           axisRateMax,  getTransactionID(request),
            generateServerID);
 
   String json = buffer;

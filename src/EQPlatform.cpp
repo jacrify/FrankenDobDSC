@@ -30,7 +30,7 @@ void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
              " }\n",
              command, parm1, parm2);
     eqUDPOut.print(response);
-    log("Status Packet sent %s",response);
+    log("Status Packet sent %s", response);
   }
 }
 
@@ -61,9 +61,9 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
 
     // Create a JSON document to hold the payload
     const size_t capacity =
-        JSON_OBJECT_SIZE(7) + 100; // Reserve some memory for the JSON document
+        JSON_OBJECT_SIZE(9) + 100; // Reserve some memory for the JSON document
     StaticJsonDocument<capacity> doc;
-    
+
     DeserializationError error = deserializeJson(doc, packet);
     // Deserialize the JSON payload
     // DeserializationError error = deserializeJson(doc, msg);
@@ -76,7 +76,8 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
 
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
         doc.containsKey("platformResetOffset") &&
-        doc.containsKey("axisMoveRateMax") && doc.containsKey("axisMoveRateMin") &&
+        doc.containsKey("axisMoveRateMax") &&
+        doc.containsKey("axisMoveRateMin") &&
         doc.containsKey("guideMoveRate") && doc.containsKey("trackingRate") &&
         doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
         doc["guideMoveRate"].is<double>() &&
@@ -94,6 +95,7 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
       trackingRate = doc["trackingRate"];
       lastPositionReceivedTime = getNow();
 
+      
       if (eqPlatformIP == "") {
 
         IPAddress remoteIp = packet.remoteIP();
@@ -190,7 +192,8 @@ TimePoint EQPlatform::calculateAdjustedTime() {
                platformResetOffsetSeconds);
 
   // log("Returned adjusted time: %s from now : %s",
-  //     timePointToString(adjustedTime).c_str(), timePointToString(now).c_str());
+  //     timePointToString(adjustedTime).c_str(),
+  //     timePointToString(now).c_str());
   return adjustedTime;
 }
 /**
