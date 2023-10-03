@@ -28,6 +28,8 @@ public:
   double axisMoveRateMax;
   double axisMoveRateMin;
    double trackingRate;
+   
+
 
 private:
   AsyncUDP eqUDPOut;

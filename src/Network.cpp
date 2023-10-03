@@ -8,6 +8,9 @@ WiFiManager wifiManager;
 #define HOMEWIFIPASS "HOMEWIFIPASS"
 
 void setupWifi(Preferences &prefs) {
+  // prefs.putString(HOMEWIFISSID,"");
+  // prefs.putString(HOMEWIFIPASS, "");
+
   log("Scanning for networks...");
   int n = WiFi.scanNetworks();
 
@@ -20,7 +23,9 @@ void setupWifi(Preferences &prefs) {
   }
   if (prefs.isKey(HOMEWIFISSID) && prefs.isKey(HOMEWIFIPASS)) {
     log("Connnecting to home wifi...");
-    WiFi.begin(prefs.getString(HOMEWIFISSID), prefs.getString(HOMEWIFIPASS));
+   
+     WiFi.begin(
+        prefs.getString(HOMEWIFISSID), prefs.getString(HOMEWIFIPASS));
     while (WiFi.status() != WL_CONNECTED) {
       delay(1000);
       log("Waiting for connection...");

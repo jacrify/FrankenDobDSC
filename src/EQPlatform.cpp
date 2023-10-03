@@ -45,6 +45,7 @@ void EQPlatform::pulseGuide(int direction, long duration) {
   sendEQCommand("pulseguide", direction, duration);
 }
 
+
 void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   unsigned long now = millis();
   String start = packet.readStringUntil(':');
@@ -95,7 +96,6 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
       trackingRate = doc["trackingRate"];
       lastPositionReceivedTime = getNow();
 
-      
       if (eqPlatformIP == "") {
 
         IPAddress remoteIp = packet.remoteIP();

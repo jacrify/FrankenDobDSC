@@ -48,12 +48,12 @@ void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
   int parsedAxis = 0;
   String axis = request->arg("Axis");
   if (axis != NULL) {
-    log("Received axis: %s", axis.c_str());
-    parsedAxis = strtol(axis.c_str(),NULL, 10);
-    log("Parsed rate value: %ld", parsedAxis);
+    // log("Received axis: %s", axis.c_str());
+    parsedAxis = strtol(axis.c_str(), NULL, 10);
+    // log("Parsed rate value: %ld", parsedAxis);
   }
   char buffer[BUFFER_SIZE];
-  double axisRateMax =   platform.axisMoveRateMax ;
+  double axisRateMax = platform.axisMoveRateMax;
 
   snprintf(buffer, sizeof(buffer),
            R"({
@@ -62,14 +62,13 @@ void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
              "Value": [
                {
                "Maximum": %lf,
-                "Minimum": 0.0
+                "Minimum": 0
               }
              ],
         "ClientTransactionID": %ld,
          "ServerTransactionID": %ld
         })",
-           axisRateMax,  getTransactionID(request),
-           generateServerID);
+           axisRateMax, getTransactionID(request), generateServerID);
 
   String json = buffer;
   request->send(200, "application/json", json);
@@ -89,7 +88,7 @@ void returnTrackingRates(AsyncWebServerRequest *request) {
            R"({
            "ErrorNumber": 0,
              "ErrorMessage": "",
-             "Value": [ 0,1 ],
+             "Value": [ 0 , 1 ],
         "ClientTransactionID": %ld,
          "ServerTransactionID": %ld
         })",
@@ -138,21 +137,26 @@ void canMoveAxis(AsyncWebServerRequest *request) {
   log("CanMoveAxis (other)=false");
   return returnSingleBool(request, false);
 }
+
+void abortSlew(AsyncWebServerRequest *request, EQPlatform &platform) {
+  platform.moveAxis(0.0);
+  return returnNoError(request);
+}
 /** Parse movement rate (degrees sec) and ask plaform to move*/
 void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
   String rate = request->arg("Rate");
   double parsedRate;
   double parsedAxis;
   if (rate != NULL) {
-    log("Received rate: %s", rate.c_str());
+    // log("Received rate: %s", rate.c_str());
     parsedRate = strtod(rate.c_str(), NULL);
-    log("Parsed rate value: %lf", parsedRate);
+    // log("Parsed rate value: %lf", parsedRate);
   }
   String axis = request->arg("Axis");
   if (axis != NULL) {
-    log("Received axis: %s", axis.c_str());
+    // log("Received axis: %s", axis.c_str());
     parsedAxis = strtod(axis.c_str(), NULL);
-    log("Parsed rate value: %lf", parsedAxis);
+    // log("Parsed rate value: %lf", parsedAxis);
   }
 
   if (axis != "0") {
@@ -192,13 +196,27 @@ void pulseGuide(AsyncWebServerRequest *request, EQPlatform &platform) {
  *  Turn tracking on and off
  *
  */
+void setTrackingRate(AsyncWebServerRequest *request, EQPlatform &platform) {
+  String trackingRateStr = request->arg("TrackingRate");
+  if (trackingRateStr != NULL) {
+    log("Received trackingRateStr: %s", trackingRateStr.c_str());
+    int trackinRate = strtol(trackingRateStr.c_str(), NULL, 10);
+    // TODO implement rating rate on platform
+  } else {
+    log("No Tracking parm found");
+  }
+  return returnNoError(request);
+}
+/**
+ *  Turn tracking on and off
+ *
+ */
 void setTracking(AsyncWebServerRequest *request, EQPlatform &platform) {
   String trackingStr = request->arg("Tracking");
   if (trackingStr != NULL) {
-    log("Received parameterName: %s", trackingStr.c_str());
-
+    log("Received trackingStr: %s", trackingStr.c_str());
     int tracking = (trackingStr == "True") ? 1 : 0;
-    log("Parsed tracking value: %d", tracking);
+    // log("Parsed tracking value: %d", tracking);
     platform.setTracking(tracking);
   } else {
     log("No Tracking parm found");
@@ -488,6 +506,9 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
                        if (subPath.startsWith("utcdate"))
                          return setUTCDate(request, model);
 
+                       if (subPath.startsWith("trackingrate"))
+                         return setTrackingRate(request, platform);
+
                        if (subPath.startsWith("tracking"))
                          return setTracking(request, platform);
 
@@ -502,6 +523,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
 
                        if (subPath.startsWith("pulseguide"))
                          return pulseGuide(request, platform);
+
+                       if (subPath.startsWith("abortslew"))
+                         return abortSlew(request, platform);
+
                        // Add more routes here as needed
 
                        // If no match found, return a 404 or appropriate
