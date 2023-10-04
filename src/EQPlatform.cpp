@@ -23,7 +23,7 @@ void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
     char response[400];
 
     snprintf(response, sizeof(response),
-             "DSC:{ "
+             "EQ:{ "
              "\"command\": \"%s\", "
              "\"parameter1\": %.5lf,"
              "\"parameter2\": %.5lf"
@@ -53,7 +53,7 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   // String msg = packet.readStringUntil('\n');
 
   // log("UDP Broadcast received: %s", msg.c_str());
-  if (start == "EQ") {
+  if (start == "DSC") {
     // Check if the broadcast is from EQ Platform
     // if (msg.startsWith("EQ:")) {
 
