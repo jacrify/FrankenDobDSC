@@ -7,7 +7,7 @@
 #include <Ephemeris.h>
 #include <vector>
 
-//when adding syncpoints, any existing points closer than this are deleted.
+// when adding syncpoints, any existing points closer than this are deleted.
 #define SYNCHPOINT_FILTER_DISTANCE_DEGREES 10
 
 struct SynchPoint {
@@ -87,73 +87,72 @@ class TelescopeModel {
 public:
   TelescopeModel();
 
- std::vector<SynchPoint> synchPoints;
- EqCoord currentEqPosition;
- SynchPoint lastSyncPoint;
+  std::vector<SynchPoint> synchPoints;
+  EqCoord currentEqPosition;
+  SynchPoint lastSyncPoint;
 
- void clearAlignment();
- void syncPositionRaDec(float ra, float dec, TimePoint tp);
- void calculateCurrentPosition(TimePoint tp);
- long calculateAzEncoderStepsPerRevolution();
- long calculateAltEncoderStepsPerRevolution();
+  void clearAlignment();
+  void syncPositionRaDec(float ra, float dec, TimePoint tp);
+  void calculateCurrentPosition(TimePoint tp);
+  long calculateAzEncoderStepsPerRevolution();
+  long calculateAltEncoderStepsPerRevolution();
 
- void setEncoderValues(long encAlt, long encAz);
- void setAzEncoderStepsPerRevolution(long altResolution);
- void setAltEncoderStepsPerRevolution(long altResolution);
- long getAzEncoderStepsPerRevolution();
- long getAltEncoderStepsPerRevolution();
+  void setEncoderValues(long encAlt, long encAz);
+  void setAzEncoderStepsPerRevolution(long altResolution);
+  void setAltEncoderStepsPerRevolution(long altResolution);
+  long getAzEncoderStepsPerRevolution();
+  long getAltEncoderStepsPerRevolution();
 
- void performZeroedAlignment(TimePoint now);
+  void performZeroedAlignment(TimePoint now);
 
-     void setLatitude(float lat);
- void setLongitude(float lng);
+  void setLatitude(float lat);
+  void setLongitude(float lng);
 
- float getLatitude();
- float getLongitude();
+  float getLatitude();
+  float getLongitude();
 
- float getAltCoord();
- float getAzCoord();
+  float getAltCoord();
+  float getAzCoord();
 
- float getDecCoord();
- float getRACoord();
+  float getDecCoord();
+  float getRACoord();
 
- /**
-  * This does the following:
-  * 1: Iterates through synchPoints and removes all items where the distance
-  * (calculated using double calculateDistanceInDegrees(EqCoord delta) )
-  * is less than trimRadius.
-  * 2: Adds sp to synchPoints
-  * 3: Returns the synchPoint where distance is greatests, found in step 1
-  * Cannot return sp. Cannot return removed item. If no item return syncpoint
-  * with "isvalid" set to false. New one is still added.
-  */
- SynchPoint addSynchPointAndFindFarthest(SynchPoint sp, double trimRadius);
+  /**
+   * This does the following:
+   * 1: Iterates through synchPoints and removes all items where the distance
+   * (calculated using double calculateDistanceInDegrees(EqCoord delta) )
+   * is less than trimRadius.
+   * 2: Adds sp to synchPoints
+   * 3: Returns the synchPoint where distance is greatests, found in step 1
+   * Cannot return sp. Cannot return removed item. If no item return syncpoint
+   * with "isvalid" set to false. New one is still added.
+   */
+  SynchPoint addSynchPointAndFindFarthest(SynchPoint sp, double trimRadius);
 
- void performOneStarAlignment(HorizCoord altaz, EqCoord eq, TimePoint tp);
+  void performOneStarAlignment(HorizCoord altaz, EqCoord eq, TimePoint tp);
 
- private:
- float latitude;
- float longitude;
+private:
+  float latitude;
+  float longitude;
 
- long altEnc;
- long azEnc;
- long azEncoderStepsPerRevolution;
- long altEncoderStepsPerRevolution;
- CoordConv alignment;
- SynchPoint baseSyncPoint;
+  long altEnc;
+  long azEnc;
+  long azEncoderStepsPerRevolution;
+  long altEncoderStepsPerRevolution;
+  CoordConv alignment;
+  SynchPoint baseSyncPoint;
 
- bool defaultAlignment;
- float currentAlt;
- float currentAz;
- double secondsToRADeltaInDegrees(double secondsDelta);
- void performBaselineAlignment();
- void calculateEncoderOffsetFromAltAz(float alt, float az, long altEncVal,
-                                      long azEncVal, long &altEncOffset,
-                                      long &azEncOffset);
- HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
+  bool defaultAlignment;
+  float currentAlt;
+  float currentAz;
+  double secondsToRADeltaInDegrees(double secondsDelta);
+  void performBaselineAlignment();
+  void calculateEncoderOffsetFromAltAz(float alt, float az, long altEncVal,
+                                       long azEncVal, long &altEncOffset,
+                                       long &azEncOffset);
+  HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
 
- void addReferencePoints(SynchPoint oldest, SynchPoint newest);
-
- };
+  void addReferencePoints(SynchPoint oldest, SynchPoint newest);
+};
 
 #endif

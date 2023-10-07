@@ -16,6 +16,7 @@ public:
   void moveAxis(double rate);
   void setTracking(int tracking);
   void pulseGuide(int direction, long duration);
+  void zeroOffsetTime();
 
   double runtimeFromCenterSeconds;
   double platformResetOffsetSeconds;

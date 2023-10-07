@@ -1,10 +1,10 @@
 #include "WebUI.h"
+#include "Encoders.h"
 #include "Logging.h"
 #include "TelescopeModel.h"
 #include <EQPlatform.h>
 #include <LittleFS.h>
 #include <Preferences.h>
-
 #define PREF_ALT_STEPS_KEY "AltStepsKey"
 #define PREF_AZ_STEPS_KEY "AzStepsKey"
 
@@ -103,7 +103,7 @@ void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
 
 void performZeroedAlignment(AsyncWebServerRequest *request,
                             TelescopeModel &model) {
-
+  zeroEncoders();
   model.performZeroedAlignment(getNow());
   request->send(200);
 }

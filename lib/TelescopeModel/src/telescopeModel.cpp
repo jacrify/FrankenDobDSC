@@ -238,6 +238,7 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
  */
 void TelescopeModel::performZeroedAlignment(TimePoint now) {
   log("Performing zero alignment");
+  clearAlignment();
   
   HorizCoord h = HorizCoord(0, 180); //this is if we were pointing south
   EqCoord eq = EqCoord(h, now); // uses Epheremis to calculate.

@@ -45,6 +45,11 @@ void EQPlatform::pulseGuide(int direction, long duration) {
   sendEQCommand("pulseguide", direction, duration);
 }
 
+void EQPlatform::zeroOffsetTime()
+{
+  sendEQCommand("zerooffset",0,0);
+}
+
 
 void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   unsigned long now = millis();

@@ -5,4 +5,5 @@ void setupEncoders();
 void loopEncoders();
 long volatile getEncoderAz();
 long volatile getEncoderAl();
+void zeroEncoders();
 #endif

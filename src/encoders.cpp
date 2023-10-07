@@ -7,8 +7,6 @@
 ESP32Encoder altEncoder;
 ESP32Encoder aziEncoder;
 
-
-
 const long resolution_az = 108531; // 36900 on paper.
 const long resolution_alt = 30000;
 
@@ -24,8 +22,6 @@ WiFiClient client;
 #define enc_al_A 27
 #define enc_al_B 14
 
-
-
 void printFirmware() {
   client.print("Frankendob DSB ");
   client.print("1.0");
@@ -37,7 +33,6 @@ void printFirmware() {
 }
 
 void printResolution() {
-
 
   client.print(resolution_az);
   client.print("-");
@@ -85,7 +80,7 @@ void printEncoderValue(long val) {
 }
 
 void loopEncoders() {
-  //this is for sky safari "direct encoder support"
+  // this is for sky safari "direct encoder support"
 
   if (server.hasClient()) {
     client = server.available();
@@ -100,11 +95,13 @@ void loopEncoders() {
       client.print("\t");
       printEncoderValue(getEncoderAl());
       client.print("\r");
-      
+
     } else if (c == 86) {
       Serial.println("Client requested firmware.");
       printFirmware();
-    } else if (c == 72) {
+    }
+
+    else if (c == 72) {
       Serial.println("Client requested res.");
       printResolution();
       client.print("\r");
@@ -116,7 +113,7 @@ void loopEncoders() {
   // Serial.println("Client Disconnected.");
   // delay(50);
 }
-
-
-
-
+void zeroEncoders() {
+  altEncoder.setCount(0);
+  aziEncoder.setCount(0);
+}
