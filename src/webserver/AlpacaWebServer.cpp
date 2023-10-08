@@ -359,9 +359,12 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
             subPath == "cansetpierside" ||
             subPath == "cansetrightascensionrate" ||
             subPath == "cansyncaltaz" || subPath == "canunpark" ||
-            subPath == "doesrefraction" || subPath == "sideofpier" ||
+            subPath == "doesrefraction" ||
             subPath == "slewing") {
           return returnSingleBool(request, false);
+        }
+         if (subPath == "sideofpier") {
+          return returnSingleInteger(request,-1);
         }
         if (subPath == "canmoveaxis") {
           return canMoveAxis(request);
