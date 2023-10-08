@@ -25,7 +25,7 @@ void setupWifi(Preferences &prefs) {
     log("Connnecting to home wifi...");
    
      WiFi.begin(
-        prefs.getString(HOMEWIFISSID), prefs.getString(HOMEWIFIPASS));
+        prefs.getString(HOMEWIFISSID).c_str(), prefs.getString(HOMEWIFIPASS).c_str());
     while (WiFi.status() != WL_CONNECTED) {
       delay(1000);
       log("Waiting for connection...");
