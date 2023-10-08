@@ -53,7 +53,10 @@ void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
     // log("Parsed rate value: %ld", parsedAxis);
   }
   char buffer[BUFFER_SIZE];
-  double axisRateMax = platform.axisMoveRateMax;
+  // TODO fix this later
+  // double axisRateMax = platform.axisMoveRateMax;
+  double axisRateMax=21;
+
 
   snprintf(buffer, sizeof(buffer),
            R"({
