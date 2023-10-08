@@ -81,7 +81,6 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
     }
 
     if (doc.containsKey("timeToCenter") && doc.containsKey("timeToEnd") &&
-        doc.containsKey("platformResetOffset") &&
         doc.containsKey("axisMoveRateMax") &&
         doc.containsKey("axisMoveRateMin") &&
         doc.containsKey("guideMoveRate") && doc.containsKey("trackingRate") &&
@@ -89,10 +88,9 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
         doc["guideMoveRate"].is<double>() &&
         doc["axisMoveRateMax"].is<double>() &&
         doc["axisMoveRateMin"].is<double>() &&
-        doc["trackingRate"].is<double>() && doc["timeToEnd"].is<double>() &&
-        doc["platformResetOffset"].is<double>()) {
+        doc["trackingRate"].is<double>() && doc["timeToEnd"].is<double>() ) {
       runtimeFromCenterSeconds = doc["timeToCenter"];
-      platformResetOffsetSeconds = doc["platformResetOffset"];
+
       timeToEnd = doc["timeToEnd"];
       currentlyRunning = doc["isTracking"];
       pulseGuideRate = doc["guideMoveRate"];
@@ -155,7 +153,7 @@ void EQPlatform::checkConnectionStatus() {
  * point. When the platform is running, this number is reducing
  * at the same rate time is moving forward, so the reference time
  * point stays the same, so the scope keeps pointing at the same ra
- * if alt/a do not change.
+ * if alt/azi do not change.
  *
  * When the platform stops, this number stays static but time moves
  * on, so ra changes over time.
@@ -167,10 +165,6 @@ void EQPlatform::checkConnectionStatus() {
  * If we ever add other tracking rates, this may be wrong, but the
  * error should be marginal.
  *
- * When the platform is rewound (or fast forwarded), this introduces
- * yet another time (ra) offset emitted by the platform:
- * platformResetOffsetSeconds. This is also added to the current
- * time to calculate the reference time point.
  */
 TimePoint EQPlatform::calculateAdjustedTime() {
   TimePoint now = getNow();
@@ -193,8 +187,7 @@ TimePoint EQPlatform::calculateAdjustedTime() {
         differenceInSeconds(lastPositionReceivedTime, now);
   }
   TimePoint adjustedTime = addSecondsToTime(
-      now, runtimeFromCenterSeconds - interpolationTimeSeconds +
-               platformResetOffsetSeconds);
+      now, runtimeFromCenterSeconds - interpolationTimeSeconds);
 
   // log("Returned adjusted time: %s from now : %s",
   //     timePointToString(adjustedTime).c_str(),
@@ -211,6 +204,6 @@ EQPlatform::EQPlatform() {
   lastPositionReceivedTime = getNow();
   currentlyRunning = false;
   platformConnected = false;
-  platformResetOffsetSeconds = 0;
+
   runtimeFromCenterSeconds = 0;
 }

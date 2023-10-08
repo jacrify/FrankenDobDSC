@@ -19,7 +19,7 @@ public:
   void zeroOffsetTime();
 
   double runtimeFromCenterSeconds;
-  double platformResetOffsetSeconds;
+
 
   String eqPlatformIP;
   double timeToEnd;

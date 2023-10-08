@@ -30,7 +30,6 @@ void getScopeStatus(AsyncWebServerRequest *request,  TelescopeModel &model,
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
     "timeToEnd" : %.1lf,
-    "rwffoffset" : %.1lf,
     "platformConnected" : %s
 })",
 
@@ -46,7 +45,6 @@ void getScopeStatus(AsyncWebServerRequest *request,  TelescopeModel &model,
           platform.eqPlatformIP.c_str(),
           platform.currentlyRunning ? "true" : "false",
           platform.runtimeFromCenterSeconds / 60, platform.timeToEnd / 60,
-          platform.platformResetOffsetSeconds/60,
           platform.platformConnected ? "true" : "false");
 
   String json = buffer;
