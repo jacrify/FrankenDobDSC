@@ -8,7 +8,7 @@
 #define PREF_ALT_STEPS_KEY "AltStepsKey"
 #define PREF_AZ_STEPS_KEY "AzStepsKey"
 
-void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
+void getScopeStatus(AsyncWebServerRequest *request,  TelescopeModel &model,
                     EQPlatform &platform) {
   // log("/getStatus");
 
@@ -30,7 +30,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
     "timeToEnd" : %.1lf,
-    
+    "rwffoffset" : %.1lf,
     "platformConnected" : %s
 })",
 
@@ -46,6 +46,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
           platform.eqPlatformIP.c_str(),
           platform.currentlyRunning ? "true" : "false",
           platform.runtimeFromCenterSeconds / 60, platform.timeToEnd / 60,
+          platform.platformResetOffsetSeconds/60,
           platform.platformConnected ? "true" : "false");
 
   String json = buffer;
@@ -102,9 +103,11 @@ void clearPrefs(AsyncWebServerRequest *request, Preferences &prefs,
 }
 
 void performZeroedAlignment(AsyncWebServerRequest *request,
-                            TelescopeModel &model) {
+                            EQPlatform &platform, TelescopeModel &model) {
   zeroEncoders();
-  model.performZeroedAlignment(getNow());
+  platform.zeroOffsetTime();
+  TimePoint now=platform.calculateAdjustedTime();
+  model.performZeroedAlignment(now);
   request->send(200);
 }
 void setupWebUI(AsyncWebServer &alpacaWebServer, TelescopeModel &model,
@@ -136,8 +139,8 @@ void setupWebUI(AsyncWebServer &alpacaWebServer, TelescopeModel &model,
                      });
 
   alpacaWebServer.on("/performZeroedAlignment", HTTP_POST,
-                     [&model](AsyncWebServerRequest *request) {
-                       performZeroedAlignment(request, model);
+                     [&model,&platform](AsyncWebServerRequest *request) {
+                       performZeroedAlignment(request,platform, model);
                      });
   alpacaWebServer.serveStatic("/", LittleFS, "/fs/");
 }

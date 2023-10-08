@@ -55,6 +55,10 @@
             <td>Time in minutes to end of run</td>
             <td><span id="timeToEnd">0</span></td>
         </tr>
+        <tr>
+            <td>Rewind/Fastfoward offset (mins)</td>
+            <td><span id="rwffoffset">0</span></td>
+        </tr>
     </table>
 
     <table border="1">
@@ -109,6 +113,7 @@
                 $("#actualAltEncoderStepsPerRevolution").text(data.actualAltEncoderStepsPerRevolution);
                 $("#actualAzEncoderStepsPerRevolution").text(data.actualAzEncoderStepsPerRevolution);
                 $("#timeToMiddle").text(data.timeToMiddle);
+                $("#rwffoffset").text(data.rwffoffset);
                 $("#lastSyncedRa").text(data.lastSyncedRa);
                 $("#lastSyncedDec").text(data.lastSyncedDec);
                 $("#lastSyncedAlt").text(data.lastSyncedAlt);

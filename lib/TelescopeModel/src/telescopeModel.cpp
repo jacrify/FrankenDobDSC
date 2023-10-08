@@ -27,10 +27,12 @@ void TelescopeModel::performBaselineAlignment() {
 TelescopeModel::TelescopeModel() {
   // Default alignment for alt az in south
   // alignment.addReference(0, 0, M_PI, 0);//radians
-  performBaselineAlignment();
-
   latitude = -34.049120;
   longitude = 151.042100;
+  Ephemeris::setLocationOnEarth(latitude, longitude);
+
+  performBaselineAlignment();
+
 
   altEnc = 0;
   azEnc = 0;
@@ -238,9 +240,10 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
  */
 void TelescopeModel::performZeroedAlignment(TimePoint now) {
   log("Performing zero alignment");
-  clearAlignment();
+  
   
   HorizCoord h = HorizCoord(0, 180); //this is if we were pointing south
+  log("Time for zero alignment: %s",timePointToString(now).c_str());
   EqCoord eq = EqCoord(h, now); // uses Epheremis to calculate.
 
   log("Zero Point: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", h.altInDegrees,
