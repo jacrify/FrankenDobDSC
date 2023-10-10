@@ -45,7 +45,9 @@
                 <a id="eqPlatformLink" href="#" style="text-decoration: none; color: inherit;">EQ Platform Connected</a>
             </td>
 
-            <td id="platformTracking">EQ Platform Tracking</td>
+            <td id="platformTracking">
+                <a id="trackingLink" href="#" style="text-decoration: none; color: inherit;">EQ Platform Tracking</a>
+            </td>
         </tr>
         <tr>
             <td>Time in minutes to middle</td>
@@ -115,13 +117,18 @@
                 $("#lastSyncedAlt").text(data.lastSyncedAlt);
                 $("#lastSyncedAz").text(data.lastSyncedAz);
                 $("#platformConnected").css("background-color", data.platformConnected ? "green" : "red");
-                if (data.platformConnected && data.eqPlatformIP) {
+                if (data.platformConnected) {
                     $("#eqPlatformLink").attr("href", "http://" + data.eqPlatformIP).text("EQ Platform Connected");
-
+                    if (data.platformTracking) {
+                        $("#trackingLink").attr("href", "/trackingOff").text("Tracking Is On");
+                    } else {
+                        $("#trackingLink").attr("href", "/trackingOn").text("Tracking Is Off");
+                    }
                 } else {
                     $("#eqPlatformLink").removeAttr("href").text("EQ Platform Not Connected");
-                    
+                    $("#trackingLink").removeAttr("href").text("");  
                 }
+                
                 $("#platformTracking").css("background-color", data.platformTracking ? "green" : "red");
             }).fail(function () {
                 console.error("Failed to get data.");

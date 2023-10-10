@@ -8,7 +8,7 @@
 #define PREF_ALT_STEPS_KEY "AltStepsKey"
 #define PREF_AZ_STEPS_KEY "AzStepsKey"
 
-void getScopeStatus(AsyncWebServerRequest *request,  TelescopeModel &model,
+void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
                     EQPlatform &platform) {
   // log("/getStatus");
 
@@ -104,7 +104,7 @@ void performZeroedAlignment(AsyncWebServerRequest *request,
                             EQPlatform &platform, TelescopeModel &model) {
   zeroEncoders();
   platform.zeroOffsetTime();
-  TimePoint now=platform.calculateAdjustedTime();
+  TimePoint now = platform.calculateAdjustedTime();
   model.performZeroedAlignment(now);
   request->send(200);
 }
@@ -137,8 +137,17 @@ void setupWebUI(AsyncWebServer &alpacaWebServer, TelescopeModel &model,
                      });
 
   alpacaWebServer.on("/performZeroedAlignment", HTTP_POST,
-                     [&model,&platform](AsyncWebServerRequest *request) {
-                       performZeroedAlignment(request,platform, model);
+                     [&model, &platform](AsyncWebServerRequest *request) {
+                       performZeroedAlignment(request, platform, model);
+                     });
+
+  alpacaWebServer.on("/trackingOn", HTTP_GET,
+                     [&model, &platform](AsyncWebServerRequest *request) {
+                       platform.setTracking(true);
+                     });
+  alpacaWebServer.on("/trackingOff", HTTP_GET,
+                     [&model, &platform](AsyncWebServerRequest *request) {
+                       platform.setTracking(false);
                      });
   alpacaWebServer.serveStatic("/", LittleFS, "/fs/");
 }
