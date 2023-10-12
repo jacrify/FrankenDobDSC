@@ -82,6 +82,10 @@
         <td>
             <span id="lastSyncedAz">0</span>
         </td>
+        <td>Last Synced Error (degrees)</td>
+        <td>
+            <span id="lastSyncedErr">0</span>
+        </td>
         </tr>
 
 
@@ -99,7 +103,7 @@
     <button id="performZeroedAlignment">Perform Zeroed Alignment</button>
 
     <br>
-    
+
     <script>
 
         function update() {
@@ -116,6 +120,7 @@
                 $("#lastSyncedDec").text(data.lastSyncedDec);
                 $("#lastSyncedAlt").text(data.lastSyncedAlt);
                 $("#lastSyncedAz").text(data.lastSyncedAz);
+                $("#lastSyncedErr").text(data.lastSyncedErr);
                 $("#platformConnected").css("background-color", data.platformConnected ? "green" : "red");
                 if (data.platformConnected) {
                     $("#eqPlatformLink").attr("href", "http://" + data.eqPlatformIP).text("EQ Platform Connected");
@@ -126,9 +131,9 @@
                     }
                 } else {
                     $("#eqPlatformLink").removeAttr("href").text("EQ Platform Not Connected");
-                    $("#trackingLink").removeAttr("href").text("");  
+                    $("#trackingLink").removeAttr("href").text("");
                 }
-                
+
                 $("#platformTracking").css("background-color", data.platformTracking ? "green" : "red");
             }).fail(function () {
                 console.error("Failed to get data.");
