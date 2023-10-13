@@ -95,7 +95,6 @@ public:
   void syncPositionRaDec(float ra, float dec, TimePoint tp);
   void calculateCurrentPosition(TimePoint tp);
 
-
   void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
   void setAltEncoderStepsPerRevolution(long altResolution);
@@ -141,8 +140,6 @@ private:
   long azEncoderStepsPerRevolution;
   long altEncoderStepsPerRevolution;
 
-
-
   CoordConv alignment;
   SynchPoint baseSyncPoint;
 
@@ -157,8 +154,10 @@ private:
   HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
 
   void addReferencePoints(SynchPoint oldest, SynchPoint newest);
-  long calculateAzEncoderStepsPerRevolution();
-  long calculateAltEncoderStepsPerRevolution();
+  long calculateAzEncoderStepsPerRevolution(SynchPoint startPoint,
+                                            SynchPoint endPoint);
+  long calculateAltEncoderStepsPerRevolution(SynchPoint startPoint,
+                                             SynchPoint endPoint);
 };
 
 #endif

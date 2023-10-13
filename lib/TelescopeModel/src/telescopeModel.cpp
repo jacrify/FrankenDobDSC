@@ -60,6 +60,8 @@ void TelescopeModel::clearAlignment() {
   // TODO #3 Make clearAlignement reset EQ platform time?
   synchPoints.clear();
   baseSyncPoint = SynchPoint();
+  lastSyncPoint = SynchPoint();
+
   baseSyncPoint.isValid = false;
   performBaselineAlignment();
 }
@@ -374,14 +376,19 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   // error calc
   calculateCurrentPosition(now);
 
-  lastSyncPoint = SynchPoint(lastSyncedEq, calculatedAltAzFromEncoders, now,
-                             currentEqPosition);
+  SynchPoint thisSyncPoint = SynchPoint(
+      lastSyncedEq, calculatedAltAzFromEncoders, now, currentEqPosition);
 
+  thisSyncPoint.altEncoder = altEnc;
+  thisSyncPoint.azEncoder = azEnc;
+  // compare to last
 
-  lastSyncPoint.altEncoder = altEnc;
-  lastSyncPoint.azEncoder = azEnc;
-
-
+  if (lastSyncPoint.isValid) {
+    calculatedAltEncoderRes =calculateAltEncoderStepsPerRevolution(thisSyncPoint, lastSyncPoint);
+    calculatedAziEncoderRes =
+        calculateAzEncoderStepsPerRevolution(thisSyncPoint, lastSyncPoint);
+  }
+  lastSyncPoint = thisSyncPoint;
 
   SynchPoint furthest = addSynchPointAndFindFarthest(
       lastSyncPoint, SYNCHPOINT_FILTER_DISTANCE_DEGREES);
@@ -390,11 +397,6 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
     log("Recalculating model...");
     addReferencePoints(furthest, lastSyncPoint);
     baseSyncPoint = furthest;
-    //Work out what encoder resoltion would be if this was
-    //a one component (alt only, or azi only) move
-    calculatedAltEncoderRes = calculateAltEncoderStepsPerRevolution();
-    calculatedAziEncoderRes = calculateAzEncoderStepsPerRevolution();
-
   } else {
     log("No usable syncpoint found...");
   }
@@ -431,16 +433,20 @@ long TelescopeModel::getAltEncoderStepsPerRevolution() {
  * @return Number of encoder steps required for a full 360° azimuth
  * revolution.
  */
-long TelescopeModel::calculateAzEncoderStepsPerRevolution() {
+long TelescopeModel::calculateAzEncoderStepsPerRevolution(SynchPoint startPoint,
+                                                          SynchPoint endPoint) {
 
-  EqCoord start = baseSyncPoint.eqCoord;
-  EqCoord end = lastSyncPoint.eqCoord;
+  EqCoord start = startPoint.eqCoord;
+  EqCoord end = endPoint.eqCoord;
 
   double distance = start.calculateDistanceInDegrees(end);
-  double encoderMove = abs(lastSyncPoint.azEncoder - baseSyncPoint.azEncoder);
-  double stepsPerDegree = distance / encoderMove;
-  double stepsPerRevolution = stepsPerDegree * 360.0;
-  log("Calculated steps per revolution  : %ld", stepsPerRevolution);
+  long encoderMove = abs(startPoint.azEncoder - endPoint.azEncoder) ;
+
+  double stepsPerDegree = encoderMove / distance;
+  long stepsPerRevolution = stepsPerDegree * 360;
+  log("Azi Encoder Res Calcs:Distance: %f Encoder Move: %ld Steps per degree: "
+      "%f Calculated steps per revolution  : %ld",
+      distance, encoderMove, stepsPerDegree, stepsPerRevolution);
   // Return steps per full revolution (360°) by scaling up stepsPerDegree.
   return stepsPerRevolution;
 }
@@ -454,16 +460,21 @@ long TelescopeModel::calculateAzEncoderStepsPerRevolution() {
  * @return Number of encoder steps required for a hypothetical full 360°
  * altitude revolution.
  */
-long TelescopeModel::calculateAltEncoderStepsPerRevolution() {
+long TelescopeModel::calculateAltEncoderStepsPerRevolution(
+    SynchPoint startPoint, SynchPoint endPoint) {
 
-  EqCoord start = baseSyncPoint.eqCoord;
-  EqCoord end = lastSyncPoint.eqCoord;
+  EqCoord start = startPoint.eqCoord;
+  EqCoord end = endPoint.eqCoord;
 
   double distance = start.calculateDistanceInDegrees(end);
-  double encoderMove = abs(lastSyncPoint.altEncoder - baseSyncPoint.altEncoder);
-  double stepsPerDegree = distance / encoderMove;
-  double stepsPerRevolution = stepsPerDegree * 360.0;
-  log("Calculated steps per revolution  : %ld", stepsPerRevolution);
+  
+  double encoderMove = abs(startPoint.altEncoder - endPoint.altEncoder) ;
+  double stepsPerDegree = encoderMove / distance;
+  long stepsPerRevolution = stepsPerDegree * 360;
+  log("Alt Encoder Res Calcs: Distance: %f Encoder Move: %ld Steps per degree: "
+      "%f Calculated steps "
+      "per revolution  : %ld",
+      distance, encoderMove, stepsPerDegree, stepsPerRevolution);
   // Return steps per full revolution (360°) by scaling up stepsPerDegree.
-  return stepsPerRevolution;
+  return -stepsPerRevolution;
 }

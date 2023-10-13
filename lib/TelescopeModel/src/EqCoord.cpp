@@ -13,10 +13,10 @@ double EqCoord::calculateDistanceInDegrees(EqCoord delta) const {
   double dec2 = delta.getDecInDegrees() * DEGREES_TO_RADIANS;
 
   // Spherical law of cosines
-  double distance_in_degrees =
+  double distance_in_radians =
       acos(sin(dec1) * sin(dec2) + cos(dec1) * cos(dec2) * cos(ra2 - ra1));
 
-  return distance_in_degrees / DEGREES_TO_RADIANS; // Conversion back to degrees
+  return distance_in_radians / DEGREES_TO_RADIANS; // Conversion back to degrees
 }
 
 /** 
