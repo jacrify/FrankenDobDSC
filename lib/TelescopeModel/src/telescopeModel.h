@@ -12,7 +12,7 @@
 
 struct SynchPoint {
   EqCoord eqCoord;
-  HorizCoord horizCoord;
+  HorizCoord encoderAltAz;
   TimePoint timePoint;
   double errorInDegreesAtCreation;
   bool isValid;
@@ -23,10 +23,10 @@ struct SynchPoint {
       : errorInDegreesAtCreation(0), isValid(false) {
   } // Initialize members as needed
 
-  // Constructor to initialize the object
-  SynchPoint(const EqCoord &eq, const HorizCoord &hz, const TimePoint &tp,
-             const EqCoord &calculatedeq)
-      : eqCoord(eq), horizCoord(hz), timePoint(tp), isValid(true) {
+  SynchPoint(const EqCoord &eq, const HorizCoord &encoderHorizontal,
+             const TimePoint &tp, const EqCoord &calculatedeq)
+      : eqCoord(eq), encoderAltAz(encoderHorizontal), timePoint(tp),
+        isValid(true) {
     errorInDegreesAtCreation = eq.calculateDistanceInDegrees(calculatedeq);
   }
 };
@@ -94,8 +94,7 @@ public:
   void clearAlignment();
   void syncPositionRaDec(float ra, float dec, TimePoint tp);
   void calculateCurrentPosition(TimePoint tp);
-  long calculateAzEncoderStepsPerRevolution();
-  long calculateAltEncoderStepsPerRevolution();
+
 
   void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
@@ -130,6 +129,8 @@ public:
   SynchPoint addSynchPointAndFindFarthest(SynchPoint sp, double trimRadius);
 
   void performOneStarAlignment(HorizCoord altaz, EqCoord eq, TimePoint tp);
+  long calculatedAltEncoderRes;
+  long calculatedAziEncoderRes;
 
 private:
   float latitude;
@@ -139,6 +140,9 @@ private:
   long azEnc;
   long azEncoderStepsPerRevolution;
   long altEncoderStepsPerRevolution;
+
+
+
   CoordConv alignment;
   SynchPoint baseSyncPoint;
 
@@ -153,6 +157,8 @@ private:
   HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
 
   void addReferencePoints(SynchPoint oldest, SynchPoint newest);
+  long calculateAzEncoderStepsPerRevolution();
+  long calculateAltEncoderStepsPerRevolution();
 };
 
 #endif

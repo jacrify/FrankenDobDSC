@@ -33,7 +33,6 @@ TelescopeModel::TelescopeModel() {
 
   performBaselineAlignment();
 
-
   altEnc = 0;
   azEnc = 0;
   azEncoderStepsPerRevolution = 0;
@@ -226,8 +225,8 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
       horiz1.aziInDegrees, eq1.getRAInHours(), eq1.getDecInDegrees());
   log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.altInDegrees,
       horiz2.aziInDegrees, eq2.getRAInHours(), eq2.getDecInDegrees());
-  baseSyncPoint =
-      SynchPoint(eq1, horiz1, now, eq1); // creates syncpoint with no error
+  baseSyncPoint = SynchPoint(eq1, horiz1, now,
+                             eq1); // creates syncpoint with no error
 }
 
 /**
@@ -240,15 +239,14 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
  */
 void TelescopeModel::performZeroedAlignment(TimePoint now) {
   log("Performing zero alignment");
-  
-  
-  HorizCoord h = HorizCoord(0, 180); //this is if we were pointing south
-  log("Time for zero alignment: %s",timePointToString(now).c_str());
+
+  HorizCoord h = HorizCoord(0, 180); // this is if we were pointing south
+  log("Time for zero alignment: %s", timePointToString(now).c_str());
   EqCoord eq = EqCoord(h, now); // uses Epheremis to calculate.
 
   log("Zero Point: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", h.altInDegrees,
       h.aziInDegrees, eq.getRAInHours(), eq.getDecInDegrees());
-  HorizCoord h2= HorizCoord(0, 0); //this is what encoders will actually read
+  HorizCoord h2 = HorizCoord(0, 0); // this is what encoders will actually read
   performOneStarAlignment(h2, eq, now);
 }
 /**
@@ -293,7 +291,7 @@ void TelescopeModel::addReferencePoints(SynchPoint oldest, SynchPoint newest) {
   double raDeltaDegrees = 0;
   alignment.clean();
 
-  alignment.addReferenceCoord(oldest.horizCoord, oldest.eqCoord);
+  alignment.addReferenceCoord(oldest.encoderAltAz, oldest.eqCoord);
 
   // compensate for time gap between two points.
   double timeDelta = differenceInSeconds(oldest.timePoint, newest.timePoint);
@@ -301,7 +299,7 @@ void TelescopeModel::addReferencePoints(SynchPoint oldest, SynchPoint newest) {
   EqCoord adjustedLastSyncEQ = newest.eqCoord.addRAInDegrees(-raDeltaDegrees);
   // BUG? what happens when platform is running?
   //
-  alignment.addReferenceCoord(newest.horizCoord, adjustedLastSyncEQ);
+  alignment.addReferenceCoord(newest.encoderAltAz, adjustedLastSyncEQ);
 
   log("Got two refs, calculating model...");
   alignment.calculateThirdReference();
@@ -360,6 +358,10 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
       lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
       timePointToString(now).c_str());
 
+  HorizCoord modeledAltAz = alignment.toInstrumentCoord(lastSyncedEq);
+  log("Calculated alt/az from model\t\talt: %lf\t\taz:%lf",
+      modeledAltAz.altInDegrees, modeledAltAz.aziInDegrees);
+
   HorizCoord calculatedAltAzFromEncoders =
       calculateAltAzFromEncoders(altEnc, azEnc);
   // assumes alt is zeroed to horizon at power on
@@ -375,8 +377,11 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncPoint = SynchPoint(lastSyncedEq, calculatedAltAzFromEncoders, now,
                              currentEqPosition);
 
+
   lastSyncPoint.altEncoder = altEnc;
   lastSyncPoint.azEncoder = azEnc;
+
+
 
   SynchPoint furthest = addSynchPointAndFindFarthest(
       lastSyncPoint, SYNCHPOINT_FILTER_DISTANCE_DEGREES);
@@ -385,6 +390,10 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
     log("Recalculating model...");
     addReferencePoints(furthest, lastSyncPoint);
     baseSyncPoint = furthest;
+    //Work out what encoder resoltion would be if this was
+    //a one component (alt only, or azi only) move
+    calculatedAltEncoderRes = calculateAltEncoderStepsPerRevolution();
+    calculatedAziEncoderRes = calculateAzEncoderStepsPerRevolution();
 
   } else {
     log("No usable syncpoint found...");
@@ -411,83 +420,50 @@ long TelescopeModel::getAltEncoderStepsPerRevolution() {
  * @brief Calculates the number of encoder steps per full 360° azimuth
  * revolution.
  *
- * It first computes the movement in the azimuth for both encoder and
- * coordinates. It then handles any wraparound in azimuth. The ratio of
- * encoder move to coordinate move yields the number of encoder steps per
- * degree of azimuth, which is then scaled to a full revolution.
+ * Assumes the move between last sync point and current sync point
+ * was an azi move only.
+ *
+ * Calculates the distance in degrees between the two ra/dec
+ * positions.
+ *
+ * Interpolates that onto encoder values
  *
  * @return Number of encoder steps required for a full 360° azimuth
  * revolution.
  */
 long TelescopeModel::calculateAzEncoderStepsPerRevolution() {
 
-  // TODO I don't think these work. They just use the calculated values as
-  // input, but should use modeled. ie we should translate ra/dec to alt/az, and
-  // use those.
-  //  Calculate difference in azimuth encoder alignment values.
-  long encoderMove = lastSyncPoint.azEncoder - baseSyncPoint.azEncoder;
+  EqCoord start = baseSyncPoint.eqCoord;
+  EqCoord end = lastSyncPoint.eqCoord;
 
-  // Calculate difference in azimuth alignment values.
-  float coordMove = lastSyncPoint.horizCoord.aziInDegrees -
-                    baseSyncPoint.horizCoord.aziInDegrees;
-
-  // Handle wraparound for azimuth (which is defined from -180° to 180°).
-  if (coordMove < -180) {
-    coordMove += 360;
-  } else if (coordMove > 180) {
-    coordMove -= 360;
-  }
-
-  if (abs(coordMove) < 0.000001)
-    return 0; // avoid division by zero here. May propagate the issue though.
-
-  // Compute steps per degree by dividing total encoder movement by total
-  // coordinate movement.
-  float stepsPerDegree = (float)encoderMove / coordMove;
-
+  double distance = start.calculateDistanceInDegrees(end);
+  double encoderMove = abs(lastSyncPoint.azEncoder - baseSyncPoint.azEncoder);
+  double stepsPerDegree = distance / encoderMove;
+  double stepsPerRevolution = stepsPerDegree * 360.0;
+  log("Calculated steps per revolution  : %ld", stepsPerRevolution);
   // Return steps per full revolution (360°) by scaling up stepsPerDegree.
-  return stepsPerDegree * 360.0;
+  return stepsPerRevolution;
 }
 
 /**
  * @brief Calculates the number of encoder steps per hypothetical full 360°
  * altitude revolution.
  *
- * This method computes the movement in the altitude for both encoder and
- * coordinates. It then handles any wraparound in altitude considering that
- * the telescope can move from slightly below the horizon to slightly past
- * zenith. The ratio of encoder move to coordinate move yields the number of
- * encoder steps per degree of altitude, which is then scaled hypothetically
- * to a full revolution.
- *
+ * Assumes the move between last sync point and current sync point
+ * was an alt move only.
  * @return Number of encoder steps required for a hypothetical full 360°
  * altitude revolution.
  */
 long TelescopeModel::calculateAltEncoderStepsPerRevolution() {
 
-  // Calculate difference in altitude encoder alignment values
-  long encoderMove = lastSyncPoint.altEncoder - baseSyncPoint.altEncoder;
+  EqCoord start = baseSyncPoint.eqCoord;
+  EqCoord end = lastSyncPoint.eqCoord;
 
-  // Calculate difference in altitude alignment values
-  float coordMove = lastSyncPoint.horizCoord.altInDegrees -
-                    baseSyncPoint.horizCoord.altInDegrees;
-
-  // Handle potential wraparound for altitude (which is defined between -45°
-  // to 45°) If your scope can move from slightly below the horizon to
-  // slightly past zenith
-  if (coordMove < -45) {
-    coordMove += 90;
-  } else if (coordMove > 45) {
-    coordMove -= 90;
-  }
-  if (abs(coordMove) < 0.000001)
-    return 0; // avoid division by zero here. May propagate the issue though.
-
-  // Compute steps per degree by dividing total encoder movement by total
-  // coordinate movement.
-  float stepsPerDegree = (float)encoderMove / coordMove;
-
-  // Return steps per hypothetical full revolution (360°) by scaling up
-  // stepsPerDegree.
-  return stepsPerDegree * 360.0;
+  double distance = start.calculateDistanceInDegrees(end);
+  double encoderMove = abs(lastSyncPoint.altEncoder - baseSyncPoint.altEncoder);
+  double stepsPerDegree = distance / encoderMove;
+  double stepsPerRevolution = stepsPerDegree * 360.0;
+  log("Calculated steps per revolution  : %ld", stepsPerRevolution);
+  // Return steps per full revolution (360°) by scaling up stepsPerDegree.
+  return stepsPerRevolution;
 }

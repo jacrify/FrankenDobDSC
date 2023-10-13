@@ -11,9 +11,9 @@
 
     <table border=1>
         <tr>
-            <td>Calculated Alt Step per Revolution</td>
+            <td>Calculated Alt Step per Revolution <br> (if last two syncs were alt only move)</td>
             <td><span id="calculateAltEncoderStepsPerRevolution">0</span></td>
-            <td>Calculated Az Step per Revolution</td>
+            <td>Calculated Az Step per Revolution <br> (if last two syncs were azi only move)</td>
             <td><span id="calculateAzEncoderStepsPerRevolution">0</span></td>
         </tr>
         <tr>
@@ -28,13 +28,13 @@
 
             </td>
             <td>
-                <button id="saveAltEncoderSteps">Save Alt Encoder Steps</button>
+                <button id="saveAltEncoderSteps">Save Calculated Alt Encoder Steps</button>
             </td>
             <td>
 
             </td>
             <td>
-                <button id="saveAzEncoderSteps">Save Az Encoder Steps</button>
+                <button id="saveAzEncoderSteps">Save Calculated Az Encoder Steps</button>
             </td>
         </tr>
     </table>
@@ -73,19 +73,23 @@
                 <span id="lastSyncedDec">0</span>
             </td>
         </tr>
-        <td>Last Synced Alt</td>
-        <td>
-            <span id="lastSyncedAlt">0</span>
-        </td>
+        <tr>
+            <td>Last Synched Alt</td>
+            <td>
+                <span id="lastSyncedAlt">0</span>
+            </td>
         </tr>
-        <td>Last Synced Az</td>
-        <td>
-            <span id="lastSyncedAz">0</span>
-        </td>
-        <td>Last Synced Error (degrees)</td>
-        <td>
-            <span id="lastSyncedErr">0</span>
-        </td>
+        <tr>
+            <td>Last Synched Az</td>
+            <td>
+                <span id="lastSyncedAz">0</span>
+            </td>
+        </tr>
+        <tr>
+            <td>Error at Last Synch (degrees)</td>
+            <td>
+                <span id="lastSyncedErr">0</span>
+            </td>
         </tr>
 
 

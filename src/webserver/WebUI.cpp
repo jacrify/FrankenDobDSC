@@ -26,7 +26,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
     "lastSyncedDec" : %lf,
     "lastSyncedAlt" : %lf,
     "lastSyncedAz" : %lf,
-    "lastSyncedErr", : %lf,
+    "lastSyncedErr" : %lf,
     "eqPlatformIP" : "%s",
     "platformTracking" : %s,
     "timeToMiddle" : %.1lf,
@@ -34,14 +34,14 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
     "platformConnected" : %s
 })",
 
-          model.calculateAltEncoderStepsPerRevolution(),
-          model.calculateAzEncoderStepsPerRevolution(),
+          model.calculatedAltEncoderRes,
+          model.calculatedAziEncoderRes,
           model.getAltEncoderStepsPerRevolution(),
           model.getAzEncoderStepsPerRevolution(),
           model.lastSyncPoint.eqCoord.getRAInDegrees(),
           model.lastSyncPoint.eqCoord.getDecInDegrees(),
-          model.lastSyncPoint.horizCoord.altInDegrees,
-          model.lastSyncPoint.horizCoord.aziInDegrees,
+          model.lastSyncPoint.encoderAltAz.altInDegrees,
+          model.lastSyncPoint.encoderAltAz.aziInDegrees,
           model.lastSyncPoint.errorInDegreesAtCreation,
 
           platform.eqPlatformIP.c_str(),
@@ -60,7 +60,7 @@ void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
 void saveAltEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
                          Preferences &prefs) {
 
-  long alt = model.calculateAltEncoderStepsPerRevolution();
+  long alt = model.calculatedAltEncoderRes;
   log("Setting new value for encoder alt steps  to %ld", alt);
   model.setAltEncoderStepsPerRevolution(alt);
 
@@ -71,7 +71,7 @@ void saveAltEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
 void saveAzEncoderSteps(AsyncWebServerRequest *request, TelescopeModel &model,
                         Preferences &prefs) {
 
-  long az = model.calculateAzEncoderStepsPerRevolution();
+  long az = model.calculatedAziEncoderRes;
   log("Setting new value for encoder az steps to %ld", az);
   model.setAzEncoderStepsPerRevolution(az);
 
