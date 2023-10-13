@@ -398,32 +398,36 @@ void test_az_encoder_calibration(void) {
 
   Ephemeris::setLocationOnEarth(-34.0493, 151.0494);
   Ephemeris::flipLongitude(false);
-  
-      //   unsigned long timeMillis =
-      //       convertDateTimeToMillis(day, month, year, hour, minute, second);
+
+  //   unsigned long timeMillis =
+  //       convertDateTimeToMillis(day, month, year, hour, minute, second);
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
 
   model.setEncoderValues(0, 0);
-  EqCoord oldEq = EqCoord(14.28644, 18.97959);
-  model.syncPositionRaDec(oldEq.getRAInHours(), oldEq.getDecInDegrees(), star1Time);
+  HorizCoord startAltAz = HorizCoord(0, 0);
+  EqCoord startEQ = EqCoord(startAltAz, star1Time);
+  //   EqCoord oldEq = EqCoord(14.28644, 18.97959);
+  model.syncPositionRaDec(startEQ.getRAInHours(), startEQ.getDecInDegrees(),
+                          star1Time);
   // model.calculateCurrentPosition();
   //   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
-  HorizCoord newAltAz = HorizCoord(0,0);
-//   HorizCoord newAltAz=HorizCoord(model.getAltCoord(),model.getAzCoord());
+
+  //   HorizCoord newAltAz=HorizCoord(model.getAltCoord(),model.getAzCoord());
   double azRotation = 10;
-  newAltAz=newAltAz.addOffset(0, azRotation);
+  HorizCoord newAltAz = startAltAz.addOffset(0, azRotation);
 
   EqCoord newEq = EqCoord(newAltAz, star1Time);
-  log("Distance in eq coords %lf",newEq.calculateDistanceInDegrees(oldEq));
+  log("Distance in eq coords %lf", newEq.calculateDistanceInDegrees(startEQ));
 
   // Set the new position using the converted RA/DEC and simulate new encoder
   // values
   double aziEncoderIncrease = 10000;
   model.setEncoderValues(0, aziEncoderIncrease);
-  model.syncPositionRaDec(newEq.getRAInHours(), newEq.getDecInDegrees(), star1Time);
+  model.syncPositionRaDec(newEq.getRAInHours(), newEq.getDecInDegrees(),
+                          star1Time);
   // Here the azimuth encoder value has increased by 100
   // model.calculateCurrentPosition();
   //   model.saveEncoderCalibrationPoint(); // Save this point
@@ -432,7 +436,7 @@ void test_az_encoder_calibration(void) {
 
   float epsilon = 1.0; // or whatever small value you're comfortable with
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
-      epsilon, aziEncoderIncrease/azRotation  *360.0, calculatedSteps,
+      epsilon, aziEncoderIncrease / azRotation * 360.0, calculatedSteps,
       "Azimuth Encoder Steps per Revolution");
 }
 
@@ -453,21 +457,26 @@ void test_alt_encoder_calibration(void) {
   model.setLongitude(151.0494);
 
   model.setEncoderValues(0, 0);
-  model.syncPositionRaDec(14.28644, 18.97959, star1Time);
+
+  HorizCoord startAltAz = HorizCoord(0, 0);
+  EqCoord startEq = EqCoord(startAltAz, star1Time);
+  model.syncPositionRaDec(startEq.getRAInHours(), startEq.getDecInDegrees(),
+                          star1Time);
   // model.calculateCurrentPosition();
   //   model.saveEncoderCalibrationPoint(); // Save this point
 
   // Generate new Alt/Az values from a known move
-  HorizCoord newAltAz = HorizCoord(0, 0);
+
   //   HorizCoord newAltAz=HorizCoord(model.getAltCoord(),model.getAzCoord());
   double altRotation = 10;
-  newAltAz = newAltAz.addOffset(altRotation, 0);
+  HorizCoord newAltAz = startAltAz.addOffset(altRotation, 0);
 
   EqCoord newEq = EqCoord(newAltAz, star1Time);
 
   // Set the new position using the converted RA/DEC and simulate new encoder
   // values
-  double altEncoderIncrease = 10000;
+  long altEncoderIncrease = 1000;
+  log("===second sync");
   model.setEncoderValues(altEncoderIncrease, 0);
   model.syncPositionRaDec(newEq.getRAInHours(), newEq.getDecInDegrees(),
                           star1Time);
@@ -478,7 +487,7 @@ void test_alt_encoder_calibration(void) {
   long calculatedSteps = model.calculatedAltEncoderRes;
   float epsilon = 1.0; // or whatever small value you're comfortable with
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
-      epsilon, altEncoderIncrease/ altRotation  *360.0, calculatedSteps,
+      epsilon, -altEncoderIncrease / altRotation * 360.0, calculatedSteps,
       "Alt Encoder Steps per Revolution");
 }
 
@@ -1592,7 +1601,7 @@ void test_model_one_star_align() {
   model.setLatitude(-34.0493);
   model.setLongitude(151.0494);
 
-  Ephemeris::setLocationOnEarth(-34.0, 2.0, 57.5, // Lat: 48°50'11"
+  Ephemeris::setLocationOnEarth(-34.0, 2.0, 57.5,  // Lat: 48°50'11"
                                 151.0, 2.0, 57.8); // Lon: -2°20'14"
 
   Ephemeris::flipLongitude(false);
@@ -1695,9 +1704,7 @@ void setup() {
   UNITY_BEGIN(); // IMPORTANT LINE!
 
   // RUN_TEST(test_telescope_model_starting_offset);
-  RUN_TEST(test_az_encoder_calibration);
-//   RUN_TEST(test_alt_encoder_calibration);
-  // RUN_TEST(test_az_encoder_wraparound);
+  //  RUN_TEST(test_az_encoder_wraparound);
   // RUN_TEST(test_alt_encoder_negative_move);
   // RUN_TEST(test_odd_times);
 
@@ -1707,26 +1714,29 @@ void setup() {
   //   RUN_TEST(test_two_star_alignment_mylocation);
 
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
+  //   RUN_TEST(test_horizontal_to_eq_eq_constructor);
   //====
-//   RUN_TEST(test_eq_to_horizontal);
-//   //   RUN_TEST(test_horizontal_to_eq);
-//   RUN_TEST(test_eq_to_horizontal_vega);
+  RUN_TEST(test_az_encoder_calibration);
+  RUN_TEST(test_alt_encoder_calibration);
 
-//   RUN_TEST(test_horizontal_to_eq_eq_constructor);
-//   RUN_TEST(test_two_star_alignment_mylocation_wrappers);
-//   RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
+  RUN_TEST(test_eq_to_horizontal);
+  //   RUN_TEST(test_horizontal_to_eq);
+  RUN_TEST(test_eq_to_horizontal_vega);
 
-//   RUN_TEST(test_telescope_model_mylocation);
-//   RUN_TEST(test_telescope_model_mylocation_with_tilt);
-//   RUN_TEST(test_one_star_align_principle);
-//   RUN_TEST(test_coords);
+  RUN_TEST(test_two_star_alignment_mylocation_wrappers);
+  RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
 
-//   RUN_TEST(test_model_one_star_align);
-//   RUN_TEST(test_eq_coord_distance);
-//   RUN_TEST(test_addSynchPoint_trimLogic);
-//   RUN_TEST(test_addSingleSyncPoint);
-//   RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);
-//   RUN_TEST(test_time_difference);
+  RUN_TEST(test_telescope_model_mylocation);
+  RUN_TEST(test_telescope_model_mylocation_with_tilt);
+  RUN_TEST(test_one_star_align_principle);
+  RUN_TEST(test_coords);
+
+  RUN_TEST(test_model_one_star_align);
+  RUN_TEST(test_eq_coord_distance);
+  RUN_TEST(test_addSynchPoint_trimLogic);
+  RUN_TEST(test_addSingleSyncPoint);
+  RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);
+  RUN_TEST(test_time_difference);
   //====
   //   RUN_TEST(test_continuity);
 

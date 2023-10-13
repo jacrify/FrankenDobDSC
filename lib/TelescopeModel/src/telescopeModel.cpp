@@ -384,7 +384,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   // compare to last
 
   if (lastSyncPoint.isValid) {
-    calculatedAltEncoderRes =calculateAltEncoderStepsPerRevolution(thisSyncPoint, lastSyncPoint);
+    calculatedAltEncoderRes =
+        calculateAltEncoderStepsPerRevolution(thisSyncPoint, lastSyncPoint);
     calculatedAziEncoderRes =
         calculateAzEncoderStepsPerRevolution(thisSyncPoint, lastSyncPoint);
   }
@@ -440,11 +441,11 @@ long TelescopeModel::calculateAzEncoderStepsPerRevolution(SynchPoint startPoint,
   EqCoord end = endPoint.eqCoord;
 
   double distance = start.calculateDistanceInDegrees(end);
-  long encoderMove = abs(startPoint.azEncoder - endPoint.azEncoder) ;
+  double encoderMove = abs(startPoint.azEncoder - endPoint.azEncoder);
 
   double stepsPerDegree = encoderMove / distance;
   long stepsPerRevolution = stepsPerDegree * 360;
-  log("Azi Encoder Res Calcs:Distance: %f Encoder Move: %ld Steps per degree: "
+  log("Azi Encoder Res Calcs:Distance: %f Encoder Move: %lf Steps per degree: "
       "%f Calculated steps per revolution  : %ld",
       distance, encoderMove, stepsPerDegree, stepsPerRevolution);
   // Return steps per full revolution (360°) by scaling up stepsPerDegree.
@@ -468,10 +469,10 @@ long TelescopeModel::calculateAltEncoderStepsPerRevolution(
 
   double distance = start.calculateDistanceInDegrees(end);
   
-  double encoderMove = abs(startPoint.altEncoder - endPoint.altEncoder) ;
+  double encoderMove = abs(startPoint.altEncoder - endPoint.altEncoder);
   double stepsPerDegree = encoderMove / distance;
   long stepsPerRevolution = stepsPerDegree * 360;
-  log("Alt Encoder Res Calcs: Distance: %f Encoder Move: %ld Steps per degree: "
+  log("Alt Encoder Res Calcs: Distance: %f Encoder Move: %lf Steps per degree: "
       "%f Calculated steps "
       "per revolution  : %ld",
       distance, encoderMove, stepsPerDegree, stepsPerRevolution);

@@ -92,7 +92,7 @@ public:
   SynchPoint lastSyncPoint;
 
   void clearAlignment();
-  void syncPositionRaDec(float ra, float dec, TimePoint tp);
+  void syncPositionRaDec(float raInHours, float decInDegrees, TimePoint tp);
   void calculateCurrentPosition(TimePoint tp);
 
   void setEncoderValues(long encAlt, long encAz);
