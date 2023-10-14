@@ -253,7 +253,7 @@ void TelescopeModel::performZeroedAlignment(TimePoint now) {
   log("Zero Point: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", h.altInDegrees,
       h.aziInDegrees, eq.getRAInHours(), eq.getDecInDegrees());
   HorizCoord h2 = HorizCoord(0, 0); // this is what encoders will actually read
-  SynchPoint oneStarSync=SynchPoint(eq,h2,now,eq,0,0);
+  SynchPoint oneStarSync = SynchPoint(eq, h2, now, eq, 0, 0);
   performOneStarAlignment(oneStarSync);
 }
 /**
@@ -446,15 +446,15 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
-  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and  "
-      "time "
-      "%s",
-      lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
-      timePointToString(now).c_str());
+  // log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and  "
+  //     "time "
+  //     "%s",
+  //     lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
+  //     timePointToString(now).c_str());
 
-  HorizCoord modeledAltAz = alignment.toInstrumentCoord(lastSyncedEq);
-  log("Calculated alt/az from model\t\talt: %lf\t\taz:%lf",
-      modeledAltAz.altInDegrees, modeledAltAz.aziInDegrees);
+  // HorizCoord modeledAltAz = alignment.toInstrumentCoord(lastSyncedEq);
+  // log("Calculated alt/az from model\t\talt: %lf\t\taz:%lf",
+  //     modeledAltAz.altInDegrees, modeledAltAz.aziInDegrees);
 
   HorizCoord calculatedAltAzFromEncoders =
       calculateAltAzFromEncoders(altEnc, azEnc);
@@ -468,12 +468,11 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   // error calc
   calculateCurrentPosition(now);
 
-  SynchPoint thisSyncPoint = SynchPoint(
-      lastSyncedEq, calculatedAltAzFromEncoders, now, currentEqPosition,altEnc,azEnc);
+  SynchPoint thisSyncPoint =
+      SynchPoint(lastSyncedEq, calculatedAltAzFromEncoders, now,
+                 currentEqPosition, altEnc, azEnc);
 
-  thisSyncPoint.altEncoder = altEnc;
-  thisSyncPoint.azEncoder = azEnc;
-  // compare to last
+  // compare to last to use for encoder calibration
 
   if (lastSyncPoint.isValid) {
     calculatedAltEncoderRes =
@@ -486,20 +485,19 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   if (baseAlignmentSynchPoints.size() == 3) {
     log("3 points in base aligment, picking best two to build temp model ");
     std::vector<SynchPoint> furthest =
-        findFarthest( lastSyncPoint, baseAlignmentSynchPoints);
+        findFarthest(lastSyncPoint, baseAlignmentSynchPoints);
     addReferencePoints(furthest);
   } else {
     log("Adding new point to base alignment, total will be %d ",
-        baseAlignmentSynchPoints.size()+1);
+        baseAlignmentSynchPoints.size() + 1);
     baseAlignmentSynchPoints.push_back(lastSyncPoint);
   }
-
 
   // special case: if this is the first alignment, then do a special one star
   // alignment
   if (defaultAlignment) {
     log("First point added, doing one off one star alignement");
-    
+
     performOneStarAlignment(thisSyncPoint);
     defaultAlignment = false;
   }
@@ -529,8 +527,8 @@ long TelescopeModel::getAltEncoderStepsPerRevolution() {
  * @return Number of encoder steps required for a full 360° azimuth
  * revolution.
  */
-long TelescopeModel::calculateAzEncoderStepsPerRevolution(SynchPoint &startPoint,
-                                                          SynchPoint &endPoint) {
+long TelescopeModel::calculateAzEncoderStepsPerRevolution(
+    SynchPoint &startPoint, SynchPoint &endPoint) {
 
   EqCoord start = startPoint.eqCoord;
   EqCoord end = endPoint.eqCoord;
