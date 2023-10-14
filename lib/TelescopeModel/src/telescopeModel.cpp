@@ -215,26 +215,25 @@ double TelescopeModel::secondsToRADeltaInDegrees(double secondsDelta) {
  * alignment. Then they can choose to do more accurate manual alignment
  * points.
  */
-void TelescopeModel::performOneStarAlignment(HorizCoord &horiz1, EqCoord &eq1,
-                                             TimePoint &now) {
+void TelescopeModel::performOneStarAlignment(SynchPoint &syncPoint) {
   log("Time (local) for one star alignment: %s",
-      timePointToString(now).c_str());
-  alignment.addReferenceCoord(horiz1, eq1);
+      timePointToString(syncPoint.timePoint).c_str());
+  alignment.addReferenceCoord(syncPoint.encoderAltAz, syncPoint.eqCoord);
 
-  HorizCoord horiz2 = horiz1.addOffset(80, 0);
+  HorizCoord horiz2 = syncPoint.encoderAltAz.addOffset(80, 0);
   // this is calculated based on current lat long time
-  EqCoord eq2 = EqCoord(horiz2, now);
+  EqCoord eq2 = EqCoord(horiz2, syncPoint.timePoint);
   alignment.addReferenceCoord(horiz2, eq2);
 
   alignment.calculateThirdReference();
 
   log("===Generated 1 star reference point===");
-  log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz1.altInDegrees,
-      horiz1.aziInDegrees, eq1.getRAInHours(), eq1.getDecInDegrees());
+  log("Point 1: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf",
+      syncPoint.encoderAltAz.altInDegrees, syncPoint.encoderAltAz.aziInDegrees,
+      syncPoint.eqCoord.getRAInHours(), syncPoint.eqCoord.getDecInDegrees());
   log("Point 2: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", horiz2.altInDegrees,
       horiz2.aziInDegrees, eq2.getRAInHours(), eq2.getDecInDegrees());
-  baseSyncPoint = SynchPoint(eq1, horiz1, now,
-                             eq1); // creates syncpoint with no error
+  baseSyncPoint = syncPoint; // creates syncpoint with no error
 }
 
 /**
@@ -254,7 +253,8 @@ void TelescopeModel::performZeroedAlignment(TimePoint now) {
   log("Zero Point: \t\talt: %lf\taz:%lf\tra(h): %lf\tdec:%lf", h.altInDegrees,
       h.aziInDegrees, eq.getRAInHours(), eq.getDecInDegrees());
   HorizCoord h2 = HorizCoord(0, 0); // this is what encoders will actually read
-  performOneStarAlignment(h2, eq, now);
+  SynchPoint oneStarSync=SynchPoint(eq,h2,now,eq,0,0);
+  performOneStarAlignment(oneStarSync);
 }
 /**
  * Add a reference point to the two star alignment model.
@@ -469,7 +469,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   calculateCurrentPosition(now);
 
   SynchPoint thisSyncPoint = SynchPoint(
-      lastSyncedEq, calculatedAltAzFromEncoders, now, currentEqPosition);
+      lastSyncedEq, calculatedAltAzFromEncoders, now, currentEqPosition,altEnc,azEnc);
 
   thisSyncPoint.altEncoder = altEnc;
   thisSyncPoint.azEncoder = azEnc;
@@ -499,7 +499,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   // alignment
   if (defaultAlignment) {
     log("First point added, doing one off one star alignement");
-    performOneStarAlignment(calculatedAltAzFromEncoders, lastSyncedEq, now);
+    
+    performOneStarAlignment(thisSyncPoint);
     defaultAlignment = false;
   }
   log("=====syncPositionRaDec====");

@@ -24,9 +24,9 @@ struct SynchPoint {
   } // Initialize members as needed
 
   SynchPoint(const EqCoord &eq, const HorizCoord &encoderHorizontal,
-             const TimePoint &tp, const EqCoord &calculatedeq)
+             const TimePoint &tp, const EqCoord &calculatedeq,long altEncoder,long azEncoder)
       : eqCoord(eq), encoderAltAz(encoderHorizontal), timePoint(tp),
-        isValid(true) {
+        isValid(true),altEncoder(altEncoder),azEncoder(azEncoder) {
     errorInDegreesAtCreation = eq.calculateDistanceInDegrees(calculatedeq);
   }
 };
@@ -97,7 +97,7 @@ public:
   std::vector<SynchPoint> findFarthest(SynchPoint &sp,
                                        std::vector<SynchPoint> &baseSyncPoints);
 
-  void performOneStarAlignment(HorizCoord &altaz, EqCoord &eq, TimePoint &tp);
+  void performOneStarAlignment(SynchPoint &point);
 
   void calculateCurrentPosition(TimePoint &tp);
 

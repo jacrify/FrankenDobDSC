@@ -112,15 +112,15 @@ void test_findFarthest(void) {
   TimePoint tp = getNow();
 
   std::vector<SynchPoint> trianglePoints;
-  trianglePoints.push_back(SynchPoint(eq1, hz, tp, eq1));
-  trianglePoints.push_back(SynchPoint(eq2, hz, tp, eq2));
-  trianglePoints.push_back(SynchPoint(eq3, hz, tp, eq3));
+  trianglePoints.push_back(SynchPoint(eq1, hz, tp, eq1,0,0));
+  trianglePoints.push_back(SynchPoint(eq2, hz, tp, eq2,0,0));
+  trianglePoints.push_back(SynchPoint(eq3, hz, tp, eq3,0,0));
 
   TelescopeModel model;
 
   // Use eq4 (center point) as reference and find the two farthest points from
   // it among the triangle vertices
-  SynchPoint point = SynchPoint(eq4, hz, tp, eq4);
+  SynchPoint point = SynchPoint(eq4, hz, tp, eq4,0,0);
   std::vector<SynchPoint> farthestPoints =
       model.findFarthest(point, trianglePoints);
 
@@ -1613,8 +1613,9 @@ void test_model_one_star_align() {
   EqCoord e1 = EqCoord();
   e1.setDecInDegrees(38.8);
   e1.setRAInHours(18.6288);
+  SynchPoint point=SynchPoint(e1,h1,time,e1,0,0);
   // vega
-  model.performOneStarAlignment(h1, e1, time);
+  model.performOneStarAlignment(point);
 }
 void test_one_star_align_principle() {
   CoordConv alignment;
