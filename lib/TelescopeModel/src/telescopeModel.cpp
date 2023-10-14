@@ -484,10 +484,13 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncPoint = thisSyncPoint;
 
   if (baseAlignmentSynchPoints.size() == 3) {
+    log("3 points in base aligment, picking best two to build temp model ");
     std::vector<SynchPoint> furthest =
         findFarthest( lastSyncPoint, baseAlignmentSynchPoints);
     addReferencePoints(furthest);
   } else {
+    log("Adding new point to base alignment, total will be %d ",
+        baseAlignmentSynchPoints.size()+1);
     baseAlignmentSynchPoints.push_back(lastSyncPoint);
   }
 
@@ -495,6 +498,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   // special case: if this is the first alignment, then do a special one star
   // alignment
   if (defaultAlignment) {
+    log("First point added, doing one off one star alignement");
     performOneStarAlignment(calculatedAltAzFromEncoders, lastSyncedEq, now);
     defaultAlignment = false;
   }

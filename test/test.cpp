@@ -104,9 +104,9 @@ void test_eq_to_horizontal(void) {
 }
 void test_findFarthest(void) {
   // Create SynchPoints
-  EqCoord eq1(1, 1);   // Vertex of triangle
-  EqCoord eq2(60, 30);   // Another vertex of triangle
-  EqCoord eq3(120, 45);    // Another vertex of triangle
+  EqCoord eq1(1, 1);    // Vertex of triangle
+  EqCoord eq2(60, 30);  // Another vertex of triangle
+  EqCoord eq3(120, 45); // Another vertex of triangle
   EqCoord eq4(119, 40); // near eq3
   HorizCoord hz;
   TimePoint tp = getNow();
@@ -120,10 +120,9 @@ void test_findFarthest(void) {
 
   // Use eq4 (center point) as reference and find the two farthest points from
   // it among the triangle vertices
-  SynchPoint point =
-      SynchPoint(eq4, hz, tp, eq4);
-       std::vector<SynchPoint> farthestPoints =
-          model.findFarthest(point, trianglePoints);
+  SynchPoint point = SynchPoint(eq4, hz, tp, eq4);
+  std::vector<SynchPoint> farthestPoints =
+      model.findFarthest(point, trianglePoints);
 
   // Check that we got exactly 3 SynchPoints in the result (eq4 and the two
   // farthest from it)
@@ -141,11 +140,7 @@ void test_findFarthest(void) {
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
       0.5, eq2.calculateDistanceInDegrees(farthestPoints[2].eqCoord), 0,
       "Expected the second SynchPoint in the result to be eq2");
-
 }
-
-
-
 
 void test_eq_coord_distance(void) {
   // First set of coordinates
@@ -1248,10 +1243,45 @@ void test_telescope_model_mylocation() {
   //   log("Star time: %ld ", timeMillis);
 
   // 1456000 milliseconds since first sync
+
+  model.syncPositionRaDec(star3RAHours, star3Dec, star1Time);
   model.calculateCurrentPosition(star1Time);
 
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
+
+  // alnair
+  double star4AltAxis =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(50, 32, 52.9);
+
+  // anticlockwise
+  double star4AzmAxis =
+      Ephemeris::degreesMinutesSecondsToFloatingDegrees(124, 21, 54);
+  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
+  //     0.01, 21.92675 ,
+  //     Ephemeris::degreesMinutesSecondsToFloatingDegrees(21, 55, 36.3),
+  //     "???");
+  // TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.01, 338.0732, star3AzmAxis,
+  //                                  "star3AzmAxis");
+  model.setEncoderValues(star4AltAxis * 100, star4AzmAxis * 100);
+
+  double star4RAHours =
+      Ephemeris::hoursMinutesSecondsToFloatingHours(22, 9, 42.54);
+ double star4RADegrees = 360 * star4RAHours / 24.0;
+
+ double star4Dec =
+     Ephemeris::degreesMinutesSecondsToFloatingDegrees(-46, 50, 46.2);
+
+
+     log("Star 4: Alnair");
+ log("    \t\t\t\t\talt: %lf\taz: %lf", star4AltAxis, star4AzmAxis);
+ log("       \t\t\t\t\tra: %lf\tdec: %lf", star4RADegrees, star4Dec);
+
+ model.syncPositionRaDec(star4RAHours, star4Dec, star1Time);
+ model.calculateCurrentPosition(star1Time);
+
+ TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star4Dec, model.getDecCoord(), "dec");
+ TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star4RAHours, model.getRACoord(), "ra");
 }
 
 void test_telescope_model_mylocation_with_tilt() {
@@ -1684,26 +1714,26 @@ void setup() {
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
   //   RUN_TEST(test_horizontal_to_eq_eq_constructor);
   //====
-  RUN_TEST(test_az_encoder_calibration);
-  RUN_TEST(test_alt_encoder_calibration);
+    RUN_TEST(test_az_encoder_calibration);
+    RUN_TEST(test_alt_encoder_calibration);
 
-  RUN_TEST(test_eq_to_horizontal);
-  //   RUN_TEST(test_horizontal_to_eq);
-  RUN_TEST(test_eq_to_horizontal_vega);
+    RUN_TEST(test_eq_to_horizontal);
+    //   RUN_TEST(test_horizontal_to_eq);
+    RUN_TEST(test_eq_to_horizontal_vega);
 
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers);
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
+    RUN_TEST(test_two_star_alignment_mylocation_wrappers);
+    RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
 
   RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_telescope_model_mylocation_with_tilt);
-  RUN_TEST(test_one_star_align_principle);
-  RUN_TEST(test_coords);
+    RUN_TEST(test_telescope_model_mylocation_with_tilt);
+    RUN_TEST(test_one_star_align_principle);
+    RUN_TEST(test_coords);
 
-  RUN_TEST(test_model_one_star_align);
-  RUN_TEST(test_eq_coord_distance);
-  RUN_TEST(test_findFarthest);
+    RUN_TEST(test_model_one_star_align);
+    RUN_TEST(test_eq_coord_distance);
+    RUN_TEST(test_findFarthest);
 
-  RUN_TEST(test_time_difference);
+    RUN_TEST(test_time_difference);
   //====
   //   RUN_TEST(test_continuity);
 
