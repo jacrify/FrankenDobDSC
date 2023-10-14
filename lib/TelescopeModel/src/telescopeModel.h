@@ -87,13 +87,19 @@ class TelescopeModel {
 public:
   TelescopeModel();
 
-  std::vector<SynchPoint> synchPoints;
+  std::vector<SynchPoint> baseAlignmentSynchPoints;
   EqCoord currentEqPosition;
   SynchPoint lastSyncPoint;
 
   void clearAlignment();
-  void syncPositionRaDec(float raInHours, float decInDegrees, TimePoint tp);
-  void calculateCurrentPosition(TimePoint tp);
+  void syncPositionRaDec(float raInHours, float decInDegrees, TimePoint &tp);
+
+  std::vector<SynchPoint> findFarthest(SynchPoint &sp,
+                                       std::vector<SynchPoint> &baseSyncPoints);
+
+  void performOneStarAlignment(HorizCoord &altaz, EqCoord &eq, TimePoint &tp);
+
+  void calculateCurrentPosition(TimePoint &tp);
 
   void setEncoderValues(long encAlt, long encAz);
   void setAzEncoderStepsPerRevolution(long altResolution);
@@ -115,19 +121,7 @@ public:
   float getDecCoord();
   float getRACoord();
 
-  /**
-   * This does the following:
-   * 1: Iterates through synchPoints and removes all items where the distance
-   * (calculated using double calculateDistanceInDegrees(EqCoord delta) )
-   * is less than trimRadius.
-   * 2: Adds sp to synchPoints
-   * 3: Returns the synchPoint where distance is greatests, found in step 1
-   * Cannot return sp. Cannot return removed item. If no item return syncpoint
-   * with "isvalid" set to false. New one is still added.
-   */
-  SynchPoint addSynchPointAndFindFarthest(SynchPoint sp, double trimRadius);
 
-  void performOneStarAlignment(HorizCoord altaz, EqCoord eq, TimePoint tp);
   long calculatedAltEncoderRes;
   long calculatedAziEncoderRes;
 
@@ -153,11 +147,11 @@ private:
                                        long &azEncOffset);
   HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
 
-  void addReferencePoints(SynchPoint oldest, SynchPoint newest);
-  long calculateAzEncoderStepsPerRevolution(SynchPoint startPoint,
-                                            SynchPoint endPoint);
-  long calculateAltEncoderStepsPerRevolution(SynchPoint startPoint,
-                                             SynchPoint endPoint);
+  void addReferencePoints(std::vector<SynchPoint> &points);
+  long calculateAzEncoderStepsPerRevolution(SynchPoint &startPoint,
+                                            SynchPoint &endPoint);
+  long calculateAltEncoderStepsPerRevolution(SynchPoint &startPoint,
+                                             SynchPoint &endPoint);
 };
 
 #endif

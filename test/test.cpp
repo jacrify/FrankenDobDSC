@@ -102,82 +102,50 @@ void test_eq_to_horizontal(void) {
   //       Ephemeris::degreesMinutesSecondsToFloatingDegrees(298, 3, 3.7),
   //       altAzCoord.azi, "Az");
 }
-
-void test_addSynchPoint_trimLogic(void) {
-  TelescopeModel model;
-
-  // Create some initial SynchPoints
-  EqCoord eq1(10, 90);
-  EqCoord eq2(10, 91);
-  EqCoord eq3(10, 92);
+void test_findFarthest(void) {
+  // Create SynchPoints
+  EqCoord eq1(1, 1);   // Vertex of triangle
+  EqCoord eq2(60, 30);   // Another vertex of triangle
+  EqCoord eq3(120, 45);    // Another vertex of triangle
+  EqCoord eq4(119, 40); // near eq3
   HorizCoord hz;
   TimePoint tp = getNow();
 
-  // Add SynchPoints using addSynchPoint method with a large trim radius to
-  // ensure they aren't trimmed
-  model.addSynchPointAndFindFarthest(SynchPoint(eq1, hz, tp, eq1), 100);
-  model.addSynchPointAndFindFarthest(SynchPoint(eq2, hz, tp, eq2), 100);
-  model.addSynchPointAndFindFarthest(SynchPoint(eq3, hz, tp, eq3), 100);
+  std::vector<SynchPoint> trianglePoints;
+  trianglePoints.push_back(SynchPoint(eq1, hz, tp, eq1));
+  trianglePoints.push_back(SynchPoint(eq2, hz, tp, eq2));
+  trianglePoints.push_back(SynchPoint(eq3, hz, tp, eq3));
 
-  // Add a new SynchPoint close to eq1 and eq2
-  EqCoord eqNew(10, 90.5);
-  SynchPoint spNew(eqNew, hz, tp, eqNew);
-  model.addSynchPointAndFindFarthest(spNew,
-                                     1); // Using a trim radius of 1 degree
+  TelescopeModel model;
 
-  // Check that eq1 and eq2 are removed, but eq3 remains
-  TEST_ASSERT_EQUAL_MESSAGE(2, model.synchPoints.size(),
-                            "Expected only 2 SynchPoints to remain");
-  // Check that the first SynchPoint is eq3
+  // Use eq4 (center point) as reference and find the two farthest points from
+  // it among the triangle vertices
+  SynchPoint point =
+      SynchPoint(eq4, hz, tp, eq4);
+       std::vector<SynchPoint> farthestPoints =
+          model.findFarthest(point, trianglePoints);
+
+  // Check that we got exactly 3 SynchPoints in the result (eq4 and the two
+  // farthest from it)
+  TEST_ASSERT_EQUAL_MESSAGE(3, farthestPoints.size(),
+                            "Expected to get 3 SynchPoints");
+
+  // Check that the first SynchPoint in the result is eq4
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
-      0.5, eq3.calculateDistanceInDegrees(model.synchPoints[0].eqCoord), 0,
-      "Expected the first SynchPoint to be eq3");
+      0.5, eq4.calculateDistanceInDegrees(farthestPoints[0].eqCoord), 0,
+      "Expected the first SynchPoint in the result to be eq4");
 
-  // Check that the second SynchPoint is eqNew
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
-      0.5, eqNew.calculateDistanceInDegrees(model.synchPoints[1].eqCoord), 0,
-      "Expected the second SynchPoint to be eqNew");
+      0.5, eq1.calculateDistanceInDegrees(farthestPoints[1].eqCoord), 0,
+      "Expected the second SynchPoint in the result to be eq1");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(
+      0.5, eq2.calculateDistanceInDegrees(farthestPoints[2].eqCoord), 0,
+      "Expected the second SynchPoint in the result to be eq2");
+
 }
 
-void test_addSingleSyncPoint(void) {
-  TelescopeModel model;
 
-  EqCoord eq1(10, 90);
-  HorizCoord hz;
-  TimePoint tp = getNow();
 
-  // Add a single SynchPoint
-  SynchPoint result =
-      model.addSynchPointAndFindFarthest(SynchPoint(eq1, hz, tp, eq1), 100);
-
-  // Check that the returned SynchPoint is invalid
-  TEST_ASSERT_FALSE_MESSAGE(
-      result.isValid,
-      "Expected an invalid SynchPoint when adding a single point");
-}
-
-void test_addTwoSyncPointsWithFirstTrimmed(void) {
-  TelescopeModel model;
-
-  EqCoord eq1(10, 90);
-  EqCoord eq2(10, 90.5); // Close to eq1
-  HorizCoord hz;
-  TimePoint tp = getNow();
-
-  // Add the first SynchPoint
-  SynchPoint result1 =
-      model.addSynchPointAndFindFarthest(SynchPoint(eq1, hz, tp, eq1), 1);
-  TEST_ASSERT_FALSE_MESSAGE(
-      result1.isValid,
-      "Expected an invalid SynchPoint when adding the first point");
-
-  // Add the second SynchPoint, which should trim the first one
-  SynchPoint result2 =
-      model.addSynchPointAndFindFarthest(SynchPoint(eq2, hz, tp, eq2), 1);
-  TEST_ASSERT_FALSE_MESSAGE(
-      result2.isValid,
-      "Expected an invalid SynchPoint when adding the second point");
-}
 
 void test_eq_coord_distance(void) {
   // First set of coordinates
@@ -1733,9 +1701,8 @@ void setup() {
 
   RUN_TEST(test_model_one_star_align);
   RUN_TEST(test_eq_coord_distance);
-  RUN_TEST(test_addSynchPoint_trimLogic);
-  RUN_TEST(test_addSingleSyncPoint);
-  RUN_TEST(test_addTwoSyncPointsWithFirstTrimmed);
+  RUN_TEST(test_findFarthest);
+
   RUN_TEST(test_time_difference);
   //====
   //   RUN_TEST(test_continuity);

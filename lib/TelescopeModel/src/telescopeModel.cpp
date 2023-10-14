@@ -58,43 +58,45 @@ TelescopeModel::TelescopeModel() {
 
 void TelescopeModel::clearAlignment() {
   // TODO #3 Make clearAlignement reset EQ platform time?
-  synchPoints.clear();
+  baseAlignmentSynchPoints.clear();
   baseSyncPoint = SynchPoint();
   lastSyncPoint = SynchPoint();
 
   baseSyncPoint.isValid = false;
   performBaselineAlignment();
 }
-SynchPoint TelescopeModel::addSynchPointAndFindFarthest(SynchPoint sp,
-                                                        double trimRadius) {
 
-  SynchPoint maxDistPoint;
-  double maxDistance = -1.0;
+// Find the farthest two points from passed synchpoint.
+// Returns vector containing passed point, and two farthest points
+std::vector<SynchPoint>
+TelescopeModel::findFarthest(SynchPoint &sp,
+                             std::vector<SynchPoint> &baseSyncPoints) {
+  SynchPoint maxDistPoint1;
+  SynchPoint maxDistPoint2;
+  double maxDistance1 = -1.0;
+  double maxDistance2 = -1.0;
 
-  auto it = std::remove_if(
-      synchPoints.begin(), synchPoints.end(), [&](const SynchPoint &point) {
-        double distance = sp.eqCoord.calculateDistanceInDegrees(point.eqCoord);
-
-        // Only update maxDistance and maxDistPoint for points that are not
-        // being removed
-        if (distance >= trimRadius && distance > maxDistance) {
-          maxDistance = distance;
-          maxDistPoint = point;
-        }
-
-        return distance < trimRadius;
-      });
-
-  synchPoints.erase(it, synchPoints.end());
-  synchPoints.push_back(sp);
-
-  if (maxDistance < 0) {
-    return SynchPoint(); // Return an invalid SynchPoint
-  } else {
-    maxDistPoint.isValid =
-        true; // Ensure the returned SynchPoint is marked as valid
-    return maxDistPoint;
+  for (auto &element : baseSyncPoints) {
+    double distance = sp.eqCoord.calculateDistanceInDegrees(element.eqCoord);
+    if (distance > maxDistance1) {
+      maxDistPoint2 = maxDistPoint1; // Previous farthest point now becomes
+                                     // second farthest
+      maxDistance2 = maxDistance1;
+      maxDistPoint1 = element; // New farthest point
+      maxDistance1 = distance;
+    } else if (distance > maxDistance2) {
+      maxDistPoint2 = element; // New second farthest point
+      maxDistance2 = distance;
+    }
   }
+
+  std::vector<SynchPoint> response;
+  if (maxDistPoint1.isValid && maxDistPoint2.isValid) {
+    response.push_back(sp);
+    response.push_back(maxDistPoint1);
+    response.push_back(maxDistPoint2);
+  }
+  return response;
 }
 
 void TelescopeModel::setEncoderValues(long encAlt, long encAz) {
@@ -143,12 +145,13 @@ HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
  * This method performs the following steps:
  * 1. Calculates alt az positon using encoder values
  * 2. Adjust that position based on error offsets, calcuated at last sync
- * 3. Convert that alt/az to equatorial coords, using the two star aligned model
+ * 3. Convert that alt/az to equatorial coords, using the two star aligned
+ * model
  * 4. Adjust the ra of the result to reflect time that has passed since model
  * creation
  * @return void
  */
-void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
+void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
   // log("");
   // log("=====calculateCurrentPosition====");
 
@@ -162,7 +165,8 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
 
   currentEqPosition = alignment.toReferenceCoord(encoderAltAz);
   // log("Base position\t\t\tra(h): %lf\tdec: %lf",
-  //     currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
+  //     currentEqPosition.getRAInHours(),
+  //     currentEqPosition.getDecInDegrees());
 
   // Work out how many seconds since the model was created. Add this
   // to the RA to compensate for time passing.
@@ -178,7 +182,8 @@ void TelescopeModel::calculateCurrentPosition(TimePoint timePoint) {
   currentEqPosition = currentEqPosition.addRAInDegrees(raDeltaDegrees);
 
   // log("Final position\t\t\tra(h): %lf\tdec: %lf",
-  //     currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
+  //     currentEqPosition.getRAInHours(),
+  //     currentEqPosition.getDecInDegrees());
   // log("=====calculateCurrentPosition====");
   // log("");
 }
@@ -207,10 +212,11 @@ double TelescopeModel::secondsToRADeltaInDegrees(double secondsDelta) {
  * setting a second alignment point for that position.
  *
  * The net effect should be that after the first sync, the user gets rough
- * alignment. Then they can choose to do more accurate manual alignment points.
+ * alignment. Then they can choose to do more accurate manual alignment
+ * points.
  */
-void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
-                                             TimePoint now) {
+void TelescopeModel::performOneStarAlignment(HorizCoord &horiz1, EqCoord &eq1,
+                                             TimePoint &now) {
   log("Time (local) for one star alignment: %s",
       timePointToString(now).c_str());
   alignment.addReferenceCoord(horiz1, eq1);
@@ -233,11 +239,10 @@ void TelescopeModel::performOneStarAlignment(HorizCoord horiz1, EqCoord eq1,
 
 /**
  * Designed to help do basic polar alignment after startup.
- * Assumes scope has been started level, and pointing along platform south axis.
- * Assumes lat long time has been set.
- * Calculates expected ra/dec for this lat long, and creates basic model.
- * You can the point at a star using scope,
- * and rotate platform until star in planetarium matches.
+ * Assumes scope has been started level, and pointing along platform south
+ * axis. Assumes lat long time has been set. Calculates expected ra/dec for
+ * this lat long, and creates basic model. You can the point at a star using
+ * scope, and rotate platform until star in planetarium matches.
  */
 void TelescopeModel::performZeroedAlignment(TimePoint now) {
   log("Performing zero alignment");
@@ -255,10 +260,10 @@ void TelescopeModel::performZeroedAlignment(TimePoint now) {
  * Add a reference point to the two star alignment model.
  * Takes the last synced point as the point to put into the model.
  * Once two points are added, a third is calculated, and then the model is
- * built. The time of the first sync is used as the base time of the model (this
- * is stored in alignmentModelSyncTime for later offsets).
- * As there is a time gap between the first reference point being added and the
- * second, the ra of the second point is adjusted backwards by this time gap.
+ * built. The time of the first sync is used as the base time of the model
+ * (this is stored in alignmentModelSyncTime for later offsets). As there is a
+ * time gap between the first reference point being added and the second, the
+ * ra of the second point is adjusted backwards by this time gap.
  */
 // void TelescopeModel::addReferencePoint() {
 //   log("");
@@ -272,7 +277,8 @@ void TelescopeModel::performZeroedAlignment(TimePoint now) {
 //   // BUG? what happens when platform is running?
 //   //
 
-//   EqCoord adjustedLastSyncEQ = lastSyncedEq.addRAInDegrees(-raDeltaDegrees);
+//   EqCoord adjustedLastSyncEQ =
+//   lastSyncedEq.addRAInDegrees(-raDeltaDegrees);
 //   alignment.addReferenceCoord(lastSyncedHoriz, lastSyncedEq);
 
 //   if (alignment.getRefs() == 2) {
@@ -285,28 +291,53 @@ void TelescopeModel::performZeroedAlignment(TimePoint now) {
 //   log("=====addReferencePoint====");
 //   log("");
 // }
+/**
+ * Whenever a model is built, one of the points is picked as the
+ * base syncpoint. When the model is queried later, the difference
+ * between that time and the timestamp of this base point is then
+ * used to offset the ra output of the model, to model the stars
+ * moving since the model was made. The other points syncpoints
+ * are also grounded back to this base syncpoint time.
+ *
+ */
+void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
 
-void TelescopeModel::addReferencePoints(SynchPoint oldest, SynchPoint newest) {
+  if (points.size() != 3) {
+    log("Size of add reference points is %d not 3!", points.size());
+    return;
+  }
+  SynchPoint point1 = points[0];
+  SynchPoint point2 = points[1];
+  SynchPoint point3 = points[2];
+
   log("");
   log("=====addReferencePoints====");
 
-  double raDeltaDegrees = 0;
+  // double raDeltaDegrees = 0;
   alignment.clean();
 
-  alignment.addReferenceCoord(oldest.encoderAltAz, oldest.eqCoord);
+  // align all points to same time
+  baseSyncPoint = point1;
+  // if p1 is at midnight, and p2 is 60 seconds later
+  // p2DegreeDelta=60
+  // point2.eqCoord needs ra adjusted BACK so position
+  // is where it was 60 seconds ago.
+  double p1top2TimeInSeconds =
+      differenceInSeconds(point1.timePoint, point2.timePoint);
+  double p2DegreeDelta = secondsToRADeltaInDegrees(p1top2TimeInSeconds);
 
-  // compensate for time gap between two points.
-  double timeDelta = differenceInSeconds(oldest.timePoint, newest.timePoint);
-  raDeltaDegrees = secondsToRADeltaInDegrees(timeDelta);
-  EqCoord adjustedLastSyncEQ = newest.eqCoord.addRAInDegrees(-raDeltaDegrees);
-  // BUG? what happens when platform is running?
-  //
-  alignment.addReferenceCoord(newest.encoderAltAz, adjustedLastSyncEQ);
+  EqCoord p2Adjusted = point2.eqCoord.addRAInDegrees(-p2DegreeDelta);
 
-  log("Got two refs, calculating model...");
-  alignment.calculateThirdReference();
+  double p1ToP3TimeInSeconds =
+      differenceInSeconds(point1.timePoint, point3.timePoint);
+  double p3DegreeDelta = secondsToRADeltaInDegrees(p1ToP3TimeInSeconds);
+  EqCoord p3Adjusted = point3.eqCoord.addRAInDegrees(-p3DegreeDelta);
 
-  // syncs don't clobber
+  alignment.addReferenceCoord(point1.encoderAltAz, point1.eqCoord);
+  alignment.addReferenceCoord(point2.encoderAltAz, p2Adjusted);
+  alignment.addReferenceCoord(point3.encoderAltAz, p3Adjusted);
+
+  log("Calculated model from three references...");
 
   log("=====addReferencePoints====");
   log("");
@@ -318,6 +349,66 @@ void TelescopeModel::addReferencePoints(SynchPoint oldest, SynchPoint newest) {
  * Lat long and time are assumed to have been set (sky sarafi does this at
  * connect).
  *
+ * The general approach is:
+ *
+ * At startup, scope does a rough model based on an assumption
+ * we're pointing south at the horizon.
+ *
+ * Afterwards, the user needs to take three platesolves some
+ * distance apart. These are used to build a model, and are
+ * stored until the alignment is cleared.
+ *
+ * After that, whenever the user platesolves, a three star alignment
+ * will be performed using the platesolved point, and the two alignment
+ * points that are farthest away. This means that after a platesolve
+ * the model should point to the exact location of the scope.
+ *
+ * That location is then discarded after the next platesolve:
+ * the original three remain.
+ *
+ * Whenever a model is built, one of the points is picked as the
+ * base syncpoint. When the model is queried later, the difference
+ * between that time and the timestamp of this base point is then
+ * used to offset the ra output of the model, to model the stars
+ * moving since the model was made. The other points syncpoints
+ * are also grounded back to this base syncpoint time.
+ *
+ * The time of the syncpoints is also adjusted at creation
+ * by the sidereal offset of the eq platform, if present, similar
+ * to the calculateCurrentPositino logic.
+ *
+ * The way time shifts work is a bit tricky:
+ *
+ * Point 1:
+ * Consider the scope pointing to ra 0 with the platform centered and off.
+ * At 12:00 am, we platesolve at this point.
+ *
+ * Point 2:
+ * Then we shift the scope by ra + 10 minutes and wait 10 minutes,
+ * then take another platesolve.
+ * During this time the planet rotates. The scope is now pointing at
+ * ra 20 .
+ * When this second point is used for building the model, we calculate
+ * point 2 time - point 1 time = 10-0, and subtract that from point2 ra
+ * to get an ra of 10 degrees to be used in the model (same as if we'd
+ * platsolved straight away).
+ *
+ * Point 3:
+ * Now we shift the scope another + 10 ra so it is pointing at ra 30.
+ * We turn the platform on and wait ten minutes, then platesolve again
+ *
+ * The planet rotates +10 ra, but this is cancelled by the platform, so
+ * the scope is still pointing at 30 ra.
+ *
+ * We do the same math as before: point 3 time-point 1 time = 20-0,
+ * and subtract that from point 3 ra to get an ra of 10 degreess to be
+ * used in the model.
+ *
+ * However now the platform emits a delta of -10 minutes to center.
+ * This is subtracted from the platesolved ra to get ra 30 to be used in the
+ * model. (This is done in platform.calculateAdjustedTime(), and
+ * adjusts the timepoint passed into this method before passing)
+ *
  * Performs the following steps:
  * 1) Calculates actual alt/az using encoders
  *
@@ -325,8 +416,8 @@ void TelescopeModel::addReferencePoints(SynchPoint oldest, SynchPoint newest) {
  *
  * 3) Calculate current position using current model (used for error calcs)
  *
- * 4) Using the passed ta, encoder horizontal pos, and calculated, create a sync
- * point
+ * 4) Using the passed ta, encoder horizontal pos, and calculated, create a
+ * sync point
  *
  * 5) Add the sync point to the list. This checks for historical sync points
  * that are far away from this one. If one is found, it is returned
@@ -339,7 +430,7 @@ void TelescopeModel::addReferencePoints(SynchPoint oldest, SynchPoint newest) {
  *
  * */
 void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
-                                       TimePoint now) {
+                                       TimePoint &now) {
   log("");
   log("=====syncPositionRaDec====");
 
@@ -355,7 +446,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
-  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and  time "
+  log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and  "
+      "time "
       "%s",
       lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
       timePointToString(now).c_str());
@@ -391,16 +483,14 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   }
   lastSyncPoint = thisSyncPoint;
 
-  SynchPoint furthest = addSynchPointAndFindFarthest(
-      lastSyncPoint, SYNCHPOINT_FILTER_DISTANCE_DEGREES);
-
-  if (furthest.isValid) {
-    log("Recalculating model...");
-    addReferencePoints(furthest, lastSyncPoint);
-    baseSyncPoint = furthest;
+  if (baseAlignmentSynchPoints.size() == 3) {
+    std::vector<SynchPoint> furthest =
+        findFarthest( lastSyncPoint, baseAlignmentSynchPoints);
+    addReferencePoints(furthest);
   } else {
-    log("No usable syncpoint found...");
+    baseAlignmentSynchPoints.push_back(lastSyncPoint);
   }
+
 
   // special case: if this is the first alignment, then do a special one star
   // alignment
@@ -434,8 +524,8 @@ long TelescopeModel::getAltEncoderStepsPerRevolution() {
  * @return Number of encoder steps required for a full 360° azimuth
  * revolution.
  */
-long TelescopeModel::calculateAzEncoderStepsPerRevolution(SynchPoint startPoint,
-                                                          SynchPoint endPoint) {
+long TelescopeModel::calculateAzEncoderStepsPerRevolution(SynchPoint &startPoint,
+                                                          SynchPoint &endPoint) {
 
   EqCoord start = startPoint.eqCoord;
   EqCoord end = endPoint.eqCoord;
@@ -445,7 +535,8 @@ long TelescopeModel::calculateAzEncoderStepsPerRevolution(SynchPoint startPoint,
 
   double stepsPerDegree = encoderMove / distance;
   long stepsPerRevolution = stepsPerDegree * 360;
-  log("Azi Encoder Res Calcs:Distance: %f Encoder Move: %lf Steps per degree: "
+  log("Azi Encoder Res Calcs:Distance: %f Encoder Move: %lf Steps per "
+      "degree: "
       "%f Calculated steps per revolution  : %ld",
       distance, encoderMove, stepsPerDegree, stepsPerRevolution);
   // Return steps per full revolution (360°) by scaling up stepsPerDegree.
@@ -462,17 +553,18 @@ long TelescopeModel::calculateAzEncoderStepsPerRevolution(SynchPoint startPoint,
  * altitude revolution.
  */
 long TelescopeModel::calculateAltEncoderStepsPerRevolution(
-    SynchPoint startPoint, SynchPoint endPoint) {
+    SynchPoint &startPoint, SynchPoint &endPoint) {
 
   EqCoord start = startPoint.eqCoord;
   EqCoord end = endPoint.eqCoord;
 
   double distance = start.calculateDistanceInDegrees(end);
-  
+
   double encoderMove = abs(startPoint.altEncoder - endPoint.altEncoder);
   double stepsPerDegree = encoderMove / distance;
   long stepsPerRevolution = stepsPerDegree * 360;
-  log("Alt Encoder Res Calcs: Distance: %f Encoder Move: %lf Steps per degree: "
+  log("Alt Encoder Res Calcs: Distance: %f Encoder Move: %lf Steps per "
+      "degree: "
       "%f Calculated steps "
       "per revolution  : %ld",
       distance, encoderMove, stepsPerDegree, stepsPerRevolution);
