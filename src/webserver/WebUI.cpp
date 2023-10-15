@@ -2,58 +2,82 @@
 #include "Encoders.h"
 #include "Logging.h"
 #include "TelescopeModel.h"
+#include <ArduinoJson.h>
 #include <EQPlatform.h>
 #include <LittleFS.h>
 #include <Preferences.h>
+
 #define PREF_ALT_STEPS_KEY "AltStepsKey"
 #define PREF_AZ_STEPS_KEY "AzStepsKey"
 
 void getScopeStatus(AsyncWebServerRequest *request, TelescopeModel &model,
                     EQPlatform &platform) {
   // log("/getStatus");
-
   platform.checkConnectionStatus();
 
-  char buffer[2000];
-  sprintf(buffer,
-          R"({
-    
-    "calculateAltEncoderStepsPerRevolution" : %ld,
-    "calculateAzEncoderStepsPerRevolution" : %ld,
-    "actualAltEncoderStepsPerRevolution" : %ld,
-    "actualAzEncoderStepsPerRevolution" : %ld,
-    "lastSyncedRa" : %lf,
-    "lastSyncedDec" : %lf,
-    "lastSyncedAlt" : %lf,
-    "lastSyncedAz" : %lf,
-    "lastSyncedErr" : %lf,
-    "eqPlatformIP" : "%s",
-    "platformTracking" : %s,
-    "timeToMiddle" : %.1lf,
-    "timeToEnd" : %.1lf,
-    "platformConnected" : %s
-})",
+  // Estimate JSON capacity
+  const size_t capacity = JSON_OBJECT_SIZE(15);
 
-          model.calculatedAltEncoderRes,
-          model.calculatedAziEncoderRes,
-          model.getAltEncoderStepsPerRevolution(),
-          model.getAzEncoderStepsPerRevolution(),
-          model.lastSyncPoint.eqCoord.getRAInDegrees(),
-          model.lastSyncPoint.eqCoord.getDecInDegrees(),
-          model.lastSyncPoint.encoderAltAz.altInDegrees,
-          model.lastSyncPoint.encoderAltAz.aziInDegrees,
-          model.lastSyncPoint.errorInDegreesAtCreation,
+  DynamicJsonDocument doc(capacity);
 
-          platform.eqPlatformIP.c_str(),
-          platform.currentlyRunning ? "true" : "false",
-          platform.runtimeFromCenterSeconds / 60, platform.timeToEnd / 60,
-          platform.platformConnected ? "true" : "false");
+  // Populate the JSON object
+  doc["calculateAltEncoderStepsPerRevolution"] = model.calculatedAltEncoderRes;
+  doc["calculateAzEncoderStepsPerRevolution"] = model.calculatedAziEncoderRes;
+  doc["actualAltEncoderStepsPerRevolution"] =
+      model.getAltEncoderStepsPerRevolution();
+  doc["actualAzEncoderStepsPerRevolution"] =
+      model.getAzEncoderStepsPerRevolution();
 
-  String json = buffer;
+  doc["eqPlatformIP"] = platform.eqPlatformIP.c_str();
+  doc["platformTracking"] = platform.currentlyRunning;
+  doc["timeToMiddle"] =
+      static_cast<float>(platform.runtimeFromCenterSeconds) / 60.0f;
+  doc["timeToEnd"] = static_cast<float>(platform.timeToEnd) / 60.0f;
+  doc["platformConnected"] = platform.platformConnected;
+  doc["lastAlignmentTimestamp"]=timePointToString(model.lastSyncPoint.timePoint);
 
-  // String json = "{\"timestamp\":" + String(times.get()) + ",\"position\":"
-  // + String(positions.get()) + ",\"velocity\":" + String(velocities.get()) +
-  // "}";
+  String json;
+  serializeJson(doc, json);
+
+  request->send(200, "application/json", json);
+}
+
+void getAlignmentData(AsyncWebServerRequest *request, TelescopeModel &model,
+                      EQPlatform &platform) {
+  const size_t capacity =
+      JSON_ARRAY_SIZE(model.baseAlignmentSynchPoints.size()) +
+      JSON_OBJECT_SIZE(3) +
+      model.baseAlignmentSynchPoints.size() * JSON_OBJECT_SIZE(7) +
+      JSON_OBJECT_SIZE(7);
+
+  DynamicJsonDocument doc(capacity);
+
+  doc["calculateAltEncoderStepsPerRevolution"] = model.calculatedAltEncoderRes;
+
+  // Add baseAlignmentSynchPoints data
+  JsonArray baseAlignmentSynchPoints =
+      doc.createNestedArray("baseAlignmentSynchPoints");
+  for (const SynchPoint &sp : model.baseAlignmentSynchPoints) {
+    JsonObject point = baseAlignmentSynchPoints.createNestedObject();
+    point["time"] = timePointToString( sp.timePoint);
+    point["ra"] = sp.eqCoord.getRAInDegrees();
+    point["dec"] = sp.eqCoord.getDecInDegrees();
+    point["alt"] = sp.encoderAltAz.altInDegrees;
+    point["az"] = sp.encoderAltAz.aziInDegrees;
+  }
+
+  // Add lastSyncPoint data
+  JsonObject lastSyncPoint = doc.createNestedObject("lastSyncPoint");
+  lastSyncPoint["time"] = timePointToString( model.lastSyncPoint.timePoint);
+  lastSyncPoint["ra"] = model.lastSyncPoint.eqCoord.getRAInDegrees();
+  lastSyncPoint["dec"] = model.lastSyncPoint.eqCoord.getDecInDegrees();
+  lastSyncPoint["alt"] = model.lastSyncPoint.encoderAltAz.altInDegrees;
+  lastSyncPoint["az"] = model.lastSyncPoint.encoderAltAz.aziInDegrees;
+  lastSyncPoint["error"] = model.lastSyncPoint.errorInDegreesAtCreation;
+
+  String json;
+  serializeJson(doc, json);
+
   request->send(200, "application/json", json);
 }
 
@@ -116,6 +140,11 @@ void setupWebUI(AsyncWebServer &alpacaWebServer, TelescopeModel &model,
   alpacaWebServer.on("/getScopeStatus", HTTP_GET,
                      [&model, &platform](AsyncWebServerRequest *request) {
                        getScopeStatus(request, model, platform);
+                     });
+
+  alpacaWebServer.on("/getAlignmentData", HTTP_GET,
+                     [&model, &platform](AsyncWebServerRequest *request) {
+                       getAlignmentData(request, model, platform);
                      });
 
   alpacaWebServer.on("/saveAltEncoderSteps", HTTP_POST,

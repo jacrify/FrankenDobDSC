@@ -60,39 +60,40 @@
 
     </table>
 
-    <table border="1">
-        <tr>
-            <td>Last Synced Ra</td>
-            <td>
-                <span id="lastSyncedRa">0</span>
-            </td>
-        </tr>
-        <tr>
-            <td>Last Synced Dec</td>
-            <td>
-                <span id="lastSyncedDec">0</span>
-            </td>
-        </tr>
-        <tr>
-            <td>Last Synched Alt</td>
-            <td>
-                <span id="lastSyncedAlt">0</span>
-            </td>
-        </tr>
-        <tr>
-            <td>Last Synched Az</td>
-            <td>
-                <span id="lastSyncedAz">0</span>
-            </td>
-        </tr>
-        <tr>
-            <td>Error at Last Synch (degrees)</td>
-            <td>
-                <span id="lastSyncedErr">0</span>
-            </td>
-        </tr>
 
 
+
+    <!-- Alignment Table -->
+    Base Alignments
+    <table border="1" id="alignmentDataTable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>RA</th>
+                <th>Dec</th>
+                <th>Alt</th>
+                <th>Az</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be inserted here via JavaScript -->
+        </tbody>
+    </table>
+    <br>Last sync points, newest first
+    <table border="1" id="lastAlignmentDataTable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>RA</th>
+                <th>Dec</th>
+                <th>Alt</th>
+                <th>Az</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be inserted here via JavaScript -->
+        </tbody>
     </table>
 
     <button id="clearPreferences">Clear Preferences</button>
@@ -107,8 +108,122 @@
     <button id="performZeroedAlignment">Perform Zeroed Alignment</button>
 
     <br>
+    <canvas id="skyCanvas" width="400" height="400"></canvas>
+
+
+    <br>
 
     <script>
+        var lastAlignmentTimestamp = "";
+
+        function renderSky(data) {
+            var canvas = document.getElementById("skyCanvas");
+            var ctx = canvas.getContext("2d");
+
+            // Clear the canvas every time
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Constants for conversion
+            const MULTIPLIER = canvas.width / 200; // assuming canvas width = canvas height
+            const CENTER = canvas.width / 2;
+
+            // Draw horizon circle (alt=0)
+            ctx.beginPath();
+            ctx.arc(CENTER, CENTER, 90 * MULTIPLIER, 0, 2 * Math.PI);
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+
+            // Draw black dot at azimuth (top center)
+            ctx.beginPath();
+            ctx.arc(CENTER, CENTER - (90 * MULTIPLIER), 2, 0, 2 * Math.PI);
+            ctx.fillStyle = "black";
+            ctx.fill();
+
+            // Draw points from baseAlignmentSynchPoints array
+            for (let i = 0; i < data.baseAlignmentSynchPoints.length; i++) {
+                let syncPoint = data.baseAlignmentSynchPoints[i];
+                let x = CENTER + (syncPoint.alt * MULTIPLIER * Math.sin(syncPoint.az * Math.PI / 180));
+                let y = CENTER - (syncPoint.alt * MULTIPLIER * Math.cos(syncPoint.az * Math.PI / 180));
+
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                ctx.fillStyle = "red";
+                ctx.fill();
+
+                if (i > 0) {
+                    let prevSyncPoint = data.baseAlignmentSynchPoints[i - 1];
+                    let prevX = CENTER + (prevSyncPoint.alt * MULTIPLIER * Math.sin(prevSyncPoint.az * Math.PI / 180));
+                    let prevY = CENTER - (prevSyncPoint.alt * MULTIPLIER * Math.cos(prevSyncPoint.az * Math.PI / 180));
+
+                    ctx.beginPath();
+                    ctx.moveTo(prevX, prevY);
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = "red";
+                    ctx.stroke();
+                }
+
+                // Close the triangle if it's the third point
+                if (i === 2) {
+                    let firstSyncPoint = data.baseAlignmentSynchPoints[0];
+                    let firstX = CENTER + (firstSyncPoint.alt * MULTIPLIER * Math.sin(firstSyncPoint.az * Math.PI / 180));
+                    let firstY = CENTER - (firstSyncPoint.alt * MULTIPLIER * Math.cos(firstSyncPoint.az * Math.PI / 180));
+
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(firstX, firstY);
+                    ctx.strokeStyle = "red";
+                    ctx.stroke();
+                }
+            }
+
+            // Draw lastSyncPoint
+            let x = CENTER + (data.lastSyncPoint.alt * MULTIPLIER * Math.sin(data.lastSyncPoint.az * Math.PI / 180));
+            let y = CENTER - (data.lastSyncPoint.alt * MULTIPLIER * Math.cos(data.lastSyncPoint.az * Math.PI / 180));
+
+            ctx.beginPath();
+            ctx.arc(x, y, data.lastSyncPoint.error * MULTIPLIER, 0, 2 * Math.PI);
+            ctx.strokeStyle = "blue";
+            ctx.stroke();
+        }
+
+
+
+
+        function fetchAlignmentData() {
+            $.getJSON("/getAlignmentData").done(function (data) {
+                var tableBody = $("#lastAlignmentDataTable tbody");
+
+                // Add 'lastSyncPoint' data to the table
+                var row = $("<tr>");
+                row.append($("<td>").text(data.lastSyncPoint.time));
+                row.append($("<td>").text(data.lastSyncPoint.ra));
+                row.append($("<td>").text(data.lastSyncPoint.dec));
+                row.append($("<td>").text(data.lastSyncPoint.alt));
+                row.append($("<td>").text(data.lastSyncPoint.az));
+                row.append($("<td>").text(data.lastSyncPoint.error));
+                tableBody.prepend(row);
+
+                tableBody = $("#alignmentDataTable tbody");
+                tableBody.empty(); // Clear any existing data
+
+                // Now add each of the alignment points from 'baseAlignmentSynchPoints'
+                for (var i = 0; i < data.baseAlignmentSynchPoints.length; i++) {
+                    var syncPoint = data.baseAlignmentSynchPoints[i];
+                    row = $("<tr>");
+                    row.append($("<td>").text(syncPoint.time));
+                    row.append($("<td>").text(syncPoint.ra));
+                    row.append($("<td>").text(syncPoint.dec));
+                    row.append($("<td>").text(syncPoint.alt));
+                    row.append($("<td>").text(syncPoint.az));
+                    tableBody.append(row);
+                }
+                renderSky(data);
+            }).fail(function () {
+                console.error("Failed to fetch alignment data.");
+            });
+        }
+
+
 
         function update() {
             console.log("Update ");
@@ -120,11 +235,7 @@
                 $("#actualAltEncoderStepsPerRevolution").text(data.actualAltEncoderStepsPerRevolution);
                 $("#actualAzEncoderStepsPerRevolution").text(data.actualAzEncoderStepsPerRevolution);
                 $("#timeToMiddle").text(data.timeToMiddle);
-                $("#lastSyncedRa").text(data.lastSyncedRa);
-                $("#lastSyncedDec").text(data.lastSyncedDec);
-                $("#lastSyncedAlt").text(data.lastSyncedAlt);
-                $("#lastSyncedAz").text(data.lastSyncedAz);
-                $("#lastSyncedErr").text(data.lastSyncedErr);
+
                 $("#platformConnected").css("background-color", data.platformConnected ? "green" : "red");
                 if (data.platformConnected) {
                     $("#eqPlatformLink").attr("href", "http://" + data.eqPlatformIP).text("EQ Platform Connected");
@@ -139,6 +250,10 @@
                 }
 
                 $("#platformTracking").css("background-color", data.platformTracking ? "green" : "red");
+                if (data.lastAlignmentTimestamp !== lastAlignmentTimestamp) {
+                    lastAlignmentTimestamp = data.lastAlignmentTimestamp;
+                    fetchAlignmentData();
+                }
             }).fail(function () {
                 console.error("Failed to get data.");
             });
@@ -151,6 +266,8 @@
         });
 
         $("#clearAlignment").click(function () {
+            $("#lastAlignmentDataTable tbody").empty();
+            $("#alignmentDataTable tbody").empty();
             $.post("/clearAlignment");
         });
 
