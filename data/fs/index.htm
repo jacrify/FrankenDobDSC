@@ -116,6 +116,13 @@
     <script>
         var lastAlignmentTimestamp = "";
 
+        function computeXY(alt, az, MULTIPLIER, CENTER) {
+            let r = (90 - alt) * MULTIPLIER;
+            let x = CENTER + r * Math.sin(az * Math.PI / 180);
+            let y = CENTER - r * Math.cos(az * Math.PI / 180);
+            return { x, y };
+        }
+
         function renderSky(data) {
             var canvas = document.getElementById("skyCanvas");
             var ctx = canvas.getContext("2d");
@@ -142,8 +149,8 @@
             // Draw points from baseAlignmentSynchPoints array
             for (let i = 0; i < data.baseAlignmentSynchPoints.length; i++) {
                 let syncPoint = data.baseAlignmentSynchPoints[i];
-                let x = CENTER + (syncPoint.alt * MULTIPLIER * Math.sin(syncPoint.az * Math.PI / 180));
-                let y = CENTER - (syncPoint.alt * MULTIPLIER * Math.cos(syncPoint.az * Math.PI / 180));
+
+                let { x, y } = computeXY(syncPoint.alt, syncPoint.az,MULTIPLIER,CENTER);
 
                 ctx.beginPath();
                 ctx.arc(x, y, 2, 0, 2 * Math.PI);
@@ -152,8 +159,9 @@
 
                 if (i > 0) {
                     let prevSyncPoint = data.baseAlignmentSynchPoints[i - 1];
-                    let prevX = CENTER + (prevSyncPoint.alt * MULTIPLIER * Math.sin(prevSyncPoint.az * Math.PI / 180));
-                    let prevY = CENTER - (prevSyncPoint.alt * MULTIPLIER * Math.cos(prevSyncPoint.az * Math.PI / 180));
+
+
+                    let { x: prevX, y: prevY } = computeXY(prevSyncPoint.alt, prevSyncPoint.az,MULTIPLIER, CENTER);
 
                     ctx.beginPath();
                     ctx.moveTo(prevX, prevY);
@@ -165,8 +173,8 @@
                 // Close the triangle if it's the third point
                 if (i === 2) {
                     let firstSyncPoint = data.baseAlignmentSynchPoints[0];
-                    let firstX = CENTER + (firstSyncPoint.alt * MULTIPLIER * Math.sin(firstSyncPoint.az * Math.PI / 180));
-                    let firstY = CENTER - (firstSyncPoint.alt * MULTIPLIER * Math.cos(firstSyncPoint.az * Math.PI / 180));
+                    let { x: firstX, y: firstY } = computeXY(firstSyncPoint.alt, firstSyncPoint.az, MULTIPLIER, CENTER);
+
 
                     ctx.beginPath();
                     ctx.moveTo(x, y);
@@ -177,8 +185,7 @@
             }
 
             // Draw lastSyncPoint
-            let x = CENTER + (data.lastSyncPoint.alt * MULTIPLIER * Math.sin(data.lastSyncPoint.az * Math.PI / 180));
-            let y = CENTER - (data.lastSyncPoint.alt * MULTIPLIER * Math.cos(data.lastSyncPoint.az * Math.PI / 180));
+            let { x, y } = computeXY(data.lastSyncPoint.alt, data.lastSyncPoint.az, MULTIPLIER, CENTER);
 
             ctx.beginPath();
             ctx.arc(x, y, data.lastSyncPoint.error * MULTIPLIER, 0, 2 * Math.PI);
