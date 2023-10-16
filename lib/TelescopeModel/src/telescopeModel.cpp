@@ -35,6 +35,8 @@ TelescopeModel::TelescopeModel() {
 
   altEnc = 0;
   azEnc = 0;
+  altDelta=0;
+  aziDelta=0;
   azEncoderStepsPerRevolution = 0;
   altEncoderStepsPerRevolution = 0;
 
@@ -61,6 +63,8 @@ void TelescopeModel::clearAlignment() {
   baseAlignmentSynchPoints.clear();
   baseSyncPoint = SynchPoint();
   lastSyncPoint = SynchPoint();
+  altDelta = 0;
+  aziDelta = 0;
 
   baseSyncPoint.isValid = false;
   performBaselineAlignment();
@@ -133,9 +137,21 @@ HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
                                                       long azEncVal) {
 
   float alt =
-      360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
-  float az = 360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
+      360.0 * ((float)(altEncVal+altDelta)) / (float)altEncoderStepsPerRevolution;
+  float az = 360.0 * ((float)(azEncVal+aziDelta)) / (float)azEncoderStepsPerRevolution;
   return HorizCoord(alt, az);
+}
+
+long TelescopeModel::calculateAltEncoderFromCoord(HorizCoord &altAz) const {
+  long altEncoderVal =
+      (altAz.altInDegrees / 360.0) * (float)altEncoderStepsPerRevolution;
+  return altEncoderVal;
+}
+
+long TelescopeModel::calculateAziEncoderFromCoord(HorizCoord &altAz) const {
+  long aziEncoderVal =
+      (altAz.aziInDegrees / 360.0) * (float)azEncoderStepsPerRevolution;
+  return aziEncoderVal;
 }
 
 /**
@@ -358,13 +374,13 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
  * distance apart. These are used to build a model, and are
  * stored until the alignment is cleared.
  *
- * After that, whenever the user platesolves, a three star alignment
- * will be performed using the platesolved point, and the two alignment
- * points that are farthest away. This means that after a platesolve
- * the model should point to the exact location of the scope.
+ * After that, whenever the user platesolves, this alignment is 
+ * used and compared to the platesolve position. Where they differ
+ * from what the encoders say, the model is used to calculate
+ * an alt/az position, and thus an encoder position. The delta
+ * between the actual and derived encoder values is stored
+ * and applied to future encoder calcs.
  *
- * That location is then discarded after the next platesolve:
- * the original three remain.
  *
  * Whenever a model is built, one of the points is picked as the
  * base syncpoint. When the model is queried later, the difference
@@ -483,10 +499,18 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncPoint = thisSyncPoint;
 
   if (baseAlignmentSynchPoints.size() == 3) {
-    log("3 points in base aligment, picking best two to build temp model ");
-    std::vector<SynchPoint> furthest =
-        findFarthest(lastSyncPoint, baseAlignmentSynchPoints);
-    addReferencePoints(furthest);
+    
+    HorizCoord modeledAltAz = alignment.toInstrumentCoord(lastSyncedEq);
+    long modeledAlt = calculateAltEncoderFromCoord(modeledAltAz);
+    long modeledAz = calculateAziEncoderFromCoord(modeledAltAz);
+    // altDelta and aziDelta will be ADDED to encoder values in
+    // calculateAlzAzFromEncoders.
+    // So if modeled alt encoder is 100, but actualy is 50,
+    // modeleded-alt=50, and when calculating we get the right result.
+    altDelta = modeledAlt - altEnc;
+    aziDelta = modeledAz - azEnc;
+    log("3 points in base aligment. Calculated alt offset: %ld and az offset : %ld",altDelta,aziDelta);
+    calculateCurrentPosition(now);
   } else {
     log("Adding new point to base alignment, total will be %d ",
         baseAlignmentSynchPoints.size() + 1);
