@@ -55,8 +55,7 @@ void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
   char buffer[BUFFER_SIZE];
   // TODO fix this later
   // double axisRateMax = platform.axisMoveRateMax;
-  double axisRateMax=21;
-
+  double axisRateMax = 21;
 
   snprintf(buffer, sizeof(buffer),
            R"({
@@ -311,6 +310,44 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
 
   returnNoError(request);
 }
+
+void slewToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
+                  EQPlatform &platform) {
+  String ra = request->arg("RightAscension");
+  double parsedRAHours;
+  double parsedDecDegrees;
+  // TODO handle exceptions
+  if (ra != NULL) {
+    log("Received parameterName: %s", ra.c_str());
+
+    parsedRAHours = strtod(ra.c_str(), NULL);
+    log("Parsed ra value: %lf", parsedRAHours);
+  } else {
+    log("Could not parse ra arg!");
+  }
+  String dec = request->arg("Declination");
+  if (dec != NULL) {
+    log("Received parameterName: %s", ra.c_str());
+
+    parsedDecDegrees = strtod(dec.c_str(), NULL);
+    log("Parsed dec value: %lf", parsedDecDegrees);
+  } else {
+    log("Could not parse dec arg!");
+  }
+
+  // get latest position
+  updatePosition(model, platform);
+  double targetRADegrees =
+      Ephemeris::hoursMinutesSecondsToFloatingHours(parsedRAHours);
+  double modelledRADegrees =
+      Ephemeris::hoursMinutesSecondsToFloatingHours(model.getRACoord());
+
+  double raDeltaDegrees=targetRADegrees-modelledRADegrees;
+  platform.slewByDegrees(raDeltaDegrees);
+
+  returnNoError(request);
+}
+
 /**
  * The whole point. Return ra/dec back to client
  */
@@ -362,12 +399,15 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
             subPath == "cansetpierside" ||
             subPath == "cansetrightascensionrate" ||
             subPath == "cansyncaltaz" || subPath == "canunpark" ||
-            subPath == "doesrefraction" ||
-            subPath == "slewing") {
+            subPath == "doesrefraction" || subPath == "slewing") {
           return returnSingleBool(request, false);
         }
-         if (subPath == "sideofpier") {
-          return returnSingleInteger(request,-1);
+
+        if (subPath == "slewing") {
+          return returnSingleBool(request, platform.slewing);
+        }
+        if (subPath == "sideofpier") {
+          return returnSingleInteger(request, -1);
         }
         if (subPath == "canmoveaxis") {
           return canMoveAxis(request);
@@ -386,7 +426,11 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
           return returnSingleBool(request, false);
         }
         if (subPath == "canslewasync") {
-          return returnSingleBool(request, false);
+          return returnSingleBool(request, true);
+        }
+        // TODO expose as config
+        if (subPath == "slewsettletime") {
+          return returnSingleInteger(request, 1);
         }
         if (subPath == "canslewaltazasync") {
           return returnSingleBool(request, false);
@@ -532,6 +576,9 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
 
                        if (subPath.startsWith("abortslew"))
                          return abortSlew(request, platform);
+
+                       if (subPath.startsWith("slewtocoordinatesasync"))
+                         return slewToCoords(request, model, platform);
 
                        // Add more routes here as needed
 

@@ -37,6 +37,12 @@ void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
 void EQPlatform::park() { sendEQCommand("park", 0, 0); }
 void EQPlatform::findHome() { sendEQCommand("home", 0, 0); }
 void EQPlatform::moveAxis(double rate) { sendEQCommand("moveaxis", rate, 0); }
+
+void EQPlatform::slewByDegrees(double degreesToSlew)
+{
+  sendEQCommand("slewbydegrees",degreesToSlew,0);
+  slewing=true;
+}
 void EQPlatform::setTracking(int tracking) {
   sendEQCommand("track", tracking, 0);
 }
@@ -84,15 +90,16 @@ void EQPlatform::processPacket(AsyncUDPPacket &packet) {
         doc.containsKey("axisMoveRateMax") &&
         doc.containsKey("axisMoveRateMin") &&
         doc.containsKey("guideMoveRate") && doc.containsKey("trackingRate") &&
-        doc.containsKey("isTracking") && doc["timeToCenter"].is<double>() &&
-        doc["guideMoveRate"].is<double>() &&
+        doc.containsKey("slewing") && doc.containsKey("isTracking") &&
+        doc["timeToCenter"].is<double>() && doc["guideMoveRate"].is<double>() &&
         doc["axisMoveRateMax"].is<double>() &&
         doc["axisMoveRateMin"].is<double>() &&
-        doc["trackingRate"].is<double>() && doc["timeToEnd"].is<double>() ) {
+        doc["trackingRate"].is<double>() && doc["timeToEnd"].is<double>()) {
       runtimeFromCenterSeconds = doc["timeToCenter"];
 
       timeToEnd = doc["timeToEnd"];
       currentlyRunning = doc["isTracking"];
+      slewing = doc["slewing"];
       pulseGuideRate = doc["guideMoveRate"];
       axisMoveRateMax = doc["axisMoveRateMax"];
       axisMoveRateMin = doc["axisMoveRateMin"];

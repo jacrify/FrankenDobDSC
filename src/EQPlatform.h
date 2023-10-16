@@ -14,6 +14,7 @@ public:
   void park();
   void findHome();
   void moveAxis(double rate);
+  void slewByDegrees(double degreesToSlew);
   void setTracking(int tracking);
   void pulseGuide(int direction, long duration);
   void zeroOffsetTime();
@@ -25,6 +26,7 @@ public:
   double timeToEnd;
   bool currentlyRunning;
   bool platformConnected;
+  bool slewing;
   double pulseGuideRate;//degrees/sec
   double axisMoveRateMax;
   double axisMoveRateMin;
