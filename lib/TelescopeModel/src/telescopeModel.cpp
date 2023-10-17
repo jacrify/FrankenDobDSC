@@ -35,8 +35,8 @@ TelescopeModel::TelescopeModel() {
 
   altEnc = 0;
   azEnc = 0;
-  altDelta=0;
-  aziDelta=0;
+  altDelta = 0;
+  aziDelta = 0;
   azEncoderStepsPerRevolution = 0;
   altEncoderStepsPerRevolution = 0;
 
@@ -68,39 +68,6 @@ void TelescopeModel::clearAlignment() {
 
   baseSyncPoint.isValid = false;
   performBaselineAlignment();
-}
-
-// Find the farthest two points from passed synchpoint.
-// Returns vector containing passed point, and two farthest points
-std::vector<SynchPoint>
-TelescopeModel::findFarthest(SynchPoint &sp,
-                             std::vector<SynchPoint> &baseSyncPoints) {
-  SynchPoint maxDistPoint1;
-  SynchPoint maxDistPoint2;
-  double maxDistance1 = -1.0;
-  double maxDistance2 = -1.0;
-
-  for (auto &element : baseSyncPoints) {
-    double distance = sp.eqCoord.calculateDistanceInDegrees(element.eqCoord);
-    if (distance > maxDistance1) {
-      maxDistPoint2 = maxDistPoint1; // Previous farthest point now becomes
-                                     // second farthest
-      maxDistance2 = maxDistance1;
-      maxDistPoint1 = element; // New farthest point
-      maxDistance1 = distance;
-    } else if (distance > maxDistance2) {
-      maxDistPoint2 = element; // New second farthest point
-      maxDistance2 = distance;
-    }
-  }
-
-  std::vector<SynchPoint> response;
-  if (maxDistPoint1.isValid && maxDistPoint2.isValid) {
-    response.push_back(sp);
-    response.push_back(maxDistPoint1);
-    response.push_back(maxDistPoint2);
-  }
-  return response;
 }
 
 void TelescopeModel::setEncoderValues(long encAlt, long encAz) {
@@ -136,9 +103,10 @@ float TelescopeModel::getAzCoord() { return currentAz; }
 HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
                                                       long azEncVal) {
 
-  float alt =
-      360.0 * ((float)(altEncVal+altDelta)) / (float)altEncoderStepsPerRevolution;
-  float az = 360.0 * ((float)(azEncVal+aziDelta)) / (float)azEncoderStepsPerRevolution;
+  float alt = 360.0 * ((float)(altEncVal + altDelta)) /
+              (float)altEncoderStepsPerRevolution;
+  float az = 360.0 * ((float)(azEncVal + aziDelta)) /
+             (float)azEncoderStepsPerRevolution;
   return HorizCoord(alt, az);
 }
 
@@ -187,7 +155,10 @@ void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
   // Work out how many seconds since the model was created. Add this
   // to the RA to compensate for time passing.
   double timeDeltaSeconds = 0;
+
   if (baseSyncPoint.isValid) {
+    // function does timepoint-base.timepoint
+    // so will be positive as time moves forward
     timeDeltaSeconds = differenceInSeconds(baseSyncPoint.timePoint, timePoint);
   }
 
@@ -195,7 +166,10 @@ void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
   // log("Time delta seconds: %lf degrees: %lf", timeDeltaSeconds,
   // raDeltaDegrees);
 
-  currentEqPosition = currentEqPosition.addRAInDegrees(raDeltaDegrees);
+  // this should substract from calculated position as has passed:
+  // if scope is pointing to same position, but earth has turned,
+  // ra pointed to gets smaller
+  currentEqPosition = currentEqPosition.addRAInDegrees(-raDeltaDegrees);
 
   // log("Final position\t\t\tra(h): %lf\tdec: %lf",
   //     currentEqPosition.getRAInHours(),
@@ -374,7 +348,7 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
  * distance apart. These are used to build a model, and are
  * stored until the alignment is cleared.
  *
- * After that, whenever the user platesolves, this alignment is 
+ * After that, whenever the user platesolves, this alignment is
  * used and compared to the platesolve position. Where they differ
  * from what the encoders say, the model is used to calculate
  * an alt/az position, and thus an encoder position. The delta
@@ -383,15 +357,19 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
  *
  *
  * Whenever a model is built, one of the points is picked as the
- * base syncpoint. When the model is queried later, the difference
- * between that time and the timestamp of this base point is then
- * used to offset the ra output of the model, to model the stars
- * moving since the model was made. The other points syncpoints
+ * base syncpoint. When the model is queried later (calculateCurrentPosition),
+ * the difference between that time and the timestamp of this base
+ * point is then used to offset the ra output of the model, to model
+ * the stars  moving since the model was made. The other points syncpoints
  * are also grounded back to this base syncpoint time.
  *
  * The time of the syncpoints is also adjusted at creation
  * by the sidereal offset of the eq platform, if present, similar
  * to the calculateCurrentPositino logic.
+ *
+ * When a fourth or firth sync is performed, we only calculate a
+ * alt/az adjustment. As the input for this we apply the same
+ * delta back to the base syncpoint.
  *
  * The way time shifts work is a bit tricky:
  *
@@ -424,6 +402,8 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
  * This is subtracted from the platesolved ra to get ra 30 to be used in the
  * model. (This is done in platform.calculateAdjustedTime(), and
  * adjusts the timepoint passed into this method before passing)
+ *
+ *
  *
  * Performs the following steps:
  * 1) Calculates actual alt/az using encoders
@@ -499,8 +479,17 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncPoint = thisSyncPoint;
 
   if (baseAlignmentSynchPoints.size() == 3) {
-    
-    HorizCoord modeledAltAz = alignment.toInstrumentCoord(lastSyncedEq);
+    // Adjust time back to model time
+    double basePointToNowTimeInSeconds =
+        differenceInSeconds(baseSyncPoint.timePoint, now);
+    double basePointToNowDeltaInDegrees =
+        secondsToRADeltaInDegrees(basePointToNowTimeInSeconds);
+
+    //where was this point at time of model creation?
+    EqCoord adjusted =
+        lastSyncedEq.addRAInDegrees(-basePointToNowDeltaInDegrees);
+
+    HorizCoord modeledAltAz = alignment.toInstrumentCoord(adjusted);
     long modeledAlt = calculateAltEncoderFromCoord(modeledAltAz);
     long modeledAz = calculateAziEncoderFromCoord(modeledAltAz);
     // altDelta and aziDelta will be ADDED to encoder values in
@@ -509,16 +498,21 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
     // modeleded-alt=50, and when calculating we get the right result.
     altDelta = modeledAlt - altEnc;
     aziDelta = modeledAz - azEnc;
-    log("3 points in base aligment. Calculated alt offset: %ld and az offset : %ld",altDelta,aziDelta);
+    log("3 points in base aligment. Calculated alt offset: %ld and az offset : "
+        "%ld",
+        altDelta, aziDelta);
     calculateCurrentPosition(now);
   } else {
     log("Adding new point to base alignment, total will be %d ",
         baseAlignmentSynchPoints.size() + 1);
     baseAlignmentSynchPoints.push_back(lastSyncPoint);
+    if (baseAlignmentSynchPoints.size() == 3) {
+      addReferencePoints(baseAlignmentSynchPoints);
+    }
   }
 
-  // special case: if this is the first alignment, then do a special one star
-  // alignment
+  // special case: if this is the first alignment, then do a one star
+  // alignment. This give us rough positions for doing 3 star
   if (defaultAlignment) {
     log("First point added, doing one off one star alignement");
 
