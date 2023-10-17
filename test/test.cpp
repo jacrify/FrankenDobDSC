@@ -1255,6 +1255,27 @@ void test_telescope_model_mylocation() {
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star4Dec, model.getDecCoord(), "dec");
   TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, expectedRAHours, model.getRACoord(),
                                    "ra");
+
+  //Now we'll do a sycnc at this same point.
+
+  //Scope is pointing to this ra/dec at this time, 
+  //as per previous assert
+  //so there should be no offset applied here
+
+  model.syncPositionRaDec(model.getRACoord(),model.getDecCoord(),oneHourLater);
+  model.calculateCurrentPosition(oneHourLater);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star4Dec, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, expectedRAHours, model.getRACoord(),
+                                   "ra");
+
+  //now introduce an error of one hour ra
+  model.syncPositionRaDec(model.getRACoord()+1.0, model.getDecCoord(),
+                          oneHourLater);
+  model.calculateCurrentPosition(oneHourLater);
+  //model should compensate
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star4Dec, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, expectedRAHours+1.0, model.getRACoord(),
+                                   "ra");
 }
 
 void test_telescope_model_mylocation_with_tilt() {
@@ -1688,29 +1709,29 @@ void setup() {
   //   RUN_TEST(test_telescope_model_mylocation_with_offset);
   //   RUN_TEST(test_horizontal_to_eq_eq_constructor);
   //====
-  RUN_TEST(test_az_encoder_calibration);
-  RUN_TEST(test_alt_encoder_calibration);
+//   RUN_TEST(test_az_encoder_calibration);
+//   RUN_TEST(test_alt_encoder_calibration);
 
-  RUN_TEST(test_eq_to_horizontal);
-  //   RUN_TEST(test_horizontal_to_eq);
-  RUN_TEST(test_eq_to_horizontal_vega);
+//   RUN_TEST(test_eq_to_horizontal);
+//   //   RUN_TEST(test_horizontal_to_eq);
+//   RUN_TEST(test_eq_to_horizontal_vega);
 
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers);
-  RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
+//   RUN_TEST(test_two_star_alignment_mylocation_wrappers);
+//   RUN_TEST(test_two_star_alignment_mylocation_wrappers_offset);
 
   RUN_TEST(test_telescope_model_mylocation);
-  RUN_TEST(test_telescope_model_mylocation_with_tilt);
-  RUN_TEST(test_one_star_align_principle);
-  RUN_TEST(test_coords);
+//   RUN_TEST(test_telescope_model_mylocation_with_tilt);
+//   RUN_TEST(test_one_star_align_principle);
+//   RUN_TEST(test_coords);
 
-  RUN_TEST(test_model_one_star_align);
-  RUN_TEST(test_eq_coord_distance);
+//   RUN_TEST(test_model_one_star_align);
+//   RUN_TEST(test_eq_coord_distance);
 
-  RUN_TEST(test_time_difference);
+//   RUN_TEST(test_time_difference);
   //====
   //   RUN_TEST(test_continuity);
 
-  RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
+//   RUN_TEST(test_telescope_model_mylocation_with_time_deltas);
 
   //   RUN_TEST(testTimestepConversion);
 

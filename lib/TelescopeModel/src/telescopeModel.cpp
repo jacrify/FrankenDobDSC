@@ -65,7 +65,8 @@ void TelescopeModel::clearAlignment() {
   lastSyncPoint = SynchPoint();
   altDelta = 0;
   aziDelta = 0;
-
+  alignment.reset();
+  alignment.clean();
   baseSyncPoint.isValid = false;
   performBaselineAlignment();
 }
@@ -305,6 +306,7 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
 
   // double raDeltaDegrees = 0;
   alignment.clean();
+  alignment.reset();
 
   // align all points to same time
   baseSyncPoint = point1;
@@ -485,9 +487,12 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
     double basePointToNowDeltaInDegrees =
         secondsToRADeltaInDegrees(basePointToNowTimeInSeconds);
 
-    //where was this point at time of model creation?
+    // where was this point at time of model creation?
+    // basePointToNowDeltaInDegrees is positive as time moves forward
+    // and a fixed alt az point results in ra decreasing over time
+    // so to find ra of point some time ago we add the delta
     EqCoord adjusted =
-        lastSyncedEq.addRAInDegrees(-basePointToNowDeltaInDegrees);
+        lastSyncedEq.addRAInDegrees(basePointToNowDeltaInDegrees);
 
     HorizCoord modeledAltAz = alignment.toInstrumentCoord(adjusted);
     long modeledAlt = calculateAltEncoderFromCoord(modeledAltAz);
