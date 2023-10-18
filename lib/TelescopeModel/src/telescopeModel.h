@@ -131,6 +131,9 @@ private:
 
   long altEnc;
   long azEnc;
+  //deltas get added to encoder values for fine model adjustments
+  long altDelta;
+  long aziDelta;
   long azEncoderStepsPerRevolution;
   long altEncoderStepsPerRevolution;
 
@@ -146,12 +149,14 @@ private:
                                        long azEncVal, long &altEncOffset,
                                        long &azEncOffset);
   HorizCoord calculateAltAzFromEncoders(long altEncVal, long azEncVal);
+  long calculateAltEncoderFromCoord(HorizCoord &altAz) const;
+  long calculateAziEncoderFromCoord(HorizCoord &altAz) const;
 
-  void addReferencePoints(std::vector<SynchPoint> &points);
-  long calculateAzEncoderStepsPerRevolution(SynchPoint &startPoint,
-                                            SynchPoint &endPoint);
-  long calculateAltEncoderStepsPerRevolution(SynchPoint &startPoint,
-                                             SynchPoint &endPoint);
-};
+    void addReferencePoints(std::vector<SynchPoint> & points);
+    long calculateAzEncoderStepsPerRevolution(SynchPoint & startPoint,
+                                              SynchPoint & endPoint);
+    long calculateAltEncoderStepsPerRevolution(SynchPoint & startPoint,
+                                               SynchPoint & endPoint);
+  };
 
 #endif

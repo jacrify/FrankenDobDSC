@@ -167,7 +167,7 @@ void CoordConv::addReferenceCoord(HorizCoord h, EqCoord e) {
   addReference(TakiHorizCoord(h, isNorthernHemisphere), e);
 }
 
-void CoordConv::setNorthernHemisphere(bool b) { isNorthernHemisphere = false; }
+void CoordConv::setNorthernHemisphere(bool b) { isNorthernHemisphere = b; }
 void CoordConv::addReference(TakiHorizCoord t, EqCoord e) {
 
   addReferenceDeg(e.getRAInDegrees(), e.getDecInDegrees(), t.aziAngle,
