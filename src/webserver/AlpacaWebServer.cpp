@@ -339,16 +339,14 @@ void slewToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
   updatePosition(model, platform);
 
   double targetRADegrees = parsedRAHours * 15.0;
-  double modelledRADegrees=model.getRACoord() * 15.0;
+  double modelledRADegrees = model.getRACoord() * 15.0;
 
-
-
-  //negative degree shifts move from limit(east)
-  //to 0 (west).
-  //ra decreases as stars are more west
-  //so if target is west of actual,
-  //targetRADegrees - modelledRADegrees will be positive
-  //so this is right.
+  // negative degree shifts move from limit(east)
+  // to 0 (west).
+  // ra decreases as stars are more west
+  // so if target is west of actual,
+  // targetRADegrees - modelledRADegrees will be positive
+  // so this is right.
   double raDeltaDegrees = targetRADegrees - modelledRADegrees;
   platform.slewByDegrees(raDeltaDegrees);
 
@@ -406,10 +404,9 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
             subPath == "cansetpierside" ||
             subPath == "cansetrightascensionrate" ||
             subPath == "cansyncaltaz" || subPath == "canunpark" ||
-            subPath == "doesrefraction"  {
+            subPath == "doesrefraction") {
           return returnSingleBool(request, false);
         }
-
 
         if (subPath == "slewing") {
           return returnSingleBool(request, platform.slewing);
