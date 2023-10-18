@@ -337,12 +337,19 @@ void slewToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
 
   // get latest position
   updatePosition(model, platform);
-  double targetRADegrees =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(parsedRAHours);
-  double modelledRADegrees =
-      Ephemeris::hoursMinutesSecondsToFloatingHours(model.getRACoord());
 
-  double raDeltaDegrees=targetRADegrees-modelledRADegrees;
+  double targetRADegrees = parsedRAHours * 15.0;
+  double modelledRADegrees=model.getRACoord() * 15.0;
+
+
+
+  //negative degree shifts move from limit(east)
+  //to 0 (west).
+  //ra decreases as stars are more west
+  //so if target is west of actual,
+  //targetRADegrees - modelledRADegrees will be positive
+  //so this is right.
+  double raDeltaDegrees = targetRADegrees - modelledRADegrees;
   platform.slewByDegrees(raDeltaDegrees);
 
   returnNoError(request);
@@ -399,9 +406,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
             subPath == "cansetpierside" ||
             subPath == "cansetrightascensionrate" ||
             subPath == "cansyncaltaz" || subPath == "canunpark" ||
-            subPath == "doesrefraction" || subPath == "slewing") {
+            subPath == "doesrefraction"  {
           return returnSingleBool(request, false);
         }
+
 
         if (subPath == "slewing") {
           return returnSingleBool(request, platform.slewing);
