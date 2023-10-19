@@ -104,23 +104,10 @@ float TelescopeModel::getAzCoord() { return currentAz; }
 HorizCoord TelescopeModel::calculateAltAzFromEncoders(long altEncVal,
                                                       long azEncVal) {
 
-  float alt = 360.0 * ((float)(altEncVal + altDelta)) /
-              (float)altEncoderStepsPerRevolution;
-  float az = 360.0 * ((float)(azEncVal + aziDelta)) /
-             (float)azEncoderStepsPerRevolution;
+  float alt =
+      360.0 * ((float)(altEncVal)) / (float)altEncoderStepsPerRevolution;
+  float az = 360.0 * ((float)(azEncVal)) / (float)azEncoderStepsPerRevolution;
   return HorizCoord(alt, az);
-}
-
-long TelescopeModel::calculateAltEncoderFromCoord(HorizCoord &altAz) const {
-  long altEncoderVal =
-      (altAz.altInDegrees / 360.0) * (float)altEncoderStepsPerRevolution;
-  return altEncoderVal;
-}
-
-long TelescopeModel::calculateAziEncoderFromCoord(HorizCoord &altAz) const {
-  long aziEncoderVal =
-      (altAz.aziInDegrees / 360.0) * (float)azEncoderStepsPerRevolution;
-  return aziEncoderVal;
 }
 
 /**
@@ -144,14 +131,13 @@ void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
   float azEncoderDegrees;
   // convert encoder values to degrees
   HorizCoord encoderAltAz = calculateAltAzFromEncoders(altEnc, azEnc);
-  // log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
-  //     encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees,
-  //     timePointToString(timePoint).c_str());
+  log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
+      encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees,
+      timePointToString(timePoint).c_str());
 
   currentEqPosition = alignment.toReferenceCoord(encoderAltAz);
-  // log("Base position\t\t\tra(h): %lf\tdec: %lf",
-  //     currentEqPosition.getRAInHours(),
-  //     currentEqPosition.getDecInDegrees());
+  log("Base position\t\t\tra(h): %lf\tdec: %lf",
+      currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
 
   // Work out how many seconds since the model was created. Add this
   // to the RA to compensate for time passing.
@@ -172,9 +158,8 @@ void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
   // ra pointed to gets smaller
   currentEqPosition = currentEqPosition.addRAInDegrees(-raDeltaDegrees);
 
-  // log("Final position\t\t\tra(h): %lf\tdec: %lf",
-  //     currentEqPosition.getRAInHours(),
-  //     currentEqPosition.getDecInDegrees());
+  log("Final position\t\t\tra(h): %lf\tdec: %lf",
+      currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
   // log("=====calculateCurrentPosition====");
   // log("");
 }
@@ -444,11 +429,11 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
-  // log("Calculating expected alt az bazed on \tra(h): %lf \tdec: %lf and  "
-  //     "time "
-  //     "%s",
-  //     lastSyncedEq.getRAInHours(), lastSyncedEq.getDecInDegrees(),
-  //     timePointToString(now).c_str());
+  log("Calculating expected alt az bazed on \tra(degrees): %lf \tdec: %lf and  "
+      "time "
+      "%s",
+      lastSyncedEq.getRAInDegrees(), lastSyncedEq.getDecInDegrees(),
+      timePointToString(now).c_str());
 
   // HorizCoord modeledAltAz = alignment.toInstrumentCoord(lastSyncedEq);
   // log("Calculated alt/az from model\t\talt: %lf\t\taz:%lf",
@@ -479,7 +464,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
         calculateAzEncoderStepsPerRevolution(thisSyncPoint, lastSyncPoint);
   }
   lastSyncPoint = thisSyncPoint;
-
+ 
   if (baseAlignmentSynchPoints.size() == 3) {
     // Adjust time back to model time
     double basePointToNowTimeInSeconds =
@@ -493,16 +478,18 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
     // so to find ra of point some time ago we add the delta
     EqCoord adjusted =
         lastSyncedEq.addRAInDegrees(basePointToNowDeltaInDegrees);
+    log("Adjusted ra (degrees) %lf", adjusted.getRAInDegrees());
 
-    HorizCoord modeledAltAz = alignment.toInstrumentCoord(adjusted);
-    long modeledAlt = calculateAltEncoderFromCoord(modeledAltAz);
-    long modeledAz = calculateAziEncoderFromCoord(modeledAltAz);
     // altDelta and aziDelta will be ADDED to encoder values in
     // calculateAlzAzFromEncoders.
     // So if modeled alt encoder is 100, but actualy is 50,
     // modeleded-alt=50, and when calculating we get the right result.
-    altDelta = modeledAlt - altEnc;
-    aziDelta = modeledAz - azEnc;
+    HorizCoord modeledAltAz = alignment.toInstrumentCoord(adjusted);
+    altDelta =
+        modeledAltAz.altInDegrees - calculatedAltAzFromEncoders.altInDegrees;
+    aziDelta =
+        modeledAltAz.aziInDegrees - calculatedAltAzFromEncoders.aziInDegrees;
+
     log("3 points in base aligment. Calculated alt offset: %ld and az offset : "
         "%ld",
         altDelta, aziDelta);
@@ -510,7 +497,9 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   } else {
     log("Adding new point to base alignment, total will be %d ",
         baseAlignmentSynchPoints.size() + 1);
-    baseAlignmentSynchPoints.push_back(lastSyncPoint);
+    log("Last sync point ra: %lf", lastSyncPoint.eqCoord.getRAInDegrees());
+
+        baseAlignmentSynchPoints.push_back(lastSyncPoint);
     if (baseAlignmentSynchPoints.size() == 3) {
       addReferencePoints(baseAlignmentSynchPoints);
     }
