@@ -1207,6 +1207,11 @@ void test_telescope_model_mylocation() {
 
   // 1456000 milliseconds since first sync
 
+  model.calculateCurrentPosition(baseTime);
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.15, star3Dec, model.getDecCoord(), "dec");
+  TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.5, star3RAHours, model.getRACoord(), "ra");
+
+
   model.syncPositionRaDec(star3RAHours, star3Dec, baseTime);
   model.calculateCurrentPosition(baseTime);
 

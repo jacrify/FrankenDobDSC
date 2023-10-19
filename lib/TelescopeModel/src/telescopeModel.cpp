@@ -135,7 +135,12 @@ void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
       encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees,
       timePointToString(timePoint).c_str());
 
-  currentEqPosition = alignment.toReferenceCoord(encoderAltAz);
+  HorizCoord offsetAltAz = encoderAltAz.addOffset(altDelta, aziDelta);
+  log("Offset from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
+      offsetAltAz.altInDegrees, offsetAltAz.aziInDegrees,
+      timePointToString(timePoint).c_str());
+
+  currentEqPosition = alignment.toReferenceCoord(offsetAltAz);
   log("Base position\t\t\tra(h): %lf\tdec: %lf",
       currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
 
@@ -278,13 +283,13 @@ void TelescopeModel::performZeroedAlignment(TimePoint now) {
  */
 void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
 
-  if (points.size() != 3) {
-    log("Size of add reference points is %d not 3!", points.size());
+  if (points.size() != 2) {
+    log("Size of add reference points is %d not 2!", points.size());
     return;
   }
   SynchPoint point1 = points[0];
   SynchPoint point2 = points[1];
-  SynchPoint point3 = points[2];
+  // SynchPoint point3 = points[2];
 
   log("");
   log("=====addReferencePoints====");
@@ -305,14 +310,15 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
 
   EqCoord p2Adjusted = point2.eqCoord.addRAInDegrees(-p2DegreeDelta);
 
-  double p1ToP3TimeInSeconds =
-      differenceInSeconds(point1.timePoint, point3.timePoint);
-  double p3DegreeDelta = secondsToRADeltaInDegrees(p1ToP3TimeInSeconds);
-  EqCoord p3Adjusted = point3.eqCoord.addRAInDegrees(-p3DegreeDelta);
+  // double p1ToP3TimeInSeconds =
+  //     differenceInSeconds(point1.timePoint, point3.timePoint);
+  // double p3DegreeDelta = secondsToRADeltaInDegrees(p1ToP3TimeInSeconds);
+  // EqCoord p3Adjusted = point3.eqCoord.addRAInDegrees(-p3DegreeDelta);
 
   alignment.addReferenceCoord(point1.encoderAltAz, point1.eqCoord);
   alignment.addReferenceCoord(point2.encoderAltAz, p2Adjusted);
-  alignment.addReferenceCoord(point3.encoderAltAz, p3Adjusted);
+  alignment.calculateThirdReference();
+  // alignment.addReferenceCoord(point3.encoderAltAz, p3Adjusted);
 
   log("Calculated model from three references...");
 
@@ -429,7 +435,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   lastSyncedEq.setRAInHours(raInHours);
   lastSyncedEq.setDecInDegrees(decInDegrees);
 
-  log("Calculating expected alt az bazed on \tra(degrees): %lf \tdec: %lf and  "
+  log("Calculating expected alt az bazed on \tra(degrees): %lf \tdec: %lf "
+      "and  "
       "time "
       "%s",
       lastSyncedEq.getRAInDegrees(), lastSyncedEq.getDecInDegrees(),
@@ -448,7 +455,9 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
       calculatedAltAzFromEncoders.aziInDegrees);
 
   // check where model would say we are. Stored in currentEqPosition to use as
-  // error calc
+  // error calc. Use unadjusted values, deltas get recalced further down.
+  altDelta = 0;
+  aziDelta = 0;
   calculateCurrentPosition(now);
 
   SynchPoint thisSyncPoint =
@@ -464,7 +473,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
         calculateAzEncoderStepsPerRevolution(thisSyncPoint, lastSyncPoint);
   }
   lastSyncPoint = thisSyncPoint;
- 
+
   if (baseAlignmentSynchPoints.size() == 3) {
     // Adjust time back to model time
     double basePointToNowTimeInSeconds =
@@ -490,7 +499,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
     aziDelta =
         modeledAltAz.aziInDegrees - calculatedAltAzFromEncoders.aziInDegrees;
 
-    log("3 points in base aligment. Calculated alt offset: %ld and az offset : "
+    log("3 points in base aligment. Calculated alt offset: %ld and az offset "
+        ": "
         "%ld",
         altDelta, aziDelta);
     calculateCurrentPosition(now);
@@ -499,8 +509,8 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
         baseAlignmentSynchPoints.size() + 1);
     log("Last sync point ra: %lf", lastSyncPoint.eqCoord.getRAInDegrees());
 
-        baseAlignmentSynchPoints.push_back(lastSyncPoint);
-    if (baseAlignmentSynchPoints.size() == 3) {
+    baseAlignmentSynchPoints.push_back(lastSyncPoint);
+    if (baseAlignmentSynchPoints.size() == 2) {
       addReferencePoints(baseAlignmentSynchPoints);
     }
   }
