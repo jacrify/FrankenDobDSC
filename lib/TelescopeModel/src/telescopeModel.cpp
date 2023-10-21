@@ -131,18 +131,18 @@ void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
   float azEncoderDegrees;
   // convert encoder values to degrees
   HorizCoord encoderAltAz = calculateAltAzFromEncoders(altEnc, azEnc);
-  log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
-      encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees,
-      timePointToString(timePoint).c_str());
+  // log("Raw Alt az from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
+  //     encoderAltAz.altInDegrees, encoderAltAz.aziInDegrees,
+  //     timePointToString(timePoint).c_str());
 
   HorizCoord offsetAltAz = encoderAltAz.addOffset(altDelta, aziDelta);
-  log("Offset from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
-      offsetAltAz.altInDegrees, offsetAltAz.aziInDegrees,
-      timePointToString(timePoint).c_str());
+  // log("Offset from encoders: \t\talt: %lf\taz:%lf\tat time:%s",
+  //     offsetAltAz.altInDegrees, offsetAltAz.aziInDegrees,
+  //     timePointToString(timePoint).c_str());
 
   currentEqPosition = alignment.toReferenceCoord(offsetAltAz);
-  log("Base position\t\t\tra(h): %lf\tdec: %lf",
-      currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
+  // log("Base position\t\t\tra(h): %lf\tdec: %lf",
+  //     currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
 
   // Work out how many seconds since the model was created. Add this
   // to the RA to compensate for time passing.
@@ -163,8 +163,8 @@ void TelescopeModel::calculateCurrentPosition(TimePoint &timePoint) {
   // ra pointed to gets smaller
   currentEqPosition = currentEqPosition.addRAInDegrees(-raDeltaDegrees);
 
-  log("Final position\t\t\tra(h): %lf\tdec: %lf",
-      currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
+  // log("Final position\t\t\tra(h): %lf\tdec: %lf",
+  //     currentEqPosition.getRAInHours(), currentEqPosition.getDecInDegrees());
   // log("=====calculateCurrentPosition====");
   // log("");
 }
@@ -474,7 +474,7 @@ void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,
   }
   lastSyncPoint = thisSyncPoint;
 
-  if (baseAlignmentSynchPoints.size() == 3) {
+  if (baseAlignmentSynchPoints.size() == 2) {
     // Adjust time back to model time
     double basePointToNowTimeInSeconds =
         differenceInSeconds(baseSyncPoint.timePoint, now);

@@ -30,7 +30,7 @@ void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
              " }\n",
              command, parm1, parm2);
     eqUDPOut.print(response);
-    log("Status Packet sent %s", response);
+    log("EQ Command command sent %s", response);
   }
 }
 

@@ -313,6 +313,7 @@ void syncToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
 
 void slewToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
                   EQPlatform &platform) {
+  log("Slewing to coords requested");
   String ra = request->arg("RightAscension");
   double parsedRAHours;
   double parsedDecDegrees;
@@ -339,16 +340,17 @@ void slewToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
   updatePosition(model, platform);
 
   double targetRADegrees = parsedRAHours * 15.0;
-  double modelledRADegrees = model.getRACoord() * 15.0;
+  double modelledRADegrees = model.currentEqPosition.getRAInDegrees();
 
   // negative degree shifts move from limit(east)
   // to 0 (west).
-  // ra decreases as stars are more west
+  // ra increases as stars are more west
   // so if target is west of actual,
-  // targetRADegrees - modelledRADegrees will be positive
+  //   modelledRADegrees -targetRADegreeswill be positive
   // so this is right.
-  double raDeltaDegrees = targetRADegrees - modelledRADegrees;
+  double raDeltaDegrees = modelledRADegrees- targetRADegrees  ;
   platform.slewByDegrees(raDeltaDegrees);
+  log("Asked platform to slew by %lf degrees: target is %lf, actual eq is %lf",raDeltaDegrees,targetRADegrees,modelledRADegrees);
 
   returnNoError(request);
 }

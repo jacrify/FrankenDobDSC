@@ -93,7 +93,7 @@ void returnSingleDouble(AsyncWebServerRequest *request, double d) {
 }
 
 void returnSingleBool(AsyncWebServerRequest *request, bool b) {
-  // log("Single bool value url is %s, bool is %d", request->url().c_str(), b);
+  log("Single bool value url is %s, bool is %d", request->url().c_str(), b);
   char buffer[BUFFER_SIZE];
   snprintf(buffer, sizeof(buffer),
            R"({
