@@ -486,7 +486,10 @@ void setupWebServer(TelescopeModel &model, Preferences &prefs,
         }
 
         if (subPath == "equatorialsystem") {
-          return returnSingleInteger(request, 1);
+          return returnSingleInteger(
+              request,
+              1); // equTopocentric
+                  // https://ascom-standards.org/Help/Developer/html/T_ASCOM_DeviceInterface_EquatorialCoordinateType.htm
         }
 
         if (subPath == "interfaceversion") {
