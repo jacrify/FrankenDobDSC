@@ -22,15 +22,21 @@ void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
           IPBROADCASTPORT)) { // Choose any available port, e.g., 12345
     char response[400];
 
-    snprintf(response, sizeof(response),
-             "EQ:{ "
-             "\"command\": \"%s\", "
-             "\"parameter1\": %.5lf,"
-             "\"parameter2\": %.5lf"
-             " }\n",
-             command, parm1, parm2);
-    eqUDPOut.print(response);
-    log("EQ Command command sent %s", response);
+    // Estimate JSON capacity
+    const size_t capacity = JSON_OBJECT_SIZE(4);
+
+    DynamicJsonDocument doc(capacity);
+    // Populate the JSON object
+    doc["command"] = command;
+    doc["parameter1"] = parm1;
+    doc["parameter2"] = parm2;
+
+    String json;
+    serializeJson(doc, json);
+    json = "EQ:" + json;
+    eqUDPOut.print(json.c_str());
+
+    log("EQ Command command sent %s", json);
   }
 }
 
