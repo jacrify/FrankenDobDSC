@@ -13,8 +13,8 @@ public:
 
   void park();
   void findHome();
-  void moveAxis(double rate);
-  void slewByDegrees(double degreesToSlew);
+  void moveAxis(int axis,double rate);
+  void slewByDegrees(int axis, double degreesToSlew);
   void setTracking(int tracking);
   void pulseGuide(int direction, long duration);
   void zeroOffsetTime();

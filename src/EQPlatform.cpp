@@ -36,12 +36,17 @@ void EQPlatform::sendEQCommand(String command, double parm1, double parm2) {
 
 void EQPlatform::park() { sendEQCommand("park", 0, 0); }
 void EQPlatform::findHome() { sendEQCommand("home", 0, 0); }
-void EQPlatform::moveAxis(double rate) { sendEQCommand("moveaxis", rate, 0); }
+void EQPlatform::moveAxis(int axis, double rate) {
+  // 0 axis = ra
+  // 1 axis= dec
+  sendEQCommand("moveaxis", axis,rate);
+}
 
-void EQPlatform::slewByDegrees(double degreesToSlew)
-{
-  sendEQCommand("slewbydegrees",degreesToSlew,0);
-  slewing=true;
+void EQPlatform::slewByDegrees(int axis,double degreesToSlew) {
+  //0 axis = ra
+  //1 axis= dec
+  sendEQCommand("slewbydegrees",axis, degreesToSlew);
+  slewing = true;
 }
 void EQPlatform::setTracking(int tracking) {
   sendEQCommand("track", tracking, 0);
@@ -51,11 +56,7 @@ void EQPlatform::pulseGuide(int direction, long duration) {
   sendEQCommand("pulseguide", direction, duration);
 }
 
-void EQPlatform::zeroOffsetTime()
-{
-  sendEQCommand("zerooffset",0,0);
-}
-
+void EQPlatform::zeroOffsetTime() { sendEQCommand("zerooffset", 0, 0); }
 
 void EQPlatform::processPacket(AsyncUDPPacket &packet) {
   unsigned long now = millis();
@@ -193,8 +194,8 @@ TimePoint EQPlatform::calculateAdjustedTime() {
     interpolationTimeSeconds =
         differenceInSeconds(lastPositionReceivedTime, now);
   }
-  TimePoint adjustedTime = addSecondsToTime(
-      now, runtimeFromCenterSeconds - interpolationTimeSeconds);
+  TimePoint adjustedTime = addSecondsToTime(now, runtimeFromCenterSeconds -
+                                                     interpolationTimeSeconds);
 
   // log("Returned adjusted time: %s from now : %s",
   //     timePointToString(adjustedTime).c_str(),

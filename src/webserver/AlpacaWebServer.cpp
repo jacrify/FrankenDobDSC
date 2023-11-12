@@ -38,7 +38,6 @@ bool checkStalePositionAndUpdate() {
 
 /**
  * Returns the rates of the various axis.
- * We only have one axis.
  */
 void returnAxisRates(AsyncWebServerRequest *request, EQPlatform &platform) {
   log("Return Axis rates url is  %s", request->url().c_str());
@@ -126,7 +125,6 @@ void setSiteLongitude(AsyncWebServerRequest *request, TelescopeModel &model) {
   return returnNoError(request);
 }
 /** Alpaca queries axis by axis to see if the can move
- * Ugly implemention to say just one axis moves.
  */
 void canMoveAxis(AsyncWebServerRequest *request) {
   String axis = request->arg("Axis");
@@ -135,13 +133,19 @@ void canMoveAxis(AsyncWebServerRequest *request) {
       log("CanMoveAxis0=true");
       return returnSingleBool(request, true);
     }
+    if (axis == "1") {
+      log("CanMoveAxis1=true");
+      return returnSingleBool(request, true);
+    }
   }
   log("CanMoveAxis (other)=false");
   return returnSingleBool(request, false);
 }
 
 void abortSlew(AsyncWebServerRequest *request, EQPlatform &platform) {
-  platform.moveAxis(0.0);
+  platform.moveAxis(0, 0);
+  platform.moveAxis(1, 0);
+
   return returnNoError(request);
 }
 /** Parse movement rate (degrees sec) and ask plaform to move*/
@@ -161,13 +165,13 @@ void moveAxis(AsyncWebServerRequest *request, EQPlatform &platform) {
     // log("Parsed rate value: %lf", parsedAxis);
   }
 
-  if (axis != "0") {
-    log("Error: can only move on one axis");
+  if (axis != "0" && axis !="1") {
+    log("Error: can only move on first two axis");
     // TODO make this return an error
     return returnNoError(request);
   }
 
-  platform.moveAxis(parsedRate);
+  platform.moveAxis(parsedAxis,parsedRate);
 
   return returnNoError(request);
 }
@@ -348,9 +352,11 @@ void slewToCoords(AsyncWebServerRequest *request, TelescopeModel &model,
   // so if target is west of actual,
   //   modelledRADegrees -targetRADegreeswill be positive
   // so this is right.
-  double raDeltaDegrees = modelledRADegrees- targetRADegrees  ;
-  platform.slewByDegrees(raDeltaDegrees);
-  log("Asked platform to slew by %lf degrees: target is %lf, actual eq is %lf",raDeltaDegrees,targetRADegrees,modelledRADegrees);
+  double raDeltaDegrees = modelledRADegrees - targetRADegrees;
+  //TODO implement dec
+  platform.slewByDegrees(0,raDeltaDegrees);
+  log("Asked platform to slew by %lf degrees: target is %lf, actual eq is %lf",
+      raDeltaDegrees, targetRADegrees, modelledRADegrees);
 
   returnNoError(request);
 }
