@@ -39,3 +39,4 @@ A single axis platform is fine for visual observing (to keep an object from drif
 
 [Digital Setting Circles Code](https://github.com/jacrify/FrankenDobDSC)
 
+[Platform Wiring](docs/diagrams/src/EQPlatformWiring.pdf)
