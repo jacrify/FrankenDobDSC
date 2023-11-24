@@ -1,0 +1,79 @@
+@startuml
+
+
+
+title Packages - Component Diagram
+
+package "Laptop" {
+    component [PHD2 (for guiding)] as PHD2
+    component [Sharpcap] as Sharpcap
+    component [Ascom Remote] as AscomRemote
+
+}
+package "Ipad" {
+    component [Sky Safari] as SkySafari
+
+}
+
+node "DSC (ESP32)" {
+
+    component AlpacaDiscovery as AlpacaDiscovery
+    component "AlpacaWebServer"
+    component "EQPlatform"
+    component "Encoders"
+     component "TelescopeModel"
+
+} 
+node "EQ Platform (ESP32)" {
+ component "UDPListener"
+ component "UDPSender"
+ component "MotorUnit"
+ component "Buttons"
+ component "RaMotor"
+ component "DecMotor"
+} 
+
+
+
+node "Focuser (ESP32)" {
+component [NunChuk] as NunChuk
+component [UDPSender] as FUDPSender
+component [FocuserMotor] as FocuserMotor
+component [AlpacaDiscovery] as FAlpacaDiscovery
+component AlpacaWebServer as FAlpacaWebServer
+}
+
+Sharpcap --> AlpacaWebServer : "Sync Position"
+Sharpcap --> AlpacaWebServer : "Get Position"
+Sharpcap -left-> FAlpacaWebServer : "Auto Focus"
+Sharpcap --> AlpacaDiscovery : "Discovery\n(UDP)"
+Sharpcap --> FAlpacaDiscovery : "Discovery\n(UDP)"
+SkySafari --> AlpacaDiscovery : "Discovery\n(UDP)"
+PHD2 --> AscomRemote : "PulseGuide"
+AscomRemote --> AlpacaWebServer : "PulseGuide"
+AscomRemote --> AlpacaDiscovery : "Discovery\n(UDP)"
+SkySafari-down-> AlpacaWebServer : "Get Position"
+  
+NunChuk-->FUDPSender: "Move Platform Axis"
+NunChuk-->FocuserMotor: "Move Focuser"
+FAlpacaWebServer-->FocuserMotor : "Move Focuser"
+FUDPSender-down->UDPSender : Move Axis
+
+TelescopeModel-->Encoders : "Get encoder position"
+TelescopeModel-right->EQPlatform : "Get platform position"
+AlpacaWebServer-->TelescopeModel: "Calculate Position"
+
+EQPlatform -down--> UDPListener : "Platform Commands\n(Json, UDP)"
+AlpacaWebServer --> EQPlatform : "Send EQ Command"
+UDPSender -up-> EQPlatform : "Platform Position\n(Json, UDP)"
+
+
+UDPListener-->MotorUnit: "motor commands"
+MotorUnit-->RaMotor : "Track on/off"
+MotorUnit-->RaMotor : "Move axis"
+MotorUnit-->RaMotor : "Pulseguide"
+MotorUnit-->DecMotor : "Track on/off"
+MotorUnit-->DecMotor : "Move axis"
+MotorUnit-->DecMotor : "Pulseguide"
+Buttons-->MotorUnit: "FF/Rewind/Play/Stop"
+@enduml

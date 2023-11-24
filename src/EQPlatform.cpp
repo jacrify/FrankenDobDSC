@@ -182,7 +182,7 @@ void EQPlatform::checkConnectionStatus() {
  */
 TimePoint EQPlatform::calculateAdjustedTime() {
   TimePoint now = getNow();
-
+  //TODO not sure why this is here anymore
   checkConnectionStatus();
   // log("Calculating  adjusted time from (now): %s",
   //     timePointToString(now).c_str());
