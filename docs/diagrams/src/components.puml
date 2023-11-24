@@ -1,8 +1,8 @@
-@startuml
+@startuml ComponentDiagram
 
 
 
-title Packages - Component Diagram
+title Packages - Conceptual Component Diagram
 
 package "Laptop" {
     component [PHD2 (for guiding)] as PHD2
