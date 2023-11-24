@@ -8,3 +8,4 @@ A dual axis Equatorial Platform with integrated Digital Setting Circles.
 
 [Digital Setting Circles Code](https://github.com/jacrify/FrankenDobDSC)
 
+[Platform Wiring](docs/diagrams/src/EQPlatformWiring.pdf)
