@@ -1,5 +1,5 @@
 # The FrankenDob
-## A 6" Dobsonian on a dual axis Equatorial Platform with integrated Digital Setting Circles
+## A 8" Dobsonian on a dual axis Equatorial Platform with integrated Digital Setting Circles
 
 Interesting stuff that it does:
 - Micro controller (ESP32) controlled speed with a stepper motor, to cancel out tangent error
