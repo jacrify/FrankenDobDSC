@@ -1,7 +1,7 @@
 # The FrankenDob
 ## A 8" F6 Dobsonian on a dual axis Equatorial Platform with integrated Digital Setting Circles
 
-Interesting stuff that it does:
+![Alt text](docs/media/HotItsGoing.jpeg)Interesting stuff that it does:
 - Micro controller (ESP32) controlled speed with a stepper motor, to cancel out tangent error
 - Digital Setting Circles (encoders) on the alt/azi axis of my dobsonian are integrated with the platform, so I can always see on my ipad where I'm pointing in the sky
 - A new method of attaching the top of the platform to the drive system
@@ -9,6 +9,9 @@ Interesting stuff that it does:
 - An autofocuser with hand controller, which also controls the platform axis
 - ASCOM/Alpaca api for the focuser and platform, to allow synching/postion tracking/pulseguiding
 - A "Zlomotion" style fine adjustment system for easily finding targets, with a really neat alt axis clutchable lead screw mechanism 
+
+![Alt text](docs/media/PlatformRA.gif)
+![Alt text](docs/media/PlatformDec.gif)
 
 ![Component Diagram](docs/diagrams/out/ComponentDiagram.png)
 
