@@ -59,7 +59,7 @@ If I zoomed in on an object too far, it drifted out of view. If an object was to
 
 Sometime around 2020 I started building an equatorial platform to address drifting. I also started looking at digital setting circles to help me understand where I am looking in the sky. And, after I purchased the cheapest dedicated astro camera I could buy (the ZWO ASI224MC), I decided I needed an electronic focuser and a ZloMotion style fine adjustment system.
 
-With lots of time, design, and a lot of 3d printing, my Frankendob was born. I'll break down the various components below.
+With lots of time, design, and a lot of 3d printing, my Frankendob was born (though it is still a work in progress).
 
 # Wait. What's an Equatorial Platform?
 
@@ -67,9 +67,6 @@ An equatorial platform is a platform that cancels out the rotation of the earth 
 
 My platform is designed for my latitude (~33.8S): the supports the roller run on parts are 3d printed specifically for this latitude. Working out the shapes of those curves was the hardest part of the design: my Fusion 360 design began with an overly complex 3d sketch mapping out the shape of the curves, and then I built the rest of the platform around it.
 
-# And what's a "dual axis"?
-
-A single axis platform is fine for visual observing (to keep an object from drifting out of view). However if you trying to do any form of astrophotography, you start trying to maximise the 
 
 
 [Equatorial Platform Code](https://github.com/jacrify/FrankenDobEquatorialPlatform)
