@@ -1,6 +1,0 @@
-@startuml PositionCalculation
-
- component "AlpacaWebServer"
- 
- 
-@enduml

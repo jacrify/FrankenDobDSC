@@ -1,0 +1,44 @@
+@startuml GetPositionConceptual
+title  Get Position Conceptual
+component SkySafari
+note top
+Sky Safari or similar astronomy 
+app polls for position
+end note
+component getPosition
+
+
+component alignmentModel
+note right 
+Alignment model calculates what 
+ra/dec the scope would be pointing to
+if platform was at center of run
+end note
+
+component altAziDelta
+note bottom 
+Error from previous synchs (if any) is applied to 
+actual alt/azi values from encoders
+end note
+
+component encoders
+note right
+Encoders provide actual alt/azi 
+end note
+
+component eqPlatform
+note bottom
+Eq platform provides time to center of run,
+which is used to adjust ra output of model to
+to reflect fact that model is based on center of run
+end note
+
+encoders-down->getPosition: alt,azi
+
+getPosition-left->SkySafari: actual ra/dec scope is pointing to
+
+alignmentModel-left->getPosition: calculated ra/dec
+eqPlatform-up->getPosition: Platform time offset
+
+altAziDelta-up->getPosition: provides delta to apply
+@enduml
