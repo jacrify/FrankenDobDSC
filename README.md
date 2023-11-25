@@ -49,7 +49,7 @@ Below is a high level conceptual summary of how this works, as well as a slightl
 ![Alt text](docs/diagrams/out/GetPositionConceptual.png)
 
 ![Alt text](docs/diagrams/out/PositionCalculationSequence.png)
-# Why did you do this? Justify your actions please
+# Why did you do this? 
 
 Around 2018 I rescued an 6" Dobsonian telescope from an abusive environment. The scope has been stored outside for some period of time, but structurally was pretty sound. It was my first telescope and I fond it a joy to use.
 
