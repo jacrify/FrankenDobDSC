@@ -10,6 +10,7 @@ Interesting stuff that it does:
 - ASCOM/Alpaca api for the focuser and platform, to allow synching/postion tracking/pulseguiding
 - A "Zlomotion" style fine adjustment system for easily finding targets, with a really neat alt axis clutchable lead screw mechanism 
 
+![Component Diagram](docs/diagrams/out/ComponentDiagram.png)
 
 # Digital Setting Circles Logic
 
@@ -23,22 +24,19 @@ If a dobsonian scope is sitting perfectly level at some point on earth, it is po
 
 Further, it is possible to ignore latitude, longitude, and local time altogether by doing a 2 or 3 star alignment, as defined in Taki Toshimi's amazing 1989 paper ["A New Concept in Computer-Aided Telescopes"](http://takitoshimi.starfree.jp/matrix/matrix\_method\_rev\_e.pdf]). This builds an alignment model using two pairs of alt/azi, ra/dec coords. This model can then be used to map alt/azi to ra/dec (or vice versa).  I borrowed parts of the code for this from [TeenAstro](https://github.com/charleslemaire0/TeenAstro).
 
-The situation becomes somewhat more complicated when we place our dob on a (hopefully perfectly polar aligned) equatorial platform. Now the whole system can be rotated by an arbitary distance about the axis through the celestial pole. I found the simplest way to think about this was to build an aligment model for the situation where the platform is centered, and the treat the known offset from the center point as an offset for the ra value. 
+The situation becomes somewhat more complicated when we place our dob on a (hopefully perfectly polar aligned) equatorial platform. Now the whole system can be rotated by an arbitary distance about the axis through the celestial pole. I found the simplest way to think about this was to build an aligment model for the situation where the platform is centered, and then treat the known offset from the center point as an offset for the ra value. 
 
-Ie if the platform is well aligned, and the alt/azi position of the dobsonian does not change, running the platform along it's track changes only the ra component of the target.
+I.E.: if the platform is well aligned, and the alt/azi position of the dobsonian does not change, running the platform along its track changes only the ra component of the target.
 
-We get more complexity due to the passage of time, both in building the model and subsequently. As time passes the ra component of targets changes.
+We get more complexity due to the passage of time: as time passes the ra component of targets changes, and this needs to be dealt with both when building the model and when interrogating it.
 
-Then we add the dec axis to the mix. Whilst initially one might think at the second axis causes the platform to act like a classic german equatorial mount, this is not the case. If the scope is pointing directly north or south, driving the dec axis motor results in a direct dec change only. However if the scope is pointing at the eastern or western horizon, driving the dec axis keeps the target stationary but rotates the field of view around it!
+Then we add the dec axis to the mix. Whilst initially one might think at the second axis causes the platform to act like a classic german equatorial mount, this is not the case. If the scope is pointing directly north or south, driving the dec axis motor results in a direct dec change only. However if the scope is pointing at the eastern or western horizon, driving the dec axis keeps the target stationary but rotates the field of view around it! This is a limitation of 2 axis platforms, but not a severe one.
 
-Thus: we need to apply a new rotation to the coorinate system for changes in the dec axis. All of these changes need to be applied when building the model, when getting a position, and when slewing to a target.
+Thus: we need to apply a new rotation to the coordinate system for changes in the dec axis. All of these changes need to be applied when building the model, when getting a position, and when slewing to a target.
 
-Lastly: nothing in this world is perfect. Polar alignments can be slightly off, right angles in telescope mounts can be not quite right angles, encoders can drop steps, steppers can have poor tolerances. My engineering is OK but at the end of the day I'm working with wood, steel, and plastic in my garage :) stuff is going to drift. 
+Lastly: nothing in this world is perfect. Polar alignments can be slightly off, right angles in telescope mounts can be not quite right angles, encoders can drop steps, steppers can have poor tolerances. My engineering is OK but at the end of the day I'm working with wood, steel, and plastic in my garage :) : Stuff is going to drift. 
 
-So I added the ability in my code to cater for this error: once I create a 2 star alignment model (which I do by pointing in two different directions and platesolving camera images), I push the scope to the rough vicinity of my target. Once I get close, I platesolve again. Invariably there is some small difference between the platesolved (actual) ra/dec and then modelled ra/dec. The scope takes this difference and applies it as an offset to all future readouts. This error probably only applies in one small section of the sky: however once I choose a new target I platesolve again and get a different error correction. This hybrid approach works very well.
-
-
-Essentially the user performs a couple of ASCOM "SyncToCoords" operations (I do this using Sharpcap platesolves) which give the scope the exact ra/dec it is pointing at.
+So I added the ability in code to cater for this error: once I create a 2 star alignment model (which I do by pointing in two different directions and platesolving camera images), I push the scope to the rough vicinity of my target. Once I get close, I platesolve again. Invariably there is some small difference between the platesolved (actual) ra/dec and then modelled ra/dec. The scope takes this difference and applies it as an offset to all future readouts. This error probably only applies in one small section of the sky: however once I choose a new target I platesolve again and get a different error correction. This hybrid approach works very well.
 
 Below is a high level conceptual summary of how this works, as well as a slightly more details sequence diagram.
 
@@ -70,7 +68,7 @@ My platform is designed for my latitude (~33.8S): the supports the roller run on
 
 A single axis platform is fine for visual observing (to keep an object from drifting out of view). However if you trying to do any form of astrophotography, you start trying to maximise the 
 
-![Component Diagram](docs/diagrams/out/ComponentDiagram.png)
+
 [Equatorial Platform Code](https://github.com/jacrify/FrankenDobEquatorialPlatform)
 
 [Auto Focuser Code](https://github.com/jacrify/FrankenDobFocuser)
