@@ -1,0 +1,38 @@
+@startuml SubsequentSyncsConceptual
+
+title SyncCoords Conceptual : Subsequent Syncs
+component Sharpcap
+note top
+After inital alignment user can perform more platesolves
+when getting close to targets
+end note
+component syncCoords
+component alignmentModel
+note right 
+Alignment model calculates what the
+ alt/azi position should be
+end note
+component altAziDelta
+note bottom 
+Error from actual encoders is stored
+ and applied to future position queries
+end note
+component encoders
+note right
+Encoders provide actual alt/azi 
+end note
+component eqPlatform
+note bottom
+Eq platform provides time to center of run,
+which is used to manipulate RA values to query
+model as if platform was at center of run
+end note
+encoders-down->syncCoords: alt,azi
+
+Sharpcap->syncCoords:Platesolve: (ra,dec) 
+
+alignmentModel-left->syncCoords: calculated alt/azi
+eqPlatform-up->syncCoords: Platform time offset
+syncCoords-down->altAziDelta : stores
+
+@enduml

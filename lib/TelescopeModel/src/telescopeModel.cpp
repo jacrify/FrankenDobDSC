@@ -272,6 +272,7 @@ void TelescopeModel::performZeroedAlignment(TimePoint now) {
 //   log("=====addReferencePoint====");
 //   log("");
 // }
+
 /**
  * Whenever a model is built, one of the points is picked as the
  * base syncpoint. When the model is queried later, the difference
@@ -337,7 +338,7 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
  * At startup, scope does a rough model based on an assumption
  * we're pointing south at the horizon.
  *
- * Afterwards, the user needs to take three platesolves some
+ * Afterwards, the user needs to take two platesolves some
  * distance apart. These are used to build a model, and are
  * stored until the alignment is cleared.
  *
@@ -358,9 +359,9 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
  *
  * The time of the syncpoints is also adjusted at creation
  * by the sidereal offset of the eq platform, if present, similar
- * to the calculateCurrentPositino logic.
+ * to the calculateCurrentPosition logic.
  *
- * When a fourth or firth sync is performed, we only calculate a
+ * When a third or fourth sync is performed, we only calculate a
  * alt/az adjustment. As the input for this we apply the same
  * delta back to the base syncpoint.
  *
@@ -396,26 +397,6 @@ void TelescopeModel::addReferencePoints(std::vector<SynchPoint> &points) {
  * model. (This is done in platform.calculateAdjustedTime(), and
  * adjusts the timepoint passed into this method before passing)
  *
- *
- *
- * Performs the following steps:
- * 1) Calculates actual alt/az using encoders
- *
- * 2) If this is the first reference point captured, do a 1 star align.
- *
- * 3) Calculate current position using current model (used for error calcs)
- *
- * 4) Using the passed ta, encoder horizontal pos, and calculated, create a
- * sync point
- *
- * 5) Add the sync point to the list. This checks for historical sync points
- * that are far away from this one. If one is found, it is returned
- *
- * 6) If this far sync point is returned, then recalc the model using both
- * points.
- *
- * 7)  Saves the encoder values in case we want to use it to work out encoder
- * resolutions
  *
  * */
 void TelescopeModel::syncPositionRaDec(float raInHours, float decInDegrees,

@@ -163,7 +163,7 @@ void EQPlatform::checkConnectionStatus() {
  * as the middle of the run, it can be in the past or in the future.
  *
  * The platform emits runtimeFromCenterSeconds, which is how many
- * seconds the platform will take to reach the center (refernece)
+ * seconds the platform will take to reach the center (reference)
  * point. When the platform is running, this number is reducing
  * at the same rate time is moving forward, so the reference time
  * point stays the same, so the scope keeps pointing at the same ra

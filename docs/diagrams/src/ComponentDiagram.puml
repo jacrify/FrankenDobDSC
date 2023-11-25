@@ -4,10 +4,24 @@
 
 title Packages - Conceptual Component Diagram
 
+:User: --> (FindTarget)
+:User: --> (TrackTarget)
+:User: --> (2Star)
+:User: --> (Focus)
+"Find target" as (FindTarget)
+"Track target" as (TrackTarget)
+"2 Star Calibration" as (2Star)
+
+
+
+
+
 package "Laptop" {
     component [PHD2 (for guiding)] as PHD2
     component [Sharpcap] as Sharpcap
     component [Ascom Remote] as AscomRemote
+    note left of Sharpcap : Sharpcap can talk to components using\nnative Alpaca
+    note right of PHD2 : PHD2 does needs to use ASCOM remote as ascom->alpaca bridge
 
 }
 package "Ipad" {
@@ -76,4 +90,10 @@ MotorUnit-->DecMotor : "Track on/off"
 MotorUnit-->DecMotor : "Move axis"
 MotorUnit-->DecMotor : "Pulseguide"
 Buttons-->MotorUnit: "FF/Rewind/Play/Stop"
+
+
+FindTarget-down->SkySafari
+2Star-down->Sharpcap
+TrackTarget-down->PHD2
+Focus-down->Sharpcap
 @enduml

@@ -1,0 +1,105 @@
+@startuml PositionCalculationSequence
+
+autoactivate on
+User->"Sky Safari": Platesolve
+
+
+note right
+Alignment Point 1
+end note
+"Sky Safari" -> "AlpacaWebServer": SyncToCoords(ra,dec)
+
+AlpacaWebServer->TelescopeModel : setEncoderValues(alt,az)
+return 
+AlpacaWebServer->EqPlatform: calculateAdjustedTime()
+note right
+Returns an time (epoch in millis) to be used for model calculations.
+This is obstensibly the time that the platform is as the middle of the run.
+It can be in the past or in the future, and provides a fix time reference
+frame for the alignment model.
+
+The platform emits runtimeFromCenterSeconds, which is how many
+seconds the platform will take to reach the center (reference)
+point. 
+
+When the platform is running, this number is reducing
+at the same rate time is moving forward, so the reference time
+point stays the same, so the scope keeps pointing at the same ra
+if alt/azi do not change.
+
+When the platform stops, this number stays static but time moves
+on, so ra changes over time.
+end note
+return  timeToMiddle
+AlpacaWebServer->TelescopeModel : syncPositionRaDec(ra,dec,timeAtMiddleOfRun)
+TelescopeModel->TelescopeModel : calculateAltAzFromEncoders(altEnc,aziEnc)
+return alt,azi
+TelescopeModel->TelescopeModel:storeSyncPoint(alt,azi,ra,dec,time)
+return
+return
+return
+return
+User -> "Sky Safari": Platesolve
+note right
+Alignment Point 2
+end note
+"Sky Safari" -> "AlpacaWebServer": SyncToCoords(ra,dec)
+
+AlpacaWebServer->TelescopeModel : setEncoderValues(alt,az)
+return
+AlpacaWebServer->EqPlatform: calculateAdjustedTime()
+EqPlatform-->AlpacaWebServer: timeToMiddle
+AlpacaWebServer->TelescopeModel : syncPositionRaDec(ra,dec,timeAtMiddleOfRun)
+TelescopeModel->TelescopeModel : calculateAltAzFromEncoders(altEnc,aziEnc)
+return alt,azi
+TelescopeModel->TelescopeModel:storeSyncPoint(alt,azi,ra,dec,time)
+return
+TelescopeModel->TelescopeModel: addReferencePoints(Points[])
+note right
+Builds alignment model based on two reference points,
+with each refernce point consisting of a ra/dec and alt/azi pair.
+Each reference point also has a time associated with it:
+this is used to adjust the ra values as if the points were taken
+at the same time (as the ra of any point increase over time)
+end note
+TelescopeModel->AlignmentModel: addReferenceCoord(alt,azi,ra,dec) 
+return
+TelescopeModel->AlignmentModel: addReferenceCoord(alt,azi,ra,dec) 
+return
+TelescopeModel->AlignmentModel: calculateThirdReference()
+return
+return
+TelescopeModel-->AlpacaWebServer
+AlpacaWebServer-->"Sky Safari"
+return
+
+
+User->"Sky Safari": Platesolve
+
+
+note right
+Subsequent syncs. At this point 2 star model is built, and any 
+delta from calculated position to actual is treated as a 
+offset to add to encoders
+end note
+"Sky Safari" -> "AlpacaWebServer": SyncToCoords(ra,dec)
+
+AlpacaWebServer->TelescopeModel : setEncoderValues(alt,az)
+return
+AlpacaWebServer->EqPlatform: calculateAdjustedTime()
+EqPlatform-->AlpacaWebServer: timeToMiddle
+AlpacaWebServer->TelescopeModel : syncPositionRaDec(ra,dec,timeAtMiddleOfRun)
+TelescopeModel->TelescopeModel : calculateAltAzFromEncoders(altEnc,aziEnc)
+return alt,azi
+TelescopeModel->TelescopeModel:storeAltAndAziDeltas
+note right
+This is the "error" between the calculated position (ra/dec) from the
+model, and the actual position from the platesolve. We convert the actual
+ra/dec position back to alt/azi using the model, and store the delta
+between the 
+end note
+return
+return
+return
+return
+@enduml

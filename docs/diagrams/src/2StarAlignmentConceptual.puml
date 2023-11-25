@@ -1,0 +1,32 @@
+@startuml 2StarAlignmentConceptual
+title SyncCoords Conceptual : 2 Star Alignment
+component Sharpcap
+note top
+User performs two initial platesolves from Sky Safari
+to create alignment model
+end note
+component syncCoords
+component alignmentModel
+note right 
+Aligment model is for the point in time of first platesolve,
+adjusted forward or back in time to where platform would be centered
+end note
+component encoders
+note right
+Encoders provide alt/azi for each plate solve
+end note
+component eqPlatform
+note right
+Eq platform provides time to center of run,
+which is used to manipulate RA values to create
+model as if platform was at center of run
+end note
+encoders-down->syncCoords: alt,azi * 2
+
+Sharpcap->syncCoords:Platesolve *2: (ra,dec) 
+
+syncCoords->alignmentModel:creates
+eqPlatform-up->syncCoords: Platform time offset
+
+
+@enduml
