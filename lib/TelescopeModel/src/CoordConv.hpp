@@ -152,9 +152,13 @@ public:
 
   void setNorthernHemisphere(bool b);
 
+  
+
+  
 protected:
-  // add a user-provided reference star (all values in degrees, except time in
-  // seconds). adding more than three has no effect
+  void createYRotationMatrix(double (&matrix)[3][3], double angleInRadians);
+  // add a user-provided reference star (all values in degrees, except time
+  // in seconds). adding more than three has no effect
   void addReferenceDeg(double ra, double dec, double azi, double alt);
   // Convert reference angle1/angle2 coordinates to axis axis1/axis2 coordinates
   // (all values in degrees)

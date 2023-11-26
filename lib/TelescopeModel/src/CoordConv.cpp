@@ -335,6 +335,23 @@ void CoordConv::toReference(double &angle1, double &angle2, double axis1,
   cout << "angle1 " << angle1 << "r angle2 " << angle2 << "r" << endl;
 #endif
 }
+/**
+ * Create rotation matrix for rotating around east west axis
+*/
+void CoordConv::createYRotationMatrix(double (&matrix)[3][3], double angleInRadians) {
+  double c = cos(angleInRadians);
+  double s = sin(angleInRadians);
+
+  matrix[0][0] = c;
+  matrix[0][1] = 0;
+  matrix[0][2] = s;
+  matrix[1][0] = 0;
+  matrix[1][1] = 1;
+  matrix[1][2] = 0;
+  matrix[2][0] = -s;
+  matrix[2][1] = 0;
+  matrix[2][2] = c;
+}
 
 double CoordConv::polErrorDeg(double lat, Err sel) {
   // 	lat=(40+49/60+51/3600)*pi/180;x=Tinv*[0;0;1];
