@@ -4,9 +4,9 @@
 Interesting stuff that it does:
 - Micro controller (ESP32) controlled speed with a stepper motor, to cancel out tangent error
 - Digital Setting Circles (encoders) on the alt/azi axis of my dobsonian are integrated with the platform, so I can always see on my ipad where I'm pointing in the sky
-- A new method of attaching the top of the platform to the drive system
-- A separate base with rotation capability, to allow for easy leveling and polar alignment of the platform whilst in use (rather than kicking it)
-- An autofocuser with hand controller, which also controls the platform axis
+- A solid method of attaching the top of the platform to the drive system
+- A separate base with (manual) fine rotation capability, to allow for easy leveling and polar alignment of the platform whilst in use (rather than kicking the platform)
+- An autofocuser with hand controller, which also controls the platform axis motors
 - ASCOM/Alpaca api for the focuser and platform, to allow synching/postion tracking/pulseguiding
 - A "Zlomotion" style fine adjustment system for easily finding targets, with a really neat alt axis clutchable lead screw mechanism 
 
@@ -14,6 +14,49 @@ Interesting stuff that it does:
 ![Alt text](docs/media/PlatformDec.gif)
 
 ![Component Diagram](docs/diagrams/out/ComponentDiagram.png)
+
+# Physical Design
+
+The physical design consists of the following components:
+* Platform
+    * Base for polar alignment
+        * Physical Structure (wooden disc)
+        * Roller bearing so platform can rotate
+        * Adjustable legs
+        * Friction locking mechanism
+        * Fine adjustment mechanism
+    * Bottom layer
+        * Stepper motor and drive system
+        * Attachment point for top layer
+        * ESP32 microcontroller and electonics
+        * Power, control, and limit switches
+        * Rollers for top layer
+    * Top Layer
+        * Vertical North Segments (actally south for me but everyone calls them VNS )
+        * South Segment
+        * Pivot and board for declination adjustment
+        * Stepper and limit switch
+* Focuser
+    * Stepper and bracket
+    * ESP32 and electronics
+    * Case and mount
+    * Wii Nunchuk
+* ZloMotion
+    * Alt Axis Fine Control
+        * Steel rod
+        * Top Attachment
+        * Bottom Attachment
+        * Clutchable lead screw
+    * Azi Axis Fine Control
+        * Belt system
+        * Wooden scaffold
+        * Bearings and pulleys
+* Encoder System
+    * Alt Encoder
+    * Azi Encoder
+    * ESP32 And electonics
+
+
 
 # Digital Setting Circles Logic
 
