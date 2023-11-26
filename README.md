@@ -66,7 +66,7 @@ With lots of time, design, and a lot of 3d printing, my Frankendob was born (tho
 An equatorial platform is a platform that cancels out the rotation of the earth for some period of time. This is slightly harder than it sounds: mechanically you need a platform that rotates around a pivot line that points to the North celestial pole (or South celestial pole if you are in the southern hemisphere). Any telescope sitting on such a platform remains stationary relative to the sky, for a period of time, but only if the platform is accurately aligned, level, and rotates at the exact speed the earth is turning at.
 
 My platform is designed for my latitude (~33.8S): the supports the roller run on parts are 3d printed specifically for this latitude. Working out the shapes of those curves was the hardest part of the design: my Fusion 360 design began with an overly complex 3d sketch mapping out the shape of the curves, and then I built the rest of the platform around it.
-
+![Alt text](<docs/media/Master Sketch.gif>)
 
 
 [Equatorial Platform Code](https://github.com/jacrify/FrankenDobEquatorialPlatform)
