@@ -165,7 +165,7 @@ I spend some time hunting for such a mechanism and wasn't able to find one. I th
 
 I printed a couple of those and experimented. Eventually I was able to come up with a design where two of the bearings clamp together driven by a spring.
 
- However for the 
+
 
 ### Alt Axis Fine Control
         * Steel rod
