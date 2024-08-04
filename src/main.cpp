@@ -12,6 +12,7 @@
 Preferences prefs;
 TelescopeModel model;
 EQPlatform platform;
+Network network(prefs, WE_ARE_DSC);
 
 void setup() {
   Serial.begin(115200);
@@ -19,7 +20,7 @@ void setup() {
   Serial.println("starting");
   prefs.begin("DSC", false);
 
-  setupWifi(prefs);
+  network.setupWifi();
   LittleFS.begin();
   // model.setAltEncoderStepsPerRevolution(-30000);
   // model.setAzEncoderStepsPerRevolution(108229);

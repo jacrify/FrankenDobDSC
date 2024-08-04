@@ -9,6 +9,11 @@ WiFiManager wifiManager;
 
 const char *ntpServer = "pool.ntp.org";
 
+IPAddress local_IP(172, 20, 10, 7);
+IPAddress gateway(172, 20, 10, 1);
+IPAddress subnet(255, 255, 255, 240);
+IPAddress primaryDNS(172, 20, 10, 1);  
+
 #define HOMEWIFISSID "HOMEWIFISSID"
 #define HOMEWIFIPASS "HOMEWIFIPASS"
 void printLocalTime() {
