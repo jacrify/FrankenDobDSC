@@ -19,7 +19,10 @@ void setup() {
   delay(1000);
   Serial.println("starting");
   prefs.begin("DSC", false);
-
+  // Fresh ESP32s need their wifi creds initialised (once off) as follows. Do
+  // not commit. network.storeESP32WifiCreds("","");
+  // network.storeHomeWifiCreds("", "");
+  // network.storePhoneWifiCreds("", "");
   network.setupWifi();
   LittleFS.begin();
   // model.setAltEncoderStepsPerRevolution(-30000);
