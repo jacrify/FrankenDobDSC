@@ -33,8 +33,9 @@ private:
 
   Preferences &preferences;
   int who_are_we;
-  IPAddress home_wifi_ip;
-  IPAddress phone_wifi_ip;
+  WiFiNetwork phoneNetwork;
+  WiFiNetwork homeNetwork;
+  WiFiNetwork espNetwork;
 };
 
 #endif // NETWORK_H
